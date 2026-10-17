@@ -1,0 +1,17 @@
+# Whitelist: only our own sources. Never commit Logitech/DTS files, the Wine prefix,
+# extracted depots, presets, analysis output or test audio.
+/*
+!/.gitignore
+!/README.md
+!/TODO.md
+!/docs/
+!/tools/
+!/host/
+!/bridge/
+host/*
+!host/bluevoice_host.c
+!host/preset_to_params.py
+!host/live_test.sh
+bridge/*
+!bridge/bluevoice_bridge.c
+!bridge/live_test.sh
