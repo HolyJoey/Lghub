@@ -283,3 +283,13 @@ void *pe_rva(pe_image *img, unsigned rva)
 {
 	return rva < img->size ? img->base + rva : NULL;
 }
+
+int pe_patch(pe_image *img, unsigned rva, const void *expect, const void *bytes, size_t n)
+{
+	if (!in_range(rva, n, img->size) || memcmp(img->base + rva, expect, n) != 0) return -1;
+	uintptr_t start = (uintptr_t)(img->base + rva) & ~(uintptr_t)0xfff;
+	size_t len = ((uintptr_t)(img->base + rva) + n - start + 0xfff) & ~(size_t)0xfff;
+	if (mprotect((void *)start, len, PROT_READ | PROT_WRITE) != 0) return -1;
+	memcpy(img->base + rva, bytes, n);
+	return mprotect((void *)start, len, PROT_READ | PROT_EXEC);   /* only code is patched */
+}
