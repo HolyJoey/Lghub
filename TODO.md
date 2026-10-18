@@ -26,7 +26,12 @@ Working, tested on this machine with the laptop microphone:
   `devices.py` (USB ids, lighting zones, onboard profiles, battery), per-device pages.
   The G Pro X (wired/wireless) opens Blue VO!CE; Blue VO!CE also has its own tile.
   Test without hardware: `LGHUB_FAKE_DEVICES=0aaa,c08b,082d lghub`.
-- [ ] Mice (G502): DPI, report rate, buttons, onboard profiles, lighting (HID++ 2.0).
+- [x] Mice (G502): DPI, report rate, buttons, onboard profiles, lighting (HID++ 2.0:
+  0x2201, 0x8060, 0x8100), tested against `simulate.py` only (`python3 -m unittest discover tests`).
+  **Check on the real G502**: profile layout offsets, LED effect bytes (cycle 0x03, breathing
+  0x0a), report-rate byte = ms, the write of a 255-byte sector in 16-byte chunks, button order
+  (names after Back/Forward are generic "Button n"). Backups of every sector we write are in
+  `~/.local/share/lghub-bluevoice/backups/<serial>/`.
 - [ ] G Pro X extras: sidetone, mic level, EQ / DTS surround.
 - [ ] Webcams (C920): V4L2 controls.
 - [ ] Keyboards and the rest; receivers (devices paired to LIGHTSPEED/Unifying).

@@ -12,6 +12,7 @@
 !/sonar-project.properties
 !/docs/
 !/tools/
+!/tests/
 !/host/
 !/bridge/
 host/*

@@ -209,6 +209,19 @@ def discover():
 	return devices
 
 
+def open_hidpp(device, index=None):
+	"""A hidpp.Device for a connected (or simulated) device; raises OSError if there is none."""
+	import hidpp
+	import simulate
+	port = device.id.split(':', 1)[1]
+	if port.startswith('fake'):
+		dev = simulate.device_for(device.usb_id, port)
+		if dev is None:
+			raise OSError('no simulated HID++ device for this model')
+		return dev
+	return hidpp.open_usb(port, hidpp.CORDED if index is None else index)
+
+
 def blue_voice_model(device):
 	"""'wired'/'wireless' if the device's page is Blue VO!CE, else None."""
 	return BLUE_VOICE_MODELS.get(device.model.key) if device else None
