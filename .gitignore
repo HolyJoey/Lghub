@@ -27,3 +27,4 @@ docs/mockups/
 
 # local session notes
 NEXT_SESSION.md
+__pycache__/
