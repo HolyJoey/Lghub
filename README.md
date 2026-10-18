@@ -24,9 +24,10 @@ that Discord, OBS, your browser or anything else can use:
 It keeps running in the background, and your real mic is only opened while some app is
 recording from Blue VO!CE.
 
-**Equalizer.** 10 bands from 32 Hz to 16 kHz with a handful of presets, on a new output
-*… (Equalizer)* in front of the headset. This one is ours (PipeWire's filters), not
-Logitech's.
+**Equalizer.** G HUB's 10-band equalizer presets (Flat, FPS, MOBA, Bass Boost, Cinematic,
+Communications) and bands, 32 Hz to 16 kHz, on a new output *… (Equalizer)* in front of the
+headset. The presets come from Logitech's own files; the filters doing the work are PipeWire's,
+not Logitech's DSP.
 
 **Headset.** Sidetone, volume and mic level from the headset's sound card, plus lighting and
 battery on headsets that have them.

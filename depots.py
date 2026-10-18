@@ -211,6 +211,23 @@ def fetch_picture(model):
 PRESET_FILES = {'g733': ('device_presets.json', 'g733')}
 
 
+def fetch_eq_presets(path):
+	"""G HUB's 10-band equalizer presets (the G560 package carries the set). True on success."""
+	url = SERVER + DEPOTS['g560']
+	try:
+		files = _files(url)
+		data = _get(url, *files['device_presets.json'])
+		json.loads(data)
+	except (OSError, ValueError, KeyError, struct.error) as e:
+		print(f'lghub: no equalizer presets: {e}', flush=True)
+		return False
+	os.makedirs(os.path.dirname(path), exist_ok=True)
+	with open(path + '.tmp', 'wb') as f:
+		f.write(data)
+	os.replace(path + '.tmp', path)
+	return True
+
+
 def fetch_presets(model):
 	"""Path of the headset's G HUB preset file, downloading it if needed, or None. Blocks."""
 	name, preset_set = PRESET_FILES[model]
@@ -327,4 +344,6 @@ if __name__ == '__main__':
 	import sys
 	if len(sys.argv) == 3 and sys.argv[1] == '--app-icon':
 		sys.exit(0 if fetch_app_icon(sys.argv[2]) else 1)
-	sys.exit('usage: depots.py --app-icon OUT.png')
+	if len(sys.argv) == 3 and sys.argv[1] == '--eq-presets':
+		sys.exit(0 if fetch_eq_presets(sys.argv[2]) else 1)
+	sys.exit('usage: depots.py --app-icon OUT.png | --eq-presets OUT.json')

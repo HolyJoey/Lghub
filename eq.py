@@ -18,22 +18,40 @@ SINK = 'lghub_eq'
 OUT = 'lghub_eq_out'
 BANDS = (32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000)
 Q = 1.41                 # about one octave per band
-RANGE = 12.0             # dB either way
 CHECK_EVERY = 5.0        # seconds between full checks (headset plugged in or out)
 
-PRESETS = {
-	'Flat': (0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-	'Bass boost': (6, 5, 4, 2, 0, 0, 0, 0, 0, 0),
-	'Footsteps': (-4, -4, -3, -1, 0, 2, 4, 5, 3, 0),
-	'Voice': (-3, -2, -1, 1, 3, 4, 4, 2, 0, -1),
-	'Music': (4, 3, 1, 0, -1, -1, 0, 2, 3, 3),
-	'Movie': (5, 4, 2, 0, -1, 0, 2, 3, 2, 1),
-	'Treble boost': (0, 0, 0, 0, 0, 1, 2, 4, 5, 6),
-}
+FLAT = (0,) * len(BANDS)
+# G HUB's own 10-band presets (fetched by the installer from Logitech's update server).
+PRESETS_FILE = os.path.join(store.DATA_DIR, 'presets', 'equalizer_presets.json')
+PRESET_NAMES = {'EQUALIZER_FLAT': 'Flat', 'EQUALIZER_FPS': 'FPS', 'EQUALIZER_MOBA': 'MOBA',
+                'EQUALIZER_BASS_BOOST': 'Bass Boost', 'EQUALIZER_CINEMATIC': 'Cinematic',
+                'EQUALIZER_COMMUNICATIONS': 'Communications'}
+
+
+def load_presets(path=PRESETS_FILE):
+	"""{name: gains} from G HUB's preset file; just Flat without it."""
+	found = {'Flat': FLAT}
+	try:
+		with open(path) as f:
+			data = json.load(f)
+	except (OSError, ValueError):
+		return found
+	for p in data.get('presets', []):
+		eq = p.get('equalizer') or {}
+		gains = eq.get('advanced')
+		if p.get('attribute') == 'EQUALIZER' and eq.get('type') == 'ADVANCED' and len(gains or []) == len(BANDS):
+			name = PRESET_NAMES.get(p.get('name'), p.get('name', '').replace('EQUALIZER_', '').title())
+			found[name] = tuple(float(g) for g in gains)
+	return found
+
+
+PRESETS = load_presets()
+# Sliders reach as far as the presets do (G HUB's go down to -17 dB), and at least 12 dB.
+RANGE = float(max([12] + [abs(g) for gains in PRESETS.values() for g in gains]))
 
 
 def default_settings():
-	return {'enabled': False, 'preset': 'Flat', 'gains': list(PRESETS['Flat']),
+	return {'enabled': False, 'preset': 'Flat', 'gains': list(FLAT),
 	        'target': 'auto', 'make_default': True}
 
 

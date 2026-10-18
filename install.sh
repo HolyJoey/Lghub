@@ -66,6 +66,7 @@ EOF
   chmod +x "$BIN_DIR/$launcher"
 done
 cp "$SRC/lghub-bluevoice.svg" "$PREFIX/icons/hicolor/scalable/apps/lghub-bluevoice.svg"
+python3 "$APP_DIR/depots.py" --eq-presets "$APP_DIR/presets/equalizer_presets.json" || true
 # The G HUB icon, read from Logitech's update server (six small requests); ours if that fails.
 ICON=lghub-bluevoice
 mkdir -p "$PREFIX/icons/hicolor/256x256/apps"

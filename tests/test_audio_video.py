@@ -49,6 +49,24 @@ class EqualizerTest(unittest.TestCase):
 		self.assertIn('target.object = "alsa_output.usb-PRO_X"', text)
 		self.assertIn('input = "band10:In"', text)
 
+	def test_ghub_presets(self):
+		import json
+		import tempfile
+		data = {'presets': [
+			{'name': 'EQUALIZER_FPS', 'attribute': 'EQUALIZER',
+			 'equalizer': {'type': 'ADVANCED', 'advanced': [0, 0, -6, -5, -3, -2, -3, -3, -5, -6]}},
+			{'name': 'EQUALIZER_SIMPLE_DEFAULT_HIDDEN', 'attribute': 'EQUALIZER',
+			 'equalizer': {'type': 'SIMPLE', 'advanced': [0] * 10}},
+			{'name': 'BLUE_VOICE_PRESET_X', 'attribute': 'BLUE_VOICE_SETTINGS'}]}
+		with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False) as f:
+			json.dump(data, f)
+		try:
+			found = eq.load_presets(f.name)
+		finally:
+			os.remove(f.name)
+		self.assertEqual(list(found), ['Flat', 'FPS'])
+		self.assertEqual(found['FPS'][2], -6.0)
+
 	def test_presets_fit(self):
 		for gains in eq.PRESETS.values():
 			self.assertEqual(len(gains), len(eq.BANDS))
