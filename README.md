@@ -85,8 +85,11 @@ the service is doing. If the installer says a download doesn't match, Logitech h
 new version of the files; open an issue. If you have the files from somewhere else you can
 point the installer at them with `./install.sh --depot-dir DIR`.
 
-## Notes
+## License
+
+MIT, see [LICENSE](LICENSE). That covers the code in this repo. Logitech's files that the
+installer downloads (the Blue VO!CE DLL and the presets) are not part of it and stay under
+Logitech's own terms.
 
 Not affiliated with Logitech. Blue VO!CE, G HUB and G Pro X are Logitech's trademarks, DTS is
-DTS, Inc.'s. This repo only has my own code; Logitech's files are downloaded from Logitech when
-you install and stay on your machine.
+DTS, Inc.'s.
