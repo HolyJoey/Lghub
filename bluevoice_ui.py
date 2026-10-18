@@ -15,7 +15,7 @@ import presets
 import pw
 import service
 import store
-from ui import (APP_DIR, NOTIFY_ACTIVE, box, button_widget, device_sidebar, format_value, label, meter_bar,
+from ui import (APP_DIR, NOTIFY_ACTIVE, box, button_widget, device_icon, device_sidebar, format_value, label, meter_bar,
                 nav_button, page_header, scrolled, set_meter)
 
 APP_TITLE = 'Blue VO!CE'
@@ -500,8 +500,7 @@ class BlueVoiceView(Gtk.Box):
 	def _build_sidebar(self, device):
 		icon_path = os.path.join(APP_DIR, 'lghub-bluevoice.svg')
 		if device:
-			logo = Gtk.Image.new_from_icon_name(device.icon)
-			logo.add_css_class('device-icon')
+			logo = device_icon(device, 32)
 		elif os.path.exists(icon_path):
 			logo = Gtk.Image.new_from_file(icon_path)
 		else:

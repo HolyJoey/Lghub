@@ -5,7 +5,9 @@ import gi
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Gtk  # noqa: E402
+from gi.repository import Gdk, GdkPixbuf, GLib, Gtk  # noqa: E402
+
+import store  # noqa: E402
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 ACCENT = '#2f8cff'
@@ -67,6 +69,7 @@ button.tile:hover {{ background: #1b1f26; border-color: #2f3644; }}
 button.tile image.tile-icon {{ color: {ACCENT}; }}
 .tile-name {{ font-size: 16px; font-weight: 700; }}
 .device-icon {{ color: {ACCENT}; }}
+.photo {{ background: radial-gradient(circle, rgba(120, 150, 200, 0.28) 0%, rgba(120, 150, 200, 0) 68%); }}
 .chip {{ background: #1c2027; border-radius: 8px; padding: 4px 10px; font-size: 12px; color: #c9ced8; }}
 """
 
@@ -177,3 +180,35 @@ def nav_button(text, icon_name, on_click):
 def scrolled(child):
 	return Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER, child=child, hexpand=True)
 
+
+
+_textures = {}
+
+
+def product_image(model_key, size):
+	"""The model's product photo scaled to fit size x size, or None when we don't have one."""
+	path = os.path.join(store.IMAGE_DIR, f'{model_key}.png')
+	if (path, size) not in _textures:
+		try:
+			pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, size, size, True)
+			_textures[(path, size)] = Gdk.Texture.new_for_pixbuf(pixbuf)
+		except GLib.Error:
+			_textures[(path, size)] = None
+	texture = _textures[(path, size)]
+	if texture is None:
+		return None
+	picture = Gtk.Image.new_from_paintable(texture)
+	picture.set_pixel_size(size)
+	picture.add_css_class('photo')
+	return picture
+
+
+def device_icon(device, size):
+	"""Photo if we have one, else the device type's symbolic icon."""
+	picture = product_image(device.model.key, size)
+	if picture:
+		return picture
+	icon = Gtk.Image.new_from_icon_name(device.icon)
+	icon.set_pixel_size(size)
+	icon.add_css_class('device-icon')
+	return icon

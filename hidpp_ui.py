@@ -8,7 +8,7 @@ import features
 import headset
 import headset_ui
 import mouse
-from ui import box, device_sidebar, label, nav_button, page_header, scrolled
+from ui import box, device_icon, device_sidebar, label, nav_button, page_header, scrolled
 from worker import Worker
 
 NOTIFY_SELECTED = 'notify::selected'
@@ -47,8 +47,7 @@ class GenericView(Gtk.Box):
 		self.worker = Worker()
 		self.loading = False
 
-		icon = Gtk.Image.new_from_icon_name(device.icon)
-		icon.add_css_class('device-icon')
+		icon = device_icon(device, 32)
 		side = device_sidebar(win.show_home, icon, device.name, device.type_name)
 		self.nav = box(spacing=4)
 		self.nav_buttons = {}

@@ -2,7 +2,8 @@
 """Fetch Logitech's Blue VO!CE files from G HUB's update server (they are not in this repo).
 
   driver_audio_apo depot -> ghub_audio_driver_apo.exe -> logi_audio_dts_studio_capture_apo.dll
-  pro_headset depot      -> pro_x_headset_device_presets.json (the 22 G Pro X presets)
+  pro_headset depot      -> pro_x_headset_device_presets.json (the 22 G Pro X presets) and the
+                            headset's product image (images/<model>.png, as its manifest lists)
 
 Depots are G HUB's package format: u32 magic 0x20170110, u32 header length, a JSON header
 listing the files, then each file as a u32 length plus its bytes. The APO DLL is stored
@@ -91,6 +92,21 @@ def embedded_pe(data, pdb_name):
 	raise ValueError(f'{pdb_name} not found')
 
 
+def save_images(files, folder):
+	"""Each model's product image, named after the model, as the depot's manifest says."""
+	try:
+		manifest = json.loads(files['manifest.json'])
+	except (KeyError, ValueError):
+		return
+	os.makedirs(folder, exist_ok=True)
+	for device in manifest.get('devices', []):
+		model = re.sub(r'[^\w-]', '', device.get('modelId', ''))
+		src = next((r.get('src') for r in device.get('resources', []) if r.get('key') == 'device_image'), None)
+		if model and src in files and files[src][:8] == b'\x89PNG\r\n\x1a\n':
+			with open(os.path.join(folder, model + '.png'), 'wb') as f:
+				f.write(files[src])
+
+
 def main():
 	ap = argparse.ArgumentParser()
 	ap.add_argument('dest')
@@ -111,6 +127,7 @@ def main():
 		if name in headset_files:
 			with open(os.path.join(args.dest, 'presets', name), 'wb') as f:
 				f.write(headset_files[name])
+	save_images(headset_files, os.path.join(args.dest, 'images'))
 	print('Logitech files ready.')
 
 

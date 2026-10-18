@@ -8,7 +8,7 @@ from gi.repository import Gdk, Gtk
 import devices
 import features
 import mouse
-from ui import box, button_widget, device_sidebar, label, nav_button, page_header, scrolled
+from ui import box, button_widget, device_icon, device_sidebar, label, nav_button, page_header, scrolled
 from worker import Worker
 
 PAGES = (('sensitivity', 'Sensitivity', 'input-mouse-symbolic'),
@@ -86,8 +86,7 @@ class MouseView(Gtk.Box):
 		self.loading = False
 		self.worker = Worker()
 
-		icon = Gtk.Image.new_from_icon_name(device.icon)
-		icon.add_css_class('device-icon')
+		icon = device_icon(device, 32)
 		side = device_sidebar(win.show_home, icon, device.name, device.type_name)
 		nav = box(spacing=4)
 		self.nav_buttons = {}

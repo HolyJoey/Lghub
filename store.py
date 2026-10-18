@@ -31,6 +31,7 @@ GHUB_PRESETS = {
 }
 MODEL_NAMES = {'wired': 'G Pro X', 'wireless': 'G Pro X Wireless'}
 BRIDGE = os.path.join(DATA_DIR, 'bin', 'bluevoice-bridge')
+IMAGE_DIR = os.path.join(DATA_DIR, 'images')   # product images, from Logitech's depots
 
 DEFAULT_PRESET = 'BLUE_VOICE_PRESET_BROADCASTER_1'
 JSON_EXT = '.json'

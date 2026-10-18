@@ -18,25 +18,31 @@ import hidpp_ui  # noqa: E402
 import mouse_ui  # noqa: E402
 import webcam_ui  # noqa: E402
 from worker import Worker  # noqa: E402
-from ui import APP_DIR, CSS, box, device_sidebar, label, nav_button, page_header, scrolled  # noqa: E402
+from ui import APP_DIR, CSS, box, device_icon, device_sidebar, label, nav_button, page_header, scrolled  # noqa: E402
 
 APP_ID = 'dev.local.LghubBlueVoice'
 APP_NAME = 'Lghub'
 DISCOVER_SECONDS = 2
 RECEIVER_SCAN_SECONDS = 10
+TILE_PICTURE = 110
 
 
 # --- home: connected devices ---------------------------------------------------------------
 
-def device_tile(icon_name, name, kind, detail, on_click, icon_file=None):
+def device_tile(icon, name, kind, detail, on_click):
+	"""icon: a widget (photo or symbolic icon)."""
 	b = Gtk.Button()
 	b.add_css_class('tile')
 	inner = box(spacing=6, valign=Gtk.Align.CENTER)
-	icon = Gtk.Image.new_from_file(icon_file) if icon_file else Gtk.Image.new_from_icon_name(icon_name)
-	icon.set_pixel_size(64)
-	icon.add_css_class('tile-icon')
-	icon.set_margin_bottom(14)
-	inner.append(icon)
+	if not icon.has_css_class('photo'):
+		icon.add_css_class('tile-icon')
+		icon.set_pixel_size(64)
+	frame = box(height_request=TILE_PICTURE, margin_bottom=12)
+	icon.set_halign(Gtk.Align.CENTER)
+	icon.set_valign(Gtk.Align.CENTER)
+	icon.set_vexpand(True)
+	frame.append(icon)
+	inner.append(frame)
 	inner.append(label(name, ['tile-name'], xalign=0.5, ellipsize=Pango.EllipsizeMode.END))
 	inner.append(label(kind, ['muted', 'small'], xalign=0.5))
 	inner.append(label(detail, ['ok', 'small'], xalign=0.5))
@@ -58,9 +64,10 @@ class HomePage(Gtk.Box):
 		soft = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, column_spacing=16, row_spacing=16,
 		                   min_children_per_line=1, max_children_per_line=5, homogeneous=True)
 		icon_path = os.path.join(APP_DIR, 'lghub-bluevoice.svg')
-		soft.append(device_tile('audio-input-microphone-symbolic', bluevoice_ui.APP_TITLE, 'Virtual microphone',
-		                        'Works with any microphone', lambda: win.show_device(None),
-		                        icon_path if os.path.exists(icon_path) else None))
+		logo = Gtk.Image.new_from_file(icon_path) if os.path.exists(icon_path) else \
+			Gtk.Image.new_from_icon_name('audio-input-microphone-symbolic')
+		soft.append(device_tile(logo, bluevoice_ui.APP_TITLE, 'Virtual microphone', 'Works with any microphone',
+		                        lambda: win.show_device(None)))
 		self.append(soft)
 		self.empty = label('No Logitech devices found. Plug one in; it shows up here within a few seconds.',
 		                   ['muted'], wrap=True)
@@ -76,7 +83,7 @@ class HomePage(Gtk.Box):
 				detail = 'No wireless device switched on'
 			else:
 				detail = 'Wireless' if dev.wireless else 'Connected'
-			self.flow.append(device_tile(dev.icon, dev.name, dev.type_name, detail,
+			self.flow.append(device_tile(device_icon(dev, TILE_PICTURE), dev.name, dev.type_name, detail,
 			                             lambda d=dev: self.win.show_device(d)))
 		self.flow.set_visible(bool(found))
 		self.empty.set_visible(not found)
@@ -94,8 +101,7 @@ class DeviceView(Gtk.Box):
 	def __init__(self, win, device):
 		super().__init__(orientation=Gtk.Orientation.HORIZONTAL, vexpand=True)
 		self.device = device
-		icon = Gtk.Image.new_from_icon_name(device.icon)
-		icon.add_css_class('device-icon')
+		icon = device_icon(device, 32)
 		side = device_sidebar(win.show_home, icon, device.name, device.type_name)
 		nav = box(spacing=4)
 		overview = nav_button('Overview', 'view-grid-symbolic', lambda: None)
@@ -108,10 +114,7 @@ class DeviceView(Gtk.Box):
 		page.append(page_header(device.name, f'{device.type_name} · connected over USB'))
 
 		hero = box(Gtk.Orientation.HORIZONTAL, 20, ['card', 'hero'])
-		big = Gtk.Image.new_from_icon_name(device.icon)
-		big.set_pixel_size(72)
-		big.add_css_class('device-icon')
-		hero.append(big)
+		hero.append(device_icon(device, 72))
 		facts = box(spacing=6, hexpand=True, valign=Gtk.Align.CENTER)
 		facts.append(label(device.name, ['big-word']))
 		facts.append(label(f'USB {device.usb_id}' + (f' · serial {device.serial}' if device.serial else ''),

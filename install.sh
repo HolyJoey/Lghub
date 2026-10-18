@@ -47,7 +47,8 @@ say "Installing to $APP_DIR"
 cp "$SRC"/*.py "$SRC/lghub-bluevoice.svg" "$APP_DIR/"
 
 say "Getting Logitech's Blue VO!CE files"
-if [ -f "$APP_DIR/apo/logi_audio_dts_studio_capture_apo.dll" ] && [ ${#DEPOT_ARGS[@]} -eq 0 ]; then
+if [ -f "$APP_DIR/apo/logi_audio_dts_studio_capture_apo.dll" ] && [ -d "$APP_DIR/images" ] \
+   && [ ${#DEPOT_ARGS[@]} -eq 0 ]; then
   echo "Already present."
 else
   python3 "$APP_DIR/fetch.py" "$APP_DIR" "${DEPOT_ARGS[@]}"
