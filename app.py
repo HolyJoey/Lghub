@@ -14,13 +14,16 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango  # noqa: E402
 
 import bluevoice_ui  # noqa: E402
 import devices  # noqa: E402
+import hidpp_ui  # noqa: E402
 import mouse_ui  # noqa: E402
 import webcam_ui  # noqa: E402
+from worker import Worker  # noqa: E402
 from ui import APP_DIR, CSS, box, device_sidebar, label, nav_button, page_header, scrolled  # noqa: E402
 
 APP_ID = 'dev.local.LghubBlueVoice'
 APP_NAME = 'Lghub'
 DISCOVER_SECONDS = 2
+RECEIVER_SCAN_SECONDS = 10
 
 
 # --- home: connected devices ---------------------------------------------------------------
@@ -69,7 +72,10 @@ class HomePage(Gtk.Box):
 		while (child := self.flow.get_first_child()):
 			self.flow.remove(child)
 		for dev in found:
-			detail = 'Connected' if dev.model.type != 'receiver' else 'Paired devices: coming soon'
+			if dev.model.type == 'receiver':
+				detail = 'No wireless device switched on'
+			else:
+				detail = 'Wireless' if dev.wireless else 'Connected'
 			self.flow.append(device_tile(dev.icon, dev.name, dev.type_name, detail,
 			                             lambda d=dev: self.win.show_device(d)))
 		self.flow.set_visible(bool(found))
@@ -82,7 +88,8 @@ ZONE_NAMES = {'primary': 'Main', 'branding': 'Logo', 'combined': 'All'}
 
 
 class DeviceView(Gtk.Box):
-	"""A device without its own settings pages yet: what it is, and what G HUB offers for it."""
+	"""A receiver with nothing switched on, or a device we can't talk to: what it is, and
+	what G HUB offers for the model."""
 
 	def __init__(self, win, device):
 		super().__init__(orientation=Gtk.Orientation.HORIZONTAL, vexpand=True)
@@ -128,8 +135,12 @@ class DeviceView(Gtk.Box):
 
 		card = box(spacing=8, css=['card'])
 		card.append(label('Settings', ['section-title']))
-		card.append(label(f'Lghub recognises this {device.type_name.lower()}, but its settings page isn’t '
-		                  'built yet. It’s on the way.', ['muted'], wrap=True))
+		if device.model.type == 'receiver':
+			text = ('No wireless device on this receiver is switched on. Switch one on; it shows up on the home '
+			        'screen within a few seconds.')
+		else:
+			text = f'Lghub recognises this {device.type_name.lower()}, but can’t change its settings yet.'
+		card.append(label(text, ['muted'], wrap=True))
 		page.append(card)
 		self.append(scrolled(page))
 
@@ -167,6 +178,11 @@ class MainWindow(Adw.ApplicationWindow):
 		self.stack.add_named(self.blue_voice, 'bluevoice')
 		self.device_view = None
 		self.current = None  # the Device whose page is open (None: home, or Blue VO!CE on its own)
+		self.found = []
+		self.paired = {}       # receiver id -> devices paired to it and switched on
+		self.scanned = {}      # receiver id -> when it was last asked
+		self.scanner = Worker()
+		self.pending = start_page if start_page.startswith('device:') else None
 
 		self._discover()
 		GLib.timeout_add_seconds(DISCOVER_SECONDS, self._discover)
@@ -174,11 +190,18 @@ class MainWindow(Adw.ApplicationWindow):
 			pro_x = next((d for d in self.home.devices if devices.blue_voice_model(d)), None)
 			self.show_device(pro_x)
 			self.blue_voice.show_page(start_page)
-		elif start_page.startswith('device:'):
-			wanted = start_page.split(':', 1)[1]
-			match = next((d for d in self.home.devices if d.model.key == wanted or d.usb_id.endswith(wanted)), None)
-			if match:
-				self.show_device(match)
+		self._open_pending()
+
+	def _open_pending(self):
+		"""--page device:<model or pid>: open it once it has been found."""
+		if not self.pending:
+			return
+		wanted = self.pending.split(':', 1)[1]
+		match = next((d for d in self.home.devices if d.model.key == wanted or d.usb_id.endswith(wanted)
+		              or d.id.endswith(wanted)), None)
+		if match:
+			self.pending = None
+			self.show_device(match)
 
 	def toast(self, text):
 		self.toasts.add_toast(Adw.Toast(title=GLib.markup_escape_text(text), timeout=4))
@@ -198,23 +221,49 @@ class MainWindow(Adw.ApplicationWindow):
 			if hasattr(self.device_view, 'close'):
 				self.device_view.close()
 			self.stack.remove(self.device_view)
-		view = {'mouse': mouse_ui.MouseView, 'camera': webcam_ui.WebcamView}.get(device.model.type, DeviceView)
+		views = {'mouse': mouse_ui.MouseView, 'camera': webcam_ui.WebcamView, 'receiver': DeviceView}
+		view = views.get(device.model.type, hidpp_ui.GenericView)
 		self.device_view = view(self, device)
 		self.stack.add_named(self.device_view, 'device')
 		self.stack.set_visible_child_name('device')
 
 	def _discover(self):
-		found = devices.discover()
-		if [d.id for d in found] != [d.id for d in self.home.devices] or not self.home.devices:
-			self.home.show(found)
-		if self.current and self.current.id not in {d.id for d in found}:
+		self.found = devices.discover()
+		receivers = [d for d in self.found if d.model.type == 'receiver']
+		ids = {r.id for r in receivers}
+		for gone in set(self.paired) - ids:
+			self.paired.pop(gone)
+			self.scanned.pop(gone, None)
+		now = GLib.get_monotonic_time() / 1e6
+		for r in receivers:
+			busy = self.current is not None and self.current.id.startswith(r.id + '#')
+			if not busy and now - self.scanned.get(r.id, -1e9) >= RECEIVER_SCAN_SECONDS:
+				self.scanned[r.id] = now
+				self.scanner.submit(lambda r=r: devices.scan_receiver(r),
+				                    lambda paired, r=r: self._paired(r.id, paired), lambda _e: None)
+		self._show_devices()
+		return True
+
+	def _paired(self, receiver_id, paired):
+		if receiver_id in self.scanned:
+			self.paired[receiver_id] = paired
+			self._show_devices()
+
+	def _show_devices(self):
+		shown = []
+		for d in self.found:
+			paired = self.paired.get(d.id)
+			shown.extend(paired if paired else [d])
+		if [d.id for d in shown] != [d.id for d in self.home.devices] or not self.home.devices:
+			self.home.show(shown)
+		self._open_pending()
+		if self.current and self.current.id not in {d.id for d in shown}:
 			self.toast(f'{self.current.name} was disconnected')
 			if devices.blue_voice_model(self.current):
 				self.blue_voice.set_device(None)  # Blue VO!CE keeps working with another mic
 				self.current = None
 			else:
 				self.show_home()
-		return True
 
 
 class App(Adw.Application):

@@ -57,6 +57,7 @@ class HidrawTransport:
 	def __init__(self, path):
 		self.path = path
 		self.fd = os.open(path, os.O_RDWR | os.O_NONBLOCK)
+		self.lock = threading.Lock()   # shared by every Device on this interface
 
 	def write(self, data):
 		os.write(self.fd, bytes(data))
@@ -78,14 +79,16 @@ class HidrawTransport:
 
 
 class Device:
-	"""A HID++ 2.0 device behind a transport. Thread-safe: requests are serialised."""
+	"""A HID++ 2.0 device behind a transport. Thread-safe: requests on one interface are
+	serialised, also between the devices paired to one receiver."""
 
-	def __init__(self, transport, index=CORDED, long_reports=True):
+	def __init__(self, transport, index=CORDED, reports=(LONG,)):
 		self.transport = transport
 		self.index = index
-		self.report = LONG if long_reports else SHORT
+		self.reports = set(reports) or {LONG}
 		self._features = {ROOT: 0}
-		self._lock = threading.Lock()
+		if not hasattr(transport, 'lock'):
+			transport.lock = threading.Lock()
 
 	def close(self):
 		self.transport.close()
@@ -93,9 +96,10 @@ class Device:
 	def request(self, feature_index, function, params=b''):
 		"""Send one request and return the 16 parameter bytes of the answer."""
 		func_sw = (function << 4) | SW_ID
-		msg = bytes([self.report, self.index, feature_index, func_sw]) + bytes(params)
-		msg = msg.ljust(SIZES[self.report], b'\0')[:SIZES[self.report]]
-		with self._lock:
+		report = SHORT if SHORT in self.reports and len(params) <= SIZES[SHORT] - 4 else LONG
+		msg = bytes([report, self.index, feature_index, func_sw]) + bytes(params)
+		msg = msg.ljust(SIZES[report], b'\0')[:SIZES[report]]
+		with self.transport.lock:
 			self.transport.write(msg)
 			deadline = time.monotonic() + TIMEOUT
 			while (left := deadline - time.monotonic()) > 0:
@@ -203,7 +207,7 @@ def _descriptor_reports(desc):
 
 
 def hidraw_for(usb_port):
-	"""[(path, long reports?)] for the HID++ interfaces of a USB device (port like '3-2')."""
+	"""[(path, HID++ report ids)] for the HID++ interfaces of a USB device (port like '3-2')."""
 	found = []
 	try:
 		names = sorted(os.listdir(SYS_HIDRAW))
@@ -219,16 +223,17 @@ def hidraw_for(usb_port):
 		except OSError:
 			continue
 		if vendor and (LONG in ids or SHORT in ids):
-			found.append((f'/dev/{name}', LONG in ids))
+			found.append((f'/dev/{name}', ids & {SHORT, LONG}))
 	return found
 
 
 def open_usb(usb_port, index=CORDED):
-	"""A Device for the HID++ interface of a USB device, or raises OSError."""
+	"""A Device for the HID++ interface of a USB device, or raises OSError. Index 0xFF is a
+	corded device or the receiver itself; 1-6 a device paired to the receiver."""
 	last = OSError(errno.ENODEV, 'no HID++ interface')
-	for path, long_reports in hidraw_for(usb_port):
+	for path, reports in hidraw_for(usb_port):
 		try:
-			dev = Device(HidrawTransport(path), index, long_reports)
+			dev = Device(HidrawTransport(path), index, reports)
 		except OSError as e:
 			last = e
 			continue
@@ -238,3 +243,14 @@ def open_usb(usb_port, index=CORDED):
 		except HidppError:
 			dev.close()
 	raise last
+
+
+def open_receiver(usb_port):
+	"""(transport, reports) of a receiver's HID++ interface, to address its slots with
+	Device(transport, index, reports). Raises OSError."""
+	for path, reports in hidraw_for(usb_port):
+		try:
+			return HidrawTransport(path), reports
+		except OSError:
+			continue
+	raise OSError(errno.ENODEV, 'no HID++ interface')

@@ -42,7 +42,14 @@ Working, tested on this machine with the laptop microphone:
 - [x] Webcams (C920): every V4L2 control, grouped (picture, white balance, exposure, focus
   and zoom); saved per camera and restored by the engine on plug-in. Tested on the laptop's
   own camera (`LGHUB_FAKE_DEVICES=082d@3-4`). No live preview yet.
-- [ ] Keyboards and the rest; receivers (devices paired to LIGHTSPEED/Unifying).
+- [x] Keyboards, other headsets, speakers, POWERPLAY, mics: one page built from the HID++
+  features the device reports (0x8070 lighting zones, 0x8040 brightness, 0x8060 report rate,
+  0x8300 sidetone, 0x8100 onboard mode, battery 0x1000/0x1001/0x1004) plus its USB sound
+  card's controls. Receivers: slots 1-6 are asked who is there; paired devices get their own
+  tile and page (mouse page included). **Check on hardware**: 0x8070 effect parameter bytes
+  and the persist flag; the current effect isn't read back (the page starts at the first
+  effect). Not done: per-key lighting (0x8080/0x8081), G-keys/macros (0x8010), keyboard
+  onboard profiles, Yeti's own protocol.
 - [ ] Product images, downloaded at install time.
 
 ## Needs the headset

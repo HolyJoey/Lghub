@@ -3,6 +3,7 @@ the tests. They follow the protocol as hidpp.py and mouse.py use it; they are no
 any real device's answers."""
 import struct
 
+import features
 import hidpp
 import mouse
 
@@ -34,6 +35,8 @@ class FakeMouse:
 
 	def __init__(self, name='G502 HERO Gaming Mouse'):
 		self.device_name = name.encode()
+		if 'LIGHTSPEED' in name:
+			self.FEATURES = self.FEATURES + [features.UNIFIED_BATTERY]
 		self.memory = {mouse.ROM | 1: _profile(1, [400, 800, 1600, 3200, 6400], (0, 140, 255)),
 		               mouse.ROM | 2: _profile(2, [1200, 2400], (255, 60, 0)),
 		               mouse.ROM | 3: _profile(3, [800], (60, 255, 120))}
@@ -82,6 +85,8 @@ class FakeMouse:
 			return b'\0U1 ' + bytes([0x12, 0x02, 0x00, 0x07])
 		if feature == mouse.DPI:
 			return self._dpi(fn, p)
+		if feature == features.UNIFIED_BATTERY:
+			return bytes([72, 4, 0, 0])
 		if feature == mouse.REPORT_RATE:
 			if fn == 0:
 				return bytes([0b10001011])
@@ -138,14 +143,77 @@ class FakeMouse:
 		return b''
 
 
+class FakeKeyboard(FakeMouse):
+	"""A corded G815-like keyboard: two lighting zones, brightness, report rate, onboard mode."""
+	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, features.COLOR_LED_EFFECTS,
+	            features.BRIGHTNESS, mouse.REPORT_RATE, mouse.ONBOARD, 0x8010, 0x8020, 0x4522]
+	ZONE_EFFECTS = [features.FIXED, features.BREATHING, features.CYCLE, 0x0008, 0x0000]
+
+	def __init__(self):
+		super().__init__('G815 RGB MECHANICAL GAMING KEYBOARD')
+		self.effects = {0: (0, b''), 1: (1, b'')}
+		self.level = 80
+
+	def handle(self, feature, fn, p):
+		if feature == hidpp.NAME and fn == 2:
+			return bytes([0])
+		if feature == features.COLOR_LED_EFFECTS:
+			if fn == 0:
+				return bytes([2])
+			if fn == 1:
+				return bytes([p[0]]) + struct.pack('>H', 1 if p[0] == 0 else 2) + bytes([len(self.ZONE_EFFECTS)])
+			if fn == 2:
+				return bytes([p[0], p[1]]) + struct.pack('>H', self.ZONE_EFFECTS[p[1]])
+			self.effects[p[0]] = (p[1], bytes(p[2:12]))
+			return b''
+		if feature == features.BRIGHTNESS:
+			if fn == 0:
+				return struct.pack('>HB', 100, 10)
+			if fn == 1:
+				return struct.pack('>H', self.level)
+			self.level = struct.unpack('>H', p[:2])[0]
+			return b''
+		return super().handle(feature, fn, p)
+
+
+class FakeReceiver:
+	"""A LIGHTSPEED receiver with one wireless G502 in slot 1; empty slots answer like a
+	receiver does (HID++ 1.0 error)."""
+
+	def __init__(self):
+		self.slots = {1: FakeMouse('G502 LIGHTSPEED Wireless Gaming Mouse')}
+		self.outbox = []
+
+	def write(self, msg):
+		slot = self.slots.get(msg[1])
+		if slot:
+			slot.write(msg)
+			self.outbox.extend(slot.outbox)
+			slot.outbox.clear()
+		else:
+			self.outbox.append(bytes([hidpp.SHORT, msg[1], 0x8F, msg[2], msg[3], 0x08, 0]))
+
+	def read(self, _timeout):
+		return self.outbox.pop(0) if self.outbox else None
+
+	def close(self):
+		pass
+
+
+MICE = ('c08b', 'c08d', 'c332', 'c07d', 'c084', 'c092')
+KEYBOARDS = ('c33f', 'c339', 'c33c', 'c343', 'c33e')
+RECEIVERS = ('c539', 'c53a', 'c53f', 'c541', 'c545', 'c547', 'c548', 'c52b')
 _FAKES = {}
 
 
-def device_for(usb_id, port):
-	"""A simulated hidpp.Device for a faked USB device, or None. One per port, kept for the
+def transport_for(usb_id, port):
+	"""A simulated HID++ interface for a faked USB device, or None. One per port, kept for the
 	app's lifetime so changes stick while it runs."""
-	if usb_id.split(':')[1] not in ('c08b', 'c08d', 'c332', 'c07d', 'c084', 'c092'):
+	pid = usb_id.split(':')[1]
+	kinds = {**dict.fromkeys(MICE, FakeMouse), **dict.fromkeys(KEYBOARDS, FakeKeyboard),
+	         **dict.fromkeys(RECEIVERS, FakeReceiver)}
+	if pid not in kinds:
 		return None
 	if port not in _FAKES:
-		_FAKES[port] = hidpp.Device(FakeMouse())
+		_FAKES[port] = kinds[pid]()
 	return _FAKES[port]

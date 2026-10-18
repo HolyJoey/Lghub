@@ -131,10 +131,19 @@ class Model:
 
 @dataclass(frozen=True)
 class Device:
-	id: str          # stable while connected: the USB port path, e.g. usb:3-2
-	usb_id: str      # vid:pid
+	id: str          # stable while connected: usb:<port>, or usb:<port>#<slot> behind a receiver
+	usb_id: str      # vid:pid (of the receiver, for a paired device)
 	model: Model
 	serial: str = ''
+	index: int = 0xFF   # HID++ device index: 0xFF corded, 1-6 paired to a receiver
+
+	@property
+	def port(self):
+		return self.id.split(':', 1)[1].split('#')[0]
+
+	@property
+	def wireless(self):
+		return self.index != 0xFF
 
 	@property
 	def name(self):
@@ -211,17 +220,56 @@ def discover():
 	return devices
 
 
-def open_hidpp(device, index=None):
-	"""A hidpp.Device for a connected (or simulated) device; raises OSError if there is none."""
+def _transport(device):
+	"""(transport, report ids) for the HID++ interface a device is reached through."""
 	import hidpp
 	import simulate
-	port = device.id.split(':', 1)[1]
-	if port.startswith('fake') or os.environ.get(FAKE_ENV):
-		dev = simulate.device_for(device.usb_id, port)
-		if dev is None:
+	if device.port.startswith('fake') or os.environ.get(FAKE_ENV):
+		transport = simulate.transport_for(device.usb_id, device.port)
+		if transport is None:
 			raise OSError('no simulated HID++ device for this model')
-		return dev
-	return hidpp.open_usb(port, hidpp.CORDED if index is None else index)
+		return transport, {hidpp.LONG}
+	return hidpp.open_receiver(device.port)
+
+
+def open_hidpp(device):
+	"""A hidpp.Device for a connected (or simulated) device; raises OSError if there is none."""
+	import hidpp
+	if device.port.startswith('fake') or os.environ.get(FAKE_ENV):
+		transport, reports = _transport(device)
+		return hidpp.Device(transport, device.index, reports)
+	return hidpp.open_usb(device.port, device.index)
+
+
+KIND_TYPES = {'mouse': 'mouse', 'trackball': 'mouse', 'touchpad': 'mouse', 'keyboard': 'keyboard',
+              'numpad': 'keyboard', 'headset': 'headset', 'speaker': 'speaker', 'microphone': 'microphone'}
+
+
+def match_model(name, kind):
+	"""The catalog model whose name appears in a device's own name (longest wins)."""
+	dev_type = KIND_TYPES.get(kind, 'other')
+	text = name.upper()
+	best = None
+	for m in MODELS:
+		if m.name.upper() in text and (m.type == dev_type or dev_type == 'other'):
+			if best is None or len(m.name) > len(best.name):
+				best = m
+	return best or Model('unknown', name or 'Wireless device', dev_type, (), (), ())
+
+
+def scan_receiver(receiver):
+	"""Devices paired to a receiver and switched on, as Device entries. Talks to the receiver;
+	call from a worker thread."""
+	import features
+	import hidpp
+	transport, reports = _transport(receiver)
+	try:
+		paired = features.paired_devices(lambda index: hidpp.Device(transport, index, reports))
+	finally:
+		if not receiver.port.startswith('fake') and not os.environ.get(FAKE_ENV):
+			transport.close()
+	return [Device(f'{receiver.id}#{p.index}', receiver.usb_id, match_model(p.name, p.kind), receiver.serial, p.index)
+	        for p in paired]
 
 
 def blue_voice_model(device):

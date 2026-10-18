@@ -6,6 +6,7 @@ keeps working without Lghub running (like G HUB's on-board memory mode).
 from gi.repository import Gdk, Gtk
 
 import devices
+import features
 import mouse
 from ui import box, button_widget, device_sidebar, label, nav_button, page_header, scrolled
 from worker import Worker
@@ -140,7 +141,7 @@ class MouseView(Gtk.Box):
 
 	def _connect(self):
 		m = mouse.Mouse(devices.open_hidpp(self.device), self.device.serial or self.device.id)
-		state = {}
+		state = {'battery': features.battery(m.dev)}
 		if m.onboard:
 			m.load_profiles()
 			state['mode'] = m.mode()
@@ -198,14 +199,20 @@ class MouseView(Gtk.Box):
 		self.changed()
 
 	def _side(self):
+		battery = self.state.get('battery')
+		power = ''
+		if battery:
+			percent, text = battery
+			power = ' · '.join(filter(None, (f'Battery {percent} %' if percent is not None else '', text))) + '\n'
 		if not self.mouse.onboard:
 			self.side_profile.set_text('Live')
-			self.side_detail.set_text('This mouse has no onboard memory; settings apply until it is unplugged.')
+			self.side_detail.set_text(power + 'This mouse has no onboard memory; settings apply until it is '
+			                          'switched off.')
 			return
 		active = next((p for p in self.profiles if p.number == self.active), None)
 		self.side_profile.set_text(active.name if active else '—')
 		mode = 'On-board memory' if self.state.get('mode') == mouse.MODE_ONBOARD else 'Software mode'
-		self.side_detail.set_text(f'{mode} · {self.mouse.firmware}' if self.mouse.firmware else mode)
+		self.side_detail.set_text(power + (f'{mode} · {self.mouse.firmware}' if self.mouse.firmware else mode))
 
 	def _profile_picker(self, page):
 		"""'Editing: <profile>' at the top of the pages that edit a profile."""
