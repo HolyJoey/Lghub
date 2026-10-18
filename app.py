@@ -702,13 +702,17 @@ class MainWindow(Adw.ApplicationWindow):
 			'starting': ('Starting', '● Starting', 'warn'),
 			'error': ('Problem', '● Error', 'err'),
 		}.get(state, ('Off', '● Stopped', 'muted'))
-		if state == 'running' and not status.get('enabled', True):
+		if state == 'running' and not status.get('listening', True):
+			word = 'Standby'
+		elif state == 'running' and not status.get('enabled', True):
 			word = 'Bypassed'
 		self.side_state.set_text(word)
 		self.conn_label.set_text(dot)
 		self.conn_label.add_css_class(css)
 		inp = status.get('input')
-		if state == 'running':
+		if state == 'running' and not status.get('listening', True):
+			self.side_input.set_text('Ready. Your microphone opens when an app uses Blue VO!CE.')
+		elif state == 'running':
 			self.side_input.set_text(f"From {inp['description']}" if inp else 'Waiting for a microphone')
 		elif state == 'error':
 			self.side_input.set_text(status.get('error', ''))

@@ -16,7 +16,8 @@ import pw
 import store
 
 POLL = 0.25          # config / status interval, seconds
-LINK_EVERY = 2.0     # link check interval, seconds
+LINK_EVERY = 2.0     # link check interval, seconds (link events also trigger a check at once)
+IDLE_GRACE = 5.0     # release the real mic this long after the last app stops recording
 MAX_BACKOFF = 30.0
 
 
@@ -40,6 +41,9 @@ class Engine:
 		self.input = None
 		self.defaulted = False
 		self.last_link_check = 0.0
+		self.listening = False       # some app records from the virtual mic
+		self.last_listener = 0.0
+		self.link_event = threading.Event()
 
 	# --- configuration -------------------------------------------------------------------
 
@@ -133,17 +137,42 @@ class Engine:
 			except subprocess.TimeoutExpired:
 				os.killpg(self.proc.pid, signal.SIGKILL)
 		self.proc = None
+		# Wine leaves wineserver and winedevice running; without this, stopping the service
+		# waits for systemd's timeout.
+		subprocess.run(['wineserver', '-k'], env=dict(os.environ, WINEPREFIX=store.WINE_PREFIX),
+		               capture_output=True, timeout=10)
 
 	# --- links ---------------------------------------------------------------------------
 
+	def watch_links(self):
+		"""Wake the main loop whenever an app starts or stops recording from the virtual mic."""
+		while not self.stop.is_set():
+			try:
+				mon = subprocess.Popen(['pw-link', '-m', '-l'], stdout=subprocess.PIPE, text=True)
+			except OSError:
+				return
+			for line in mon.stdout:
+				if self.stop.is_set():
+					break
+				if line[:1] in '+-' and pw.VIRTUAL_MIC + ':' in line:
+					self.link_event.set()
+			mon.kill()
+			self.stop.wait(2)
+
 	def check_links(self):
+		"""Virtual mic always fed by the DSP; the real mic only linked while some app listens,
+		so it isn't kept open (and its in-use indicator lit) for nothing."""
 		objs = pw.dump()
 		self.input = pw.pick_input(self.config.get('input', 'auto'), objs)
 		dsp_in, dsp_out = f'{pw.DSP}:in', f'{pw.DSP}:out'
 		mic_in = next((n for _, _, n in pw.ports(pw.VIRTUAL_MIC, 'in', objs)), None)
 		if not pw.node_id(pw.DSP, objs) or not mic_in:
 			return  # bridge still starting
-		want = pw.capture_port(self.input['name'], objs) if self.input else None
+		now = time.monotonic()
+		if pw.links_out_of(pw.VIRTUAL_MIC, objs):
+			self.last_listener = now
+		self.listening = now - self.last_listener < IDLE_GRACE
+		want = pw.capture_port(self.input['name'], objs) if self.input and self.listening else None
 		for port in pw.links_into(dsp_in, objs):
 			if port != want:
 				pw.unlink(port, dsp_in)
@@ -165,8 +194,9 @@ class Engine:
 			'error': self.last_error,
 			'enabled': self.config.get('enabled', True),
 			'input': self.input,
-			'meter_in': self.meter[0] if self.ready else -120.0,
-			'meter_out': self.meter[1] if self.ready else -120.0,
+			'listening': self.listening,
+			'meter_in': self.meter[0] if self.ready and self.listening else -120.0,
+			'meter_out': self.meter[1] if self.ready and self.listening else -120.0,
 			'pid': os.getpid(),
 			'updated': time.time(),
 		})
@@ -174,15 +204,20 @@ class Engine:
 	def run(self):
 		signal.signal(signal.SIGTERM, lambda *_: self.stop.set())
 		signal.signal(signal.SIGINT, lambda *_: self.stop.set())
+		threading.Thread(target=self.watch_links, daemon=True).start()
 		while not self.stop.is_set():
 			self.reload_config()
 			self.check_bridge()
 			now = time.monotonic()
-			if self.proc and now - self.last_link_check >= LINK_EVERY:
+			due = now - self.last_link_check >= LINK_EVERY
+			if self.proc and (due or self.link_event.is_set()):
+				self.link_event.clear()
 				self.last_link_check = now
 				self.check_links()
 			self.publish()
-			self.stop.wait(POLL)
+			if not self.proc:
+				self.link_event.clear()  # nothing to relink until the bridge is back
+			self.link_event.wait(POLL)
 		self.stop_bridge()
 		store.write_status({'state': 'stopped', 'error': '', 'updated': time.time()})
 

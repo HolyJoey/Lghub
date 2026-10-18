@@ -174,7 +174,7 @@ int main(int argc, char **argv)
     struct pw_properties *mic = pw_properties_new(
         "factory.name", "support.null-audio-sink", PW_KEY_NODE_NAME, "bluevoice_mic",
         PW_KEY_NODE_DESCRIPTION, "Blue VO!CE Microphone", PW_KEY_MEDIA_CLASS, "Audio/Source/Virtual",
-        "audio.position", "[ MONO ]", "audio.rate", "48000", NULL);
+        "audio.position", "[ MONO ]", "audio.rate", "48000", PW_KEY_NODE_GROUP, "bluevoice", NULL);
     b->virtual_mic = pw_core_create_object(b->core, "adapter", PW_TYPE_INTERFACE_Node, PW_VERSION_NODE,
                                            &mic->dict, 0);
     pw_properties_free(mic);
@@ -183,7 +183,8 @@ int main(int argc, char **argv)
         pw_properties_new(PW_KEY_MEDIA_TYPE, "Audio", PW_KEY_MEDIA_CATEGORY, "Filter",
                           PW_KEY_MEDIA_ROLE, "DSP", PW_KEY_NODE_NAME, "bluevoice_dsp",
                           PW_KEY_NODE_DESCRIPTION, "Blue VO!CE processing", PW_KEY_APP_NAME, "Blue VO!CE",
-                          PW_KEY_NODE_LATENCY, "480/48000", PW_KEY_NODE_AUTOCONNECT, "false", NULL),
+                          PW_KEY_NODE_LATENCY, "480/48000", PW_KEY_NODE_AUTOCONNECT, "false",
+                          PW_KEY_NODE_GROUP, "bluevoice", NULL),
         &filter_events, b);
     b->in_port = pw_filter_add_port(b->filter, PW_DIRECTION_INPUT, PW_FILTER_PORT_FLAG_MAP_BUFFERS,
         sizeof(struct port), pw_properties_new(PW_KEY_FORMAT_DSP, "32 bit float mono audio",
