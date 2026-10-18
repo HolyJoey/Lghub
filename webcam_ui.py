@@ -82,9 +82,11 @@ class WebcamView(Gtk.Box):
 		self.preview_switch = Gtk.Switch(active=os.environ.get('LGHUB_PREVIEW') != '0', valign=Gtk.Align.CENTER)
 		self.preview_switch.connect('notify::active', lambda w, _p: self._start_preview() if w.get_active()
 		                            else self._stop_preview())
+		self.preview_switch.connect('notify::active', lambda w, _p: self.picture.set_visible(w.get_active()))
 		head.append(self.preview_switch)
 		c.append(head)
-		self.picture = Gtk.Picture(content_fit=Gtk.ContentFit.CONTAIN, height_request=PREVIEW_HEIGHT)
+		self.picture = Gtk.Picture(content_fit=Gtk.ContentFit.CONTAIN, height_request=PREVIEW_HEIGHT,
+		                           visible=self.preview_switch.get_active())
 		c.append(self.picture)
 		self.preview_note = label('', ['muted', 'small'], wrap=True)
 		c.append(self.preview_note)
