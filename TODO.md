@@ -18,7 +18,13 @@
   virtual source "Blue VO!CE Microphone". The node appears in PipeWire.
 
 **Broken / unfinished**
-1. **Bridge live test fails** — recording from `bluevoice_mic` gets no audio and the source never
+1. ~~**Bridge live test fails**~~ — FIXED 2026-10-18: rewrote the bridge as a `pw_filter`
+   (plain DSP ports) + a bridge-owned null-audio node as the virtual mic, linked with pw-link;
+   and the host now runs with `WINEDLLOVERRIDES=winepulse.drv,winealsa.drv,wineoss.drv=d`
+   (the APO's device enumeration hung inside Wine's audio drivers). Live test: speech in →
+   processed speech out of "Blue VO!CE Microphone", no drops, underruns only in the first 30 ms.
+   (Stream-based virtual sources can't be recorded from on this PipeWire 1.4.2 / WirePlumber
+   setup — even pw-loopback's fail with "no more input formats".) Original notes: — recording from `bluevoice_mic` gets no audio and the source never
    reaches "streaming". Likely causes, in order:
    - stale nodes from earlier test runs were still registered (duplicate `bluevoice_mic`);
      re-test after a clean start (`wineserver -k`, no leftover bridge/host processes)
