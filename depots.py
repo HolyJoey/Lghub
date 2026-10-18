@@ -207,6 +207,36 @@ def fetch_picture(model):
 	return None
 
 
+def metadata_path(model):
+	return os.path.join(store.IMAGE_DIR, f'{model}.metadata.json')
+
+
+def fetch_metadata(model):
+	"""Path of the model's metadata.json (G HUB's picture layout: key and button positions on the
+	product picture, lighting zones), downloading it if needed; None if there is none. Blocks."""
+	path = metadata_path(model)
+	if os.path.exists(path):
+		return path
+	if model not in DEPOTS:
+		return None
+	url = SERVER + DEPOTS[model]
+	try:
+		files = _files(url)
+		name = next((n for n in files if n.split('/')[-1].lower().startswith('metadata') and n.endswith('.json')), None)
+		if not name:
+			return None
+		data = _get(url, *files[name])
+		json.loads(data)
+	except (OSError, ValueError, KeyError, struct.error) as e:
+		print(f'lghub: no layout for {model}: {e}', flush=True)
+		return None
+	os.makedirs(store.IMAGE_DIR, exist_ok=True)
+	with open(path + '.tmp', 'wb') as f:
+		f.write(data)
+	os.replace(path + '.tmp', path)
+	return path
+
+
 # Headsets whose Blue VO!CE presets come from their depot at first sight (the G Pro X ones come
 # with the installer): model -> (file in the depot, preset set in store.GHUB_PRESETS).
 PRESET_FILES = {'g733': ('device_presets.json', 'g733')}

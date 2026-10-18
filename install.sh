@@ -114,11 +114,15 @@ echo "Running. A new input device, 'Blue VO!CE Microphone', appears in a few sec
 
 say "Done"
 echo "Open 'Lghub' from your menu, or run: lghub"
-if [ ! -f /etc/udev/rules.d/70-lghub.rules ]; then
-  echo
-  echo "Mice and keyboards need one udev rule (the only step that needs root):"
-  echo "  echo 'SUBSYSTEM==\"hidraw\", ATTRS{idVendor}==\"046d\", TAG+=\"uaccess\"' | sudo tee /etc/udev/rules.d/70-lghub.rules"
-  echo "  sudo udevadm control --reload && sudo udevadm trigger"
+if ! grep -qs uinput /etc/udev/rules.d/70-lghub.rules; then
+  cat <<'RULES'
+
+Mice, keyboards and macros need a udev rule (the only step that needs root):
+  printf '%s\n' 'SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", TAG+="uaccess"' \
+    'KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"' \
+    | sudo tee /etc/udev/rules.d/70-lghub.rules
+  sudo udevadm control --reload && sudo udevadm trigger
+RULES
 fi
 case ":$PATH:" in
   *":$BIN_DIR:"*) ;;

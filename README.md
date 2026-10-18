@@ -50,6 +50,10 @@ battery on headsets that have them.
 
 DPI levels (and the default and DPI-shift level), report rate, what every button does
 (including keystrokes and a G-Shift layer), lighting, and the profiles stored in the mouse.
+**Macros** like G HUB's: keystrokes, text, media and system actions, apps, web pages and
+recorded sequences (once, while held, or on/off), put on any button but the left one. They
+run in the background service, the same way G HUB does it (HID++ 0x8110: only buttons with a
+macro stop clicking by themselves).
 Like G HUB's on-board memory mode, everything is saved *in the mouse*, so it keeps working on
 any computer and nothing has to run in the background. Before the first change, the mouse's
 memory is backed up to `~/.local/share/lghub-bluevoice/backups/`.
@@ -63,7 +67,8 @@ Wireless mice also show their battery.
 ## Keyboards and the rest
 
 Keyboards, other headsets, the G560 speakers, POWERPLAY and anything else Logitech: Lghub
-asks the device what it can do and shows that. Lighting zones and effects, brightness, report
+asks the device what it can do and shows that. Keyboards also get macros on their G-keys and a
+per-key lighting page drawn from G HUB's own key layout. Lighting zones and effects, brightness, report
 rate, sidetone, on-board memory and battery. Devices with a USB sound card (headsets,
 speakers, Yeti mics) also get its controls.
 
@@ -100,11 +105,13 @@ repo), checks the hashes, builds the helpers, adds a menu entry and starts a use
 app fetches its product picture from the same server (and, for the G733, its Blue VO!CE
 presets): just those files, a few hundred KB.
 
-Mice and keyboards need permission to talk to the device. One udev rule does it; this is the
-only step that needs root:
+Mice and keyboards need permission to talk to the device, and macros to type. One udev rule
+file does both; this is the only step that needs root:
 
 ```bash
-echo 'SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", TAG+="uaccess"' | sudo tee /etc/udev/rules.d/70-lghub.rules
+printf '%s\n' 'SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", TAG+="uaccess"' \
+  'KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"' \
+  | sudo tee /etc/udev/rules.d/70-lghub.rules
 sudo udevadm control --reload && sudo udevadm trigger
 ```
 
@@ -165,7 +172,8 @@ simulator. The webcam screenshot is a real camera.
 
 ## Not there yet
 
-- Per-key lighting, G-key macros, and keyboard onboard profiles.
+- Per-key lighting is drawn and saved, but not sent to the keyboard yet; keyboard onboard
+  profiles; Blue VO!CE 2 (Yeti mics, G735, PRO X 2); Yeti controls.
 - Most devices here have only met the simulator. If something doesn't work on yours, open an
   issue with `journalctl --user -u lghub-bluevoice` and what the device's page says.
 

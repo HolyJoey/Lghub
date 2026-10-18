@@ -13,6 +13,7 @@ import threading
 import time
 
 import eq
+import inputd
 import hotplug
 import presets
 import pw
@@ -51,6 +52,7 @@ class Engine:
 		self.webcams = webcam.Restorer()
 		self.surround = surround.Runner()
 		self.sound_cards = hotplug.Watch(hotplug.SOUND)
+		self.inputs = inputd.Manager()
 
 	# --- configuration -------------------------------------------------------------------
 
@@ -250,8 +252,11 @@ class Engine:
 				self.surround.check(objs)
 			if self.webcams.due():
 				self.webcams.check()
+			if self.inputs.due():
+				self.inputs.check()
 			self.link_event.wait(POLL if self.listening else IDLE_POLL)
 		self.stop_bridge()
+		self.inputs.stop()
 		self.surround.stop()
 		self.eq.stop()
 		store.write_status({'state': 'stopped', 'error': '', 'updated': time.time()})

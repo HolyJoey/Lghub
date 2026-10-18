@@ -36,10 +36,11 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 
 ## Not done
 
-- Macros and button remaps (in progress): `uinput.py` (virtual keyboard/mouse) and `macros.py`
-  (G HUB's macro format: keystroke, text, mouse, media, system, app, web page, audio, sequences)
-  are done and tested; the triggers (0x8110 MouseButtonSpy, 0x8010 G-keys, 0x1B04 divert) and
-  the UI wait on G HUB's agent code (re/ghub, Ghidra).
+- [x] Macros: `macros.py` (G HUB's macro format), `uinput.py`, `inputd.py` (0x8110 for mice and
+  0x8010 for G-keys, exactly as G HUB's agent drives them: remap entry 0 = handled in software,
+  big-endian button mask), Macros page with recorder and "On buttons". **Check on the G502**:
+  that 0x8110 is there and buttons behave; G-key bit order (G1 = bit 0 of the first byte) on a
+  keyboard. Not done: DPI/profile macro actions (device_action), 0x1B04 divert for newer mice.
 - Per-key lighting (0x8080/0x8081): key layout from G HUB's metadata.json; protocol from the agent.
 - Keyboard onboard profiles: G HUB's onboard_profiles.proto extracted; format from the agent.
 - Yeti: polar pattern, monitor mix, LED meter; protocol from the agent.

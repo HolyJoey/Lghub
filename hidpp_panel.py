@@ -59,6 +59,13 @@ class SettingsPanel(Gtk.Box):
 	def close(self):
 		self.worker.stop()
 
+	def apply_perkey(self, colors):
+		"""Per-key colours ({"group:id": [r, g, b]}) to the device, if it has per-key lighting."""
+		import perkey
+		dev = self.dev
+		if dev is not None:
+			self._do(lambda: perkey.apply(dev, colors))
+
 	# --- talking to the device ------------------------------------------------------------
 
 	def _connect(self):

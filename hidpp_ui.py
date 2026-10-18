@@ -4,6 +4,8 @@ from gi.repository import Gtk
 
 import headset
 import headset_ui
+import macros_ui
+import perkey_ui
 from hidpp_panel import SettingsPanel
 from ui import box, device_icon, device_sidebar, label, nav_button, page_header, scrolled
 
@@ -35,6 +37,16 @@ class GenericView(Gtk.Box):
 		page.append(self.panel)
 		self.stack.add_named(scrolled(page), 'settings')
 		self._add_nav('settings', 'Settings', 'emblem-system-symbolic')
+		if device.model.type == 'keyboard':
+			if perkey_ui.load_layout(device.model.key):
+				self.perkey = perkey_ui.PerKeyPage(win, device, self._apply_perkey)
+				self.stack.add_named(scrolled(self.perkey), 'perkey')
+				self._add_nav('perkey', 'Per-key lighting', 'input-keyboard-symbolic')
+			gkeys = perkey_ui.gkey_count(device.model.key) or 0
+			self.stack.add_named(scrolled(macros_ui.MacrosPage(win, device, [(f'gkey:{i}', f'G{i}')
+			                                                                  for i in range(1, gkeys + 1)])),
+			                     'macros')
+			self._add_nav('macros', 'Macros', 'media-record-symbolic')
 		self.audio = None
 		if not device.wireless and headset.alsa_card(device.port) is not None:
 			self.audio = headset_ui.HeadsetPage(win, hidpp=False)
@@ -48,6 +60,10 @@ class GenericView(Gtk.Box):
 		self.panel.close()
 		if self.audio:
 			self.audio.close()
+
+	def _apply_perkey(self, colors):
+		"""Send per-key colours to the keyboard (HID++ 0x8081; see perkey.py)."""
+		self.panel.apply_perkey(colors)
 
 	def _status(self, title, detail):
 		self.side_title.set_text(title)

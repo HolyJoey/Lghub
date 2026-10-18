@@ -31,7 +31,7 @@ def _profile(number, dpis, color):
 class FakeMouse:
 	"""A corded G502 HERO-like mouse with factory profiles only (empty user memory)."""
 	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, mouse.DPI,
-	            mouse.REPORT_RATE, mouse.ONBOARD]
+	            mouse.REPORT_RATE, mouse.ONBOARD, 0x8110]
 	KIND = 3   # mouse
 
 	def __init__(self, name='G502 HERO Gaming Mouse'):
@@ -44,6 +44,8 @@ class FakeMouse:
 		self.mode, self.profile, self.dpi_slot, self.dpi, self.rate_ms = 1, 1, 1, 800, 1
 		self.write_at = None
 		self.outbox = []
+		self.spying = False
+		self.remap = bytes(range(1, 17))      # each button outputs its own HID button
 
 	# transport interface
 	def write(self, msg):
@@ -67,8 +69,27 @@ class FakeMouse:
 	def handle(self, feature, fn, p):
 		handlers = {hidpp.ROOT: self._root, hidpp.FEATURE_SET: self._feature_set, hidpp.NAME: self._name,
 		            hidpp.FIRMWARE: self._firmware, mouse.DPI: self._dpi, mouse.REPORT_RATE: self._rate,
-		            features.UNIFIED_BATTERY: lambda _fn, _p: bytes([72, 4, 0, 0]), mouse.ONBOARD: self._onboard}
+		            features.UNIFIED_BATTERY: lambda _fn, _p: bytes([72, 4, 0, 0]), mouse.ONBOARD: self._onboard,
+		            0x8110: self._spy}
 		return handlers[feature](fn, p)
+
+	def _spy(self, fn, p):
+		"""0x8110 MouseButtonSpy as G HUB drives it: 0 count, 1 start, 2 stop, 3/4 get/set remap."""
+		if fn == 0:
+			return bytes([11])
+		if fn in (1, 2):
+			self.spying = fn == 1
+			return b''
+		if fn == 3:
+			return self.remap
+		self.remap = bytes(p[:16])
+		return b''
+
+	def press(self, mask):
+		"""Simulate the buttons in mask being held (a 0x8110 event while spying)."""
+		if self.spying:
+			idx = self.FEATURES.index(0x8110)
+			self.outbox.append(bytes([hidpp.LONG, 0xFF, idx, 0x00]) + struct.pack('>H', mask).ljust(16, b'\0'))
 
 	def _root(self, fn, p):
 		if fn == 0:

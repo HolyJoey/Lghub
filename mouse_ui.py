@@ -7,6 +7,7 @@ from gi.repository import Gdk, Gtk
 
 import devices
 import features
+import macros_ui
 import mouse
 from ui import box, button_widget, device_icon, device_sidebar, label, nav_button, page_header, scrolled
 from worker import Worker
@@ -14,7 +15,8 @@ from worker import Worker
 PAGES = (('sensitivity', 'Sensitivity', 'input-mouse-symbolic'),
          ('buttons', 'Buttons', 'input-keyboard-symbolic'),
          ('lighting', 'Lighting', 'weather-clear-symbolic'),
-         ('profiles', 'Profiles', 'view-list-symbolic'))
+         ('profiles', 'Profiles', 'view-list-symbolic'),
+         ('macros', 'Macros', 'media-record-symbolic'))
 BUTTON_NAMES = ('Left button', 'Right button', 'Middle button (wheel click)', 'Back', 'Forward')
 ZONE_NAMES = {'primary': 'DPI indicator / main', 'branding': 'Logo'}
 NOTIFY_SELECTED = 'notify::selected'
@@ -118,7 +120,12 @@ class MouseView(Gtk.Box):
 		self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE, vexpand=True)
 		self.pages = {}
 		for key, _text, _icon in PAGES:
-			page = box(spacing=20, css=['page'])
+			if key == 'macros':
+				page = macros_ui.MacrosPage(win, device, [(f'button:{i + 1}', BUTTON_NAMES[i] if i < len(BUTTON_NAMES)
+				                                           else f'Button {i + 1}') for i in range(1, 11)])
+				# not the left button: the mouse must always keep a primary click
+			else:
+				page = box(spacing=20, css=['page'])
 			self.pages[key] = page
 			self.stack.add_named(scrolled(page), key)
 		message = box(spacing=12, css=['page'])

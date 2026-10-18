@@ -112,6 +112,20 @@ class Device:
 					return bytes(reply[4:]).ljust(16, b'\0')
 		raise NoReply()
 
+	def next_event(self, timeout):
+		"""(feature index, event number, 16 parameter bytes) of the next notification from the
+		device (software id 0), or None after timeout seconds. Use from one thread at a time."""
+		deadline = time.monotonic() + timeout
+		while (left := deadline - time.monotonic()) > 0:
+			with self.transport.lock:
+				report = self.transport.read(left)
+			if not report or len(report) < 4 or report[0] not in SIZES or report[1] != self.index:
+				continue
+			if report[2] in (0xFF, 0x8F) or report[3] & 0x0F:
+				continue   # an error or an answer to a request, not a notification
+			return report[2], report[3] >> 4, bytes(report[4:]).ljust(16, b'\0')
+		return None
+
 	def feature_index(self, feature_id):
 		"""The device's index for a feature, or None if it doesn't have it (cached)."""
 		if feature_id not in self._features:

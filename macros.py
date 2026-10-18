@@ -295,3 +295,64 @@ def _spawn(cmd):
 		                 start_new_session=True)
 	except OSError:
 		pass   # a missing program: nothing to run
+
+
+# --- the macro library ---------------------------------------------------------------------
+
+import os  # noqa: E402
+
+import store  # noqa: E402
+
+LIBRARY_FILE = os.path.join(store.CONFIG_DIR, 'macros.json')
+ASSIGNMENTS_FILE = os.path.join(store.CONFIG_DIR, 'assignments.json')
+
+
+def library():
+	"""{id: macro} of the user's macros."""
+	return store._read_json(LIBRARY_FILE, {})
+
+
+def save_library(macros):
+	store._write_json(LIBRARY_FILE, macros)
+
+
+def new_id(existing):
+	n = 1
+	while f'm{n}' in existing:
+		n += 1
+	return f'm{n}'
+
+
+def assignments():
+	"""{device ident: {button: macro id}}."""
+	return store._read_json(ASSIGNMENTS_FILE, {})
+
+
+def save_assignments(data):
+	store._write_json(ASSIGNMENTS_FILE, data)
+
+
+def recorded_sequence(events, keep_delays=True, mode='once'):
+	"""A SEQUENCE macro from recorded (usage, is_down, seconds) key events. mode: 'once',
+	'held' (repeats while the button is held) or 'toggle' (starts and stops on presses)."""
+	components, last = [], None
+	for usage, down, t in events:
+		if keep_delays and last is not None and t > last:
+			components.append({'delay': {'duration_ms': round((t - last) * 1000)}})
+		components.append({'keyboard': {'hid_usage': usage, 'is_down': down}})
+		last = t
+	return sequence_macro(components, keep_delays, mode)
+
+
+def sequence_components(macro):
+	seq = macro.get('sequence', {})
+	return (seq.get('simple_sequence') or seq.get('toggle_sequence') or {}).get('components', [])
+
+
+def sequence_macro(components, keep_delays=True, mode='once'):
+	"""A SEQUENCE macro playing components once, while held ('held') or on/off ('toggle')."""
+	part = {'components': components, 'interruptible': True}
+	seq = {'use_simple_actions': mode != 'toggle', 'use_toggle_actions': mode == 'toggle',
+	       'use_repeat_actions': mode == 'held', 'use_default_delay': not keep_delays, 'default_delay': 50}
+	seq['toggle_sequence' if mode == 'toggle' else 'simple_sequence'] = part
+	return {'type': 'SEQUENCE', 'sequence': seq}
