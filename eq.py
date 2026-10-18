@@ -19,7 +19,7 @@ OWN_NODES = (SINK, 'lghub_surround', pw.VIRTUAL_MIC)   # ours, never a target
 OUT = 'lghub_eq_out'
 BANDS = (32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000)
 Q = 1.41                 # about one octave per band
-CHECK_EVERY = 5.0        # seconds between full checks (headset plugged in or out)
+CHECK_EVERY = 60.0       # fallback; the engine asks for a check when a sound card comes or goes
 
 FLAT = (0,) * len(BANDS)
 # G HUB's own 10-band headset presets (LGHUB/data/eq_presets.json, fetched by the installer).

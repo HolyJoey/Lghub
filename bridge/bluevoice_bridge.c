@@ -14,7 +14,7 @@
  * MicOpt instance off the audio thread, warms it up on the live input, then crossfades to it.
  * If the graph's sample rate changes, an instance for the new rate replaces the old one outright.
  *
- * stderr: "ready ..." once, then "meter <in dBFS> <out dBFS>" every 100 ms.
+ * stderr: "ready ..." once, then "meter <in dBFS> <out dBFS>" every 100 ms (every second in silence).
  *
  * Usage: bluevoice-bridge --dll APO.dll --params FILE
  */
@@ -231,7 +231,12 @@ static void on_timer(void *data, uint64_t expirations)
 		}
 	}
 	double in_db = to_db(&b->meter_in), out_db = to_db(&b->meter_out);
-	fprintf(stderr, "meter %.1f %.1f\n", in_db, out_db);
+	static int quiet_ticks;
+	/* Silence is reported once a second, sound every 100 ms: an idle engine needn't wake 10x/s. */
+	if (in_db > -119.0 || out_db > -119.0 || ++quiet_ticks >= 10) {
+		quiet_ticks = 0;
+		fprintf(stderr, "meter %.1f %.1f\n", in_db, out_db);
+	}
 }
 
 static void on_signal(void *data, int sig)

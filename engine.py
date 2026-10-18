@@ -13,14 +13,16 @@ import threading
 import time
 
 import eq
+import hotplug
 import presets
 import pw
 import store
 import surround
 import webcam
 
-POLL = 0.25          # config / status interval, seconds
-LINK_EVERY = 5.0     # full link check interval, seconds (link events also trigger a check at once)
+POLL = 0.25          # config / status interval while an app records, seconds
+IDLE_POLL = 1.0      # the same while idle (link events still wake the loop at once)
+LINK_EVERY = 60.0    # fallback; link events and sound-card hotplug trigger a check at once
 IDLE_STATUS_EVERY = 1.0  # status.json interval while no app listens (meters need 10 Hz only when used)
 IDLE_GRACE = 5.0     # release the real mic this long after the last app stops recording
 MAX_BACKOFF = 30.0
@@ -48,6 +50,7 @@ class Engine:
 		self.eq = eq.Runner()
 		self.webcams = webcam.Restorer()
 		self.surround = surround.Runner()
+		self.sound_cards = hotplug.Watch(hotplug.SOUND)
 
 	# --- configuration -------------------------------------------------------------------
 
@@ -226,6 +229,10 @@ class Engine:
 			self.reload_config()
 			self.check_bridge()
 			now = time.monotonic()
+			if self.sound_cards.changed():      # a headset or mic came or went: look again now
+				self.last_link_check = 0.0
+				self.eq.last_check = 0.0
+				self.surround.wake = True
 			due = now - self.last_link_check >= LINK_EVERY
 			if self.proc and (due or self.link_event.is_set()):
 				self.link_event.clear()
@@ -243,7 +250,7 @@ class Engine:
 				self.surround.check(objs)
 			if self.webcams.due():
 				self.webcams.check()
-			self.link_event.wait(POLL)
+			self.link_event.wait(POLL if self.listening else IDLE_POLL)
 		self.stop_bridge()
 		self.surround.stop()
 		self.eq.stop()

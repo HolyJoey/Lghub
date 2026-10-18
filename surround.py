@@ -25,7 +25,7 @@ DEFAULT_GAIN = 1.1          # G HUB's default volume for every channel (its Surr
 # HX2E_GAMING = 12, HX2E_SPORTS = 13); the DLL numbers them from 0 in the same order.
 ROOMS = (('gaming', 'Gaming', 1), ('entertainment', 'Entertainment', 0), ('sports', 'Sports', 2))
 DEFAULT_ROOM = 'gaming'     # G HUB's default (headsetRoom HX2E_GAMING)
-CHECK_EVERY = 5.0
+CHECK_EVERY = 60.0          # fallback; the engine asks for a check on hotplug and link changes
 IDLE_GRACE = 5.0            # keep the headset linked this long after the last app stops playing
 
 # The DLL's tuning per headset, picked from the headset's name in PipeWire.
@@ -85,6 +85,7 @@ class Runner:
 		self.defaulted = False
 		self.last_check = 0.0
 		self.last_playing = 0.0
+		self.next_check = 0.0      # an earlier check when something is about to change
 		self.wake = False          # set by the engine's link watcher: an app started or stopped
 
 	def due(self):
@@ -97,7 +98,8 @@ class Runner:
 		if self.wake:
 			self.wake = False
 			return True
-		return time.monotonic() - self.last_check >= CHECK_EVERY
+		now = time.monotonic()
+		return now - self.last_check >= CHECK_EVERY or (self.next_check and now >= self.next_check)
 
 	def _write_params(self):
 		os.makedirs(store.RUN_DIR, exist_ok=True)
@@ -108,6 +110,7 @@ class Runner:
 
 	def check(self, objs):
 		self.last_check = time.monotonic()
+		self.next_check = 0.0
 		if self.proc and self.proc.poll() is not None:
 			self.proc = None
 		headset = pw_headset(objs) if self.settings['enabled'] and available() else None
@@ -135,18 +138,19 @@ class Runner:
 			return
 		self.headset = headset['name']
 		self.defaulted = False
-		self.last_check = time.monotonic() - CHECK_EVERY + 1   # link once its ports exist, in ~1 s
+		self.next_check = time.monotonic() + 1   # link once its ports exist
 		print(f"engine: surround on {headset['name']} ({tuning(headset)})", flush=True)
 
 	def _link(self, objs, headset):
 		"""While an app plays into the 7.1 output (and a few seconds after): monitor -> DSP ->
 		headset. Otherwise unlinked, so the headset can go idle like it would without us."""
 		now = time.monotonic()
-		if pw.links_into_node(SINK, objs):
+		playing = pw.links_into_node(SINK, objs) > 0
+		if playing:
 			self.last_playing = now
 		active = now - self.last_playing < IDLE_GRACE
-		if active:
-			self.last_check = min(self.last_check, now - CHECK_EVERY + 1)   # notice the end soon
+		if active and not playing:
+			self.next_check = self.last_playing + IDLE_GRACE + 0.1   # unlink when the grace ends
 		for c in CHANNELS:
 			src, dst = f'{SINK}:monitor_{c}', f'{DSP}:in_{c}'
 			linked = src in pw.links_into(dst, objs)

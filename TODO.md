@@ -36,16 +36,24 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 
 ## Not done
 
-- Per-key lighting (0x8080/0x8081), G-keys and macros (0x8010, needs a key-remapping daemon),
-  keyboard onboard profiles, Yeti's own protocol. Need the hardware to do right.
-- Blue VO!CE 2 (newer headsets: `logi_audio_dts_clearvoice_2_capture_apo.dll`), same approach.
+- Macros and button remaps (in progress): `uinput.py` (virtual keyboard/mouse) and `macros.py`
+  (G HUB's macro format: keystroke, text, mouse, media, system, app, web page, audio, sequences)
+  are done and tested; the triggers (0x8110 MouseButtonSpy, 0x8010 G-keys, 0x1B04 divert) and
+  the UI wait on G HUB's agent code (re/ghub, Ghidra).
+- Per-key lighting (0x8080/0x8081): key layout from G HUB's metadata.json; protocol from the agent.
+- Keyboard onboard profiles: G HUB's onboard_profiles.proto extracted; format from the agent.
+- Yeti: polar pattern, monitor mix, LED meter; protocol from the agent.
+- Blue VO!CE 2 (Yetis, G735, PRO X 2; `logi_audio_dts_clearvoice_2_capture_apo.dll`), in
+  progress: exported DSP API, parameter struct offsets and the 107 property keys (pid -> field)
+  are decoded; G HUB's setting names -> pids come from the agent.
 - G HUB's 5-band "PRO" equalizer (pro_eq_presets.json: TSM Bjergsen, Hamlinz, ...): the band
   frequencies aren't in the preset files; the 10-band headset presets are in.
 
 ## Could be better
 
-- The background service idles at about 0.6% of one core (measured): headset/webcam/link
-  checks on timers. Event-driven checks (udev, PipeWire registry) would bring that near 0.
+- The background service idles at about 0.2% of one core (was 0.6%): checks now run when a sound
+  card or USB device comes or goes, with 60 s fallbacks. What's left is the engine loop and the
+  PipeWire link monitor.
 
 ## Depot updates
 

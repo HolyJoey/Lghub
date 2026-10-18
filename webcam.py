@@ -4,11 +4,12 @@ import os
 import time
 
 import devices
+import hotplug
 import store
 import v4l2
 
 WEBCAM_FILE = os.path.join(store.CONFIG_DIR, 'webcams.json')
-CHECK_EVERY = 3.0
+CHECK_EVERY = 60.0     # fallback; normally a check runs when a USB device comes or goes
 SETTLE = 1.0           # a fresh camera needs a moment before it takes controls
 
 
@@ -61,9 +62,12 @@ class Restorer:
 		self.seen = {}           # device id -> time first seen
 		self.done = set()
 		self.last_check = 0.0
+		self.usb = hotplug.Watch(hotplug.USB)
 
 	def due(self):
-		return time.monotonic() - self.last_check >= CHECK_EVERY
+		changed = self.usb.changed()
+		settling = any(d not in self.done for d in self.seen)
+		return changed or settling or time.monotonic() - self.last_check >= CHECK_EVERY
 
 	def check(self):
 		self.last_check = now = time.monotonic()
@@ -76,7 +80,12 @@ class Restorer:
 		for d in cams:
 			self.seen.setdefault(d.id, now)
 			values = all_saved.get(ident(d))
-			if d.id in self.done or not values or now - self.seen[d.id] < SETTLE:
+			if d.id in self.done:
+				continue
+			if not values:
+				self.done.add(d.id)      # nothing saved for it: nothing to put back
+				continue
+			if now - self.seen[d.id] < SETTLE:
 				continue
 			node = v4l2.video_node(d.id.split(':', 1)[1])
 			if not node:
