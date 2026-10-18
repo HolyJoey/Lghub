@@ -12,7 +12,7 @@ gtk4-broadwayd :7 >/dev/null 2>&1 &
 BROADWAY=$!
 sleep 1
 shot() {   # name, fake devices, start page, sub page
-	LGHUB_FAKE_DEVICES="$2" GDK_BACKEND=broadway BROADWAY_DISPLAY=:7 \
+	LGHUB_PREVIEW=0 LGHUB_FAKE_DEVICES="$2" GDK_BACKEND=broadway BROADWAY_DISPLAY=:7 \
 		timeout 30 python3 "${DOCS}/screenshot.py" "$3" "$4" "${OUT}/$1.png" 2>/dev/null
 	echo "$1"
 }

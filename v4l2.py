@@ -4,8 +4,10 @@ Lists a camera's controls (brightness, focus, zoom, ...), reads and sets them. W
 UVC webcam; the C920 and other Logitech cameras need nothing special.
 """
 import fcntl
+import mmap
 import os
 import re
+import select
 import struct
 
 # struct layouts from linux/videodev2.h
@@ -16,6 +18,28 @@ _CONTROL = struct.Struct('=Ii')                   # id, value
 
 def _iowr(nr, size):
 	return (3 << 30) | (size << 16) | (ord('V') << 8) | nr
+
+
+def _iow(nr, size):
+	return (1 << 30) | (size << 16) | (ord('V') << 8) | nr
+
+
+# Streaming (x86-64 layouts): format descriptions, formats, buffer requests, buffers.
+_FMTDESC = struct.Struct('=III32sII12x')               # index, type, flags, description, fourcc, mbus
+_PIX_FORMAT = struct.Struct('=IIII')                    # width, height, fourcc, field (start of v4l2_pix_format)
+FORMAT_SIZE = 208                                       # u32 type + pad, 200-byte union at offset 8
+_REQBUFS = struct.Struct('=IIII4x')                     # count, type, memory, capabilities
+BUFFER_SIZE = 88
+VIDIOC_ENUM_FMT = _iowr(2, _FMTDESC.size)
+VIDIOC_S_FMT = _iowr(5, FORMAT_SIZE)
+VIDIOC_REQBUFS = _iowr(8, _REQBUFS.size)
+VIDIOC_QUERYBUF = _iowr(9, BUFFER_SIZE)
+VIDIOC_QBUF = _iowr(15, BUFFER_SIZE)
+VIDIOC_DQBUF = _iowr(17, BUFFER_SIZE)
+VIDIOC_STREAMON = _iow(18, 4)
+VIDIOC_STREAMOFF = _iow(19, 4)
+CAPTURE, MEMORY_MMAP = 1, 1
+MJPEG = int.from_bytes(b'MJPG', 'little')
 
 
 VIDIOC_G_CTRL = _iowr(27, _CONTROL.size)
@@ -112,6 +136,73 @@ class Camera:
 
 	def set(self, cid, value):
 		fcntl.ioctl(self.fd, VIDIOC_S_CTRL, bytearray(_CONTROL.pack(cid, int(value))))
+
+
+class Stream:
+	"""MJPEG frames from a camera, through memory-mapped buffers. Every UVC webcam (the C920
+	included) offers MJPEG; frames come out as JPEG bytes for the UI to decode."""
+
+	def __init__(self, camera, width=640, height=360, buffers=3):
+		self.fd = camera.fd
+		self.maps = []
+		if not self._has_mjpeg():
+			raise OSError('this camera has no MJPEG mode')
+		fmt = bytearray(FORMAT_SIZE)
+		struct.pack_into('=I', fmt, 0, CAPTURE)
+		_PIX_FORMAT.pack_into(fmt, 8, width, height, MJPEG, 0)
+		fcntl.ioctl(self.fd, VIDIOC_S_FMT, fmt)
+		self.width, self.height = struct.unpack_from('=II', fmt, 8)
+		req = bytearray(_REQBUFS.pack(buffers, CAPTURE, MEMORY_MMAP, 0))
+		fcntl.ioctl(self.fd, VIDIOC_REQBUFS, req)
+		for index in range(_REQBUFS.unpack(req)[0]):
+			buf = self._buffer(index)
+			fcntl.ioctl(self.fd, VIDIOC_QUERYBUF, buf)
+			offset, length = struct.unpack_from('=I', buf, 64)[0], struct.unpack_from('=I', buf, 72)[0]
+			self.maps.append(mmap.mmap(self.fd, length, mmap.MAP_SHARED, mmap.PROT_READ, offset=offset))
+			fcntl.ioctl(self.fd, VIDIOC_QBUF, buf)
+		fcntl.ioctl(self.fd, VIDIOC_STREAMON, struct.pack('=i', CAPTURE))
+
+	def _has_mjpeg(self):
+		for index in range(32):
+			desc = bytearray(_FMTDESC.pack(index, CAPTURE, 0, b'', 0, 0))
+			try:
+				fcntl.ioctl(self.fd, VIDIOC_ENUM_FMT, desc)
+			except OSError:
+				return False
+			if _FMTDESC.unpack(desc)[4] == MJPEG:
+				return True
+		return False
+
+	@staticmethod
+	def _buffer(index):
+		buf = bytearray(BUFFER_SIZE)
+		struct.pack_into('=II', buf, 0, index, CAPTURE)
+		struct.pack_into('=I', buf, 60, MEMORY_MMAP)
+		return buf
+
+	def frame(self, timeout=1.0):
+		"""The next frame as JPEG bytes, or None if none came within the timeout."""
+		if not select.select([self.fd], [], [], timeout)[0]:
+			return None
+		buf = self._buffer(0)
+		fcntl.ioctl(self.fd, VIDIOC_DQBUF, buf)
+		index, _type, used = struct.unpack_from('=III', buf, 0)
+		data = self.maps[index][:used]
+		fcntl.ioctl(self.fd, VIDIOC_QBUF, buf)
+		return data
+
+	def close(self):
+		try:
+			fcntl.ioctl(self.fd, VIDIOC_STREAMOFF, struct.pack('=i', CAPTURE))
+		except OSError:
+			pass   # already stopped, or the camera is gone
+		for m in self.maps:
+			m.close()
+		self.maps = []
+		try:
+			fcntl.ioctl(self.fd, VIDIOC_REQBUFS, bytearray(_REQBUFS.pack(0, CAPTURE, MEMORY_MMAP, 0)))
+		except OSError:
+			pass   # frees the buffers so the camera can be streamed again
 
 
 def video_node(usb_port):

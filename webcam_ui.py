@@ -1,11 +1,16 @@
-"""The webcam page: every picture control the camera offers, grouped like G HUB's."""
-from gi.repository import Gtk
+"""The webcam page: a live preview and every picture control the camera offers, grouped like
+G HUB's."""
+import os
+import threading
+
+from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
 
 import v4l2
 import webcam
 from ui import box, button_widget, device_icon, device_sidebar, label, nav_button, page_header, scrolled
 from worker import Worker
 
+PREVIEW_HEIGHT = 300
 GROUPS = (
 	('Picture', ('brightness', 'contrast', 'saturation', 'sharpness', 'gamma', 'hue', 'gain', 'backlight')),
 	('White balance', ('white_balance',)),
@@ -54,6 +59,7 @@ class WebcamView(Gtk.Box):
 		self.page = box(spacing=20, css=['page'])
 		self.page.append(page_header('Picture', 'Changes show right away in any app using the camera.',
 		                             button_widget('Reset all', ['ghost'], self._reset)))
+		self.page.append(self._preview_card())
 		self.body = box(spacing=20)
 		self.body.append(label('Opening the camera…', ['muted']))
 		self.page.append(self.body)
@@ -61,9 +67,73 @@ class WebcamView(Gtk.Box):
 		self.worker.submit(self._open, self._show, self._failed)
 
 	def close(self):
+		self._stop_preview()
 		cam = self.camera
 		self.worker.submit(lambda: cam and cam.close())
 		self.worker.stop()
+
+	# --- preview --------------------------------------------------------------------------
+
+	def _preview_card(self):
+		c = box(spacing=12, css=['card'])
+		head = box(Gtk.Orientation.HORIZONTAL, 12)
+		head.append(label('Preview', ['section-title'], hexpand=True, valign=Gtk.Align.CENTER))
+		# LGHUB_PREVIEW=0 starts with the preview off (docs/screenshots.sh: no faces in the README)
+		self.preview_switch = Gtk.Switch(active=os.environ.get('LGHUB_PREVIEW') != '0', valign=Gtk.Align.CENTER)
+		self.preview_switch.connect('notify::active', lambda w, _p: self._start_preview() if w.get_active()
+		                            else self._stop_preview())
+		head.append(self.preview_switch)
+		c.append(head)
+		self.picture = Gtk.Picture(content_fit=Gtk.ContentFit.CONTAIN, height_request=PREVIEW_HEIGHT)
+		c.append(self.picture)
+		self.preview_note = label('', ['muted', 'small'], wrap=True)
+		c.append(self.preview_note)
+		self.streaming = None        # the thread's stop event while the preview runs
+		self.frame_pending = False
+		return c
+
+	def _start_preview(self):
+		if self.streaming or not self.camera or not self.preview_switch.get_active():
+			return
+		stop = threading.Event()
+		self.streaming = stop
+		self.preview_note.set_text('')
+		threading.Thread(target=self._stream, args=(self.camera, stop), daemon=True).start()
+
+	def _stop_preview(self):
+		if self.streaming:
+			self.streaming.set()
+			self.streaming = None
+
+	def _stream(self, camera, stop):
+		try:
+			stream = v4l2.Stream(camera)
+		except OSError as e:
+			text = ('The camera is in use by another app, so there is no preview here. Settings still work.'
+			        if e.errno == 16 else f'No preview: {e.strerror or e}.')
+			GLib.idle_add(lambda: self.preview_note.set_text(text) and False)
+			return
+		try:
+			while not stop.is_set():
+				data = stream.frame()
+				if data and not self.frame_pending:
+					self.frame_pending = True
+					GLib.idle_add(self._show_frame, data)
+		except OSError:
+			GLib.idle_add(lambda: self.preview_note.set_text('The preview stopped.') and False)
+		finally:
+			stream.close()
+
+	def _show_frame(self, data):
+		self.frame_pending = False
+		loader = GdkPixbuf.PixbufLoader.new_with_type('jpeg')
+		try:
+			loader.write(data)
+			loader.close()
+		except GLib.Error:
+			return False   # a damaged frame; the next one will do
+		self.picture.set_paintable(Gdk.Texture.new_for_pixbuf(loader.get_pixbuf()))
+		return False
 
 	def _open(self):
 		node = v4l2.video_node(self.device.id.split(':', 1)[1])
@@ -81,6 +151,7 @@ class WebcamView(Gtk.Box):
 			self.body.remove(child)
 
 	def _show(self, controls):
+		self._start_preview()
 		self._clear()
 		self.widgets = {}
 		self.loading = True
