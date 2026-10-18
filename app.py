@@ -285,6 +285,8 @@ class App(Adw.Application):
 	def do_startup(self):
 		Adw.Application.do_startup(self)
 		Adw.StyleManager.get_default().set_color_scheme(Adw.ColorScheme.FORCE_DARK)
+		theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
+		Gtk.Window.set_default_icon_name('lghub' if theme.has_icon('lghub') else 'lghub-bluevoice')
 		provider = Gtk.CssProvider()
 		provider.load_from_string(CSS)
 		Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), provider,

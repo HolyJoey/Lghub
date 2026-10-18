@@ -14,7 +14,7 @@ systemctl --user daemon-reload 2>/dev/null || true
 rm -rf "$APP_DIR"
 rm -f "$HOME/.local/bin/lghub" "$HOME/.local/bin/lghub-bluevoice"
 rm -f "$PREFIX/applications/lghub-bluevoice.desktop"
-rm -f "$PREFIX/icons/hicolor/scalable/apps/lghub-bluevoice.svg"
+rm -f "$PREFIX/icons/hicolor/scalable/apps/lghub-bluevoice.svg" "$PREFIX/icons/hicolor/256x256/apps/lghub.png"
 if command -v update-desktop-database >/dev/null; then update-desktop-database "$PREFIX/applications" || true; fi
 echo "App, background service and Logitech files removed."
 

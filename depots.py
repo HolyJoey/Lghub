@@ -1,4 +1,4 @@
-"""Product pictures and Blue VO!CE presets, fetched from G HUB's update server the first time
+"""Product pictures, Blue VO!CE presets and the G HUB app icon, fetched from G HUB's update server the first time
 a device shows up.
 
 Each model's G HUB package (a "depot") holds its pictures. A depot can be tens of MB, but
@@ -230,3 +230,101 @@ def fetch_presets(model):
 		f.write(data)
 	os.replace(path + '.tmp', path)
 	return path
+
+
+# --- the G HUB app icon ------------------------------------------------------------------------
+# The 256 px icon in G HUB's software manager (core depot, G HUB 2026.6): the executable's place
+# in the depot and the icon's hash are pinned, so this is six small range requests, checked.
+CORE_DEPOT = 'e4566bcc-25b0-4d8f-b4ad-170264654488/core.depot'
+ICON_EXE_OFFSET = 26003104
+ICON_SHA256 = '743180184d0ebcc498f112c36845909496a1048793ba392294ef4660acfa9a08'
+RT_ICON, RT_GROUP_ICON = 3, 14
+
+
+def _largest_icon(read):
+	"""(width, image bytes) of the biggest image in a PE file's first icon group."""
+	pe = struct.unpack('<I', read(0x3c, 4))[0]
+	head = read(pe, 24 + 240)
+	nsec, optsize = struct.unpack_from('<H', head, 6)[0], struct.unpack_from('<H', head, 20)[0]
+	magic = struct.unpack_from('<H', head, 24)[0]
+	dirs = 24 + (112 if magic == 0x20b else 96)
+	rsrc_rva, rsrc_size = struct.unpack_from('<II', head, dirs + 8 * 2)
+	secs = read(pe + 24 + optsize, 40 * nsec)
+	for i in range(nsec):
+		vsz, va, rsz, raw = struct.unpack_from('<IIII', secs, 40 * i + 8)
+		if va <= rsrc_rva < va + max(vsz, rsz):
+			base_raw = raw + rsrc_rva - va
+			break
+	else:
+		raise ValueError('no resource section')
+	rsrc = read(base_raw, rsrc_size)
+
+	def entries(off):
+		named, ids = struct.unpack_from('<HH', rsrc, off + 12)
+		for k in range(named + ids):
+			name, ptr = struct.unpack_from('<II', rsrc, off + 16 + 8 * k)
+			yield name, ptr
+
+	def leaf(ptr):
+		while ptr >> 31:
+			ptr = next(entries(ptr & 0x7fffffff))[1]
+		rva, size = struct.unpack_from('<II', rsrc, ptr)
+		return read(base_raw + rva - rsrc_rva, size)
+
+	icons = {}
+	groups = []
+	for typ, ptr in entries(0):
+		if typ == RT_ICON:
+			for ident, p in entries(ptr & 0x7fffffff):
+				icons[ident] = p
+		elif typ == RT_GROUP_ICON:
+			for _ident, p in entries(ptr & 0x7fffffff):
+				groups.append(p)
+	best = None
+	for g in groups[:1]:   # the first group is the application icon
+		data = leaf(g)
+		count = struct.unpack_from('<H', data, 4)[0]
+		for k in range(count):
+			w, h, _c, _r, _planes, _bits, size, ident = struct.unpack_from('<BBBBHHIH', data, 6 + 14 * k)
+			w = w or 256
+			if best is None or w > best[0]:
+				best = (w, ident)
+	if best is None:
+		raise ValueError('no icon')
+	return best[0], leaf(icons[best[1]])
+
+
+def fetch_app_icon(out):
+	"""Save G HUB's app icon as a 256 px PNG at out. True on success. Blocks on the network."""
+	import hashlib
+
+	import gi
+	gi.require_version('GdkPixbuf', '2.0')
+	from gi.repository import GdkPixbuf, GLib
+	url = SERVER + CORE_DEPOT
+	try:
+		_width, image = _largest_icon(lambda offset, length: _get(url, ICON_EXE_OFFSET + offset, length))
+	except (OSError, ValueError, KeyError, struct.error) as e:
+		print(f'lghub: no G HUB icon: {e}', flush=True)
+		return False
+	if hashlib.sha256(image).hexdigest() != ICON_SHA256:
+		print('lghub: the G HUB icon is not the expected one; keeping our own', flush=True)
+		return False
+	# Icon images are PNG or a bare bitmap; wrapped in a one-image .ico, GdkPixbuf reads both.
+	ico = struct.pack('<HHH', 0, 1, 1) + struct.pack('<BBBBHHII', 0, 0, 0, 0, 1, 32, len(image), 22) + image
+	loader = GdkPixbuf.PixbufLoader.new_with_type('ico')
+	try:
+		loader.write(ico)
+		loader.close()
+		loader.get_pixbuf().savev(out, 'png', [], [])
+	except GLib.Error as e:
+		print(f'lghub: cannot convert the G HUB icon: {e}', flush=True)
+		return False
+	return True
+
+
+if __name__ == '__main__':
+	import sys
+	if len(sys.argv) == 3 and sys.argv[1] == '--app-icon':
+		sys.exit(0 if fetch_app_icon(sys.argv[2]) else 1)
+	sys.exit('usage: depots.py --app-icon OUT.png')

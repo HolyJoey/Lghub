@@ -66,6 +66,12 @@ EOF
   chmod +x "$BIN_DIR/$launcher"
 done
 cp "$SRC/lghub-bluevoice.svg" "$PREFIX/icons/hicolor/scalable/apps/lghub-bluevoice.svg"
+# The G HUB icon, read from Logitech's update server (six small requests); ours if that fails.
+ICON=lghub-bluevoice
+mkdir -p "$PREFIX/icons/hicolor/256x256/apps"
+if python3 "$APP_DIR/depots.py" --app-icon "$PREFIX/icons/hicolor/256x256/apps/lghub.png"; then
+  ICON=lghub
+fi
 cat > "$PREFIX/applications/lghub-bluevoice.desktop" <<EOF
 [Desktop Entry]
 Type=Application
@@ -73,7 +79,7 @@ Name=Lghub
 GenericName=Logitech G devices
 Comment=Settings for Logitech G headsets, mice and webcams, with Blue VO!CE
 Exec=$BIN_DIR/lghub
-Icon=lghub-bluevoice
+Icon=$ICON
 Terminal=false
 Categories=AudioVideo;Audio;Settings;HardwareSettings;
 StartupWMClass=$APP_ID
