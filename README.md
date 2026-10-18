@@ -135,8 +135,8 @@ The app itself does nothing once closed.
   directly. `bridge/peloader.c` maps the DLL into a normal Linux process and gives it the few
   Windows functions it needs; `bridge/micopt.c` calls it the way the Windows effect does, and
   `bluevoice-bridge` wraps that in a PipeWire filter. Every parameter is written down in
-  [docs/apo-parameters.md](docs/apo-parameters.md). `host/` checks the result against the
-  real effect under Wine.
+  [docs/apo-parameters.md](docs/apo-parameters.md). The output was checked sample by
+  sample against the real effect running under Wine.
 - **Mice, keyboards, receivers.** Logitech's HID++ 2.0 protocol over `/dev/hidraw`
   (`hidpp.py`): ask the device which features it has, then use them. Onboard profiles
   (`mouse.py`) are read, changed and written back with their checksum, then read again to

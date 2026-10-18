@@ -1,5 +1,6 @@
-# Whitelist: only our own sources. Never commit Logitech/DTS files, the Wine prefix,
-# extracted depots, presets, analysis output or test audio.
+# Whitelist: only what the app needs to build, run and be understood. Everything else stays
+# local: Logitech/DTS files, the Wine prefix, extracted depots, analysis output, test audio,
+# and development tools (scanner config, reverse-engineering scripts, test harnesses).
 /*
 !/.gitignore
 !/README.md
@@ -9,22 +10,19 @@
 !/install.sh
 !/uninstall.sh
 !/lghub-bluevoice.svg
-!/sonar-project.properties
-!/docs/
-!/tools/
 !/tests/
-!/host/
 !/bridge/
-host/*
-!host/bluevoice_host.c
-!host/compare_native.py
 bridge/*
-!bridge/*.c
-!bridge/*.h
-
-# design mockups stay local for now
-docs/mockups/
-
-# local session notes
-NEXT_SESSION.md
+!bridge/bluevoice_bridge.c
+!bridge/surround_bridge.c
+!bridge/micopt.c
+!bridge/micopt.h
+!bridge/hx2e.c
+!bridge/hx2e.h
+!bridge/peloader.c
+!bridge/peloader.h
+!/docs/
+docs/*
+!docs/apo-parameters.md
+!docs/screenshots/
 __pycache__/
