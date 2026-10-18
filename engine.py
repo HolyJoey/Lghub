@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Lghub engine: keeps the Blue VO!CE virtual microphone and the headset equalizer running.
+"""Lghub engine: keeps the Blue VO!CE virtual microphone and the headset equalizer running, and
+puts webcam settings back when a camera is plugged in.
 
 Runs bluevoice-bridge (Logitech's Blue VO!CE DSP as a native PipeWire filter), keeps the links
 mic -> bluevoice_dsp -> "Blue VO!CE Microphone" in place, applies config.json changes live, and
@@ -15,6 +16,7 @@ import eq
 import presets
 import pw
 import store
+import webcam
 
 POLL = 0.25          # config / status interval, seconds
 LINK_EVERY = 5.0     # full link check interval, seconds (link events also trigger a check at once)
@@ -43,6 +45,7 @@ class Engine:
 		self.link_event = threading.Event()
 		self.last_publish = 0.0
 		self.eq = eq.Runner()
+		self.webcams = webcam.Restorer()
 
 	# --- configuration -------------------------------------------------------------------
 
@@ -224,6 +227,8 @@ class Engine:
 				self.link_event.clear()  # nothing to relink until the bridge is back
 			if self.eq.due():
 				self.eq.check(pw.dump())
+			if self.webcams.due():
+				self.webcams.check()
 			self.link_event.wait(POLL)
 		self.stop_bridge()
 		self.eq.stop()

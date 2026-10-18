@@ -15,6 +15,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango  # noqa: E402
 import bluevoice_ui  # noqa: E402
 import devices  # noqa: E402
 import mouse_ui  # noqa: E402
+import webcam_ui  # noqa: E402
 from ui import APP_DIR, CSS, box, device_sidebar, label, nav_button, page_header, scrolled  # noqa: E402
 
 APP_ID = 'dev.local.LghubBlueVoice'
@@ -197,7 +198,7 @@ class MainWindow(Adw.ApplicationWindow):
 			if hasattr(self.device_view, 'close'):
 				self.device_view.close()
 			self.stack.remove(self.device_view)
-		view = {'mouse': mouse_ui.MouseView}.get(device.model.type, DeviceView)
+		view = {'mouse': mouse_ui.MouseView, 'camera': webcam_ui.WebcamView}.get(device.model.type, DeviceView)
 		self.device_view = view(self, device)
 		self.stack.add_named(self.device_view, 'device')
 		self.stack.set_visible_child_name('device')

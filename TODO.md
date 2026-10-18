@@ -39,7 +39,9 @@ Working, tested on this machine with the laptop microphone:
 - [ ] DTS Headphone:X surround: Logitech's render APOs only export COM; needs a COM host for
   `logi_audio_headset_render_apo.dll` (like the Blue VO!CE bridge, but for playback). Not
   started.
-- [ ] Webcams (C920): V4L2 controls.
+- [x] Webcams (C920): every V4L2 control, grouped (picture, white balance, exposure, focus
+  and zoom); saved per camera and restored by the engine on plug-in. Tested on the laptop's
+  own camera (`LGHUB_FAKE_DEVICES=082d@3-4`). No live preview yet.
 - [ ] Keyboards and the rest; receivers (devices paired to LIGHTSPEED/Unifying).
 - [ ] Product images, downloaded at install time.
 

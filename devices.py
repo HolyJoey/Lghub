@@ -12,7 +12,8 @@ from dataclasses import dataclass
 LOGITECH = '046d'
 SYS_USB = '/sys/bus/usb/devices'
 # Comma-separated vid:pid (or just pid, Logitech assumed) to pretend are connected; for testing
-# pages and screenshots without the hardware.
+# pages and screenshots without the hardware. pid@port pretends a real USB port holds that
+# model (e.g. 082d@3-4 shows another webcam as a C920).
 FAKE_ENV = 'LGHUB_FAKE_DEVICES'
 
 # (model, name, type, USB ids, lighting zones, flags)
@@ -194,8 +195,9 @@ def _usb_devices():
 def _fake_devices():
 	found = []
 	for i, item in enumerate(filter(None, (s.strip().lower() for s in os.environ.get(FAKE_ENV, '').split(',')))):
+		item, _, port = item.partition('@')
 		usb_id = item if ':' in item else f'{LOGITECH}:{item}'
-		found.append((f'fake{i}', usb_id, ''))
+		found.append((port or f'fake{i}', usb_id, ''))
 	return found
 
 
@@ -214,7 +216,7 @@ def open_hidpp(device, index=None):
 	import hidpp
 	import simulate
 	port = device.id.split(':', 1)[1]
-	if port.startswith('fake'):
+	if port.startswith('fake') or os.environ.get(FAKE_ENV):
 		dev = simulate.device_for(device.usb_id, port)
 		if dev is None:
 			raise OSError('no simulated HID++ device for this model')
