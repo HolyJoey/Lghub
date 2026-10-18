@@ -1,34 +1,33 @@
 # Blue VO!CE for Linux
 
-Logitech's Blue VO!CE microphone effects for the G Pro X headset, on Linux. The official
-G HUB software is Windows-only.
+I use a Logitech G Pro X, and the one thing I missed after moving to Linux was Blue VO!CE.
+G HUB only runs on Windows, so I took it apart to see where Blue VO!CE actually lives.
 
-This is not a remake: it runs **Logitech's own Blue VO!CE DSP** — the audio effect G HUB
-installs on Windows — natively, inside a small PipeWire filter (no Wine), and gives you its
-output as a normal microphone that any app can use. The output is bit-for-bit identical to the
-Windows effect for all 22 presets.
+Turns out it isn't in the headset at all. It's a Windows audio effect that G HUB installs, a
+DLL built on DTS's MicOpt library. This project loads that same DLL on Linux, without Wine,
+and puts the result on a virtual microphone. Same code Logitech ships, so it sounds the same:
+I checked all 22 presets against the Windows effect and the output is identical, sample for
+sample.
 
-![Voice page with live levels and the G HUB presets](docs/screenshots/voice.png)
+![Voice page](docs/screenshots/voice.png)
 
-## What it does
+## What you get
 
-- **Blue VO!CE on/off** — off is a clean pass-through, so apps keep their microphone
-- **All 22 G HUB presets** for the G Pro X — Broadcaster, AM Radio, FM Station, the pro-player
-  presets and more, with the exact values G HUB uses
-- **Every effect, live** — high-pass filter, noise reduction, noise gate, 3-band voice EQ,
-  de-esser, compressor and limiter, each with the same controls as G HUB's advanced mode;
-  changes crossfade in without clicks
-- **A virtual microphone** — “Blue VO!CE Microphone” shows up in Discord, OBS, your browser and
-  everything else, or becomes your default input with one switch
-- **Your own presets** — save, import and export
-- **Live meters** for your microphone and the processed voice
-- **Runs in the background** — closing the app keeps the virtual microphone working
+A new input device called **Blue VO!CE Microphone** that Discord, OBS, your browser or anything
+else can use, plus a small app to control it:
 
-## Screenshots
+- every Blue VO!CE preset G HUB has for the G Pro X (and the Pro X Wireless set too)
+- all the advanced controls: high-pass, noise reduction, noise gate, voice EQ, de-esser,
+  compressor and limiter. Changes apply while you talk, without clicks
+- save your own presets, import and export them
+- an on/off switch that keeps the device around, so your apps don't lose their mic
+
+It runs in the background, so you can close the app. Your real microphone is only opened while
+some app is actually recording from Blue VO!CE.
 
 | Effects | Microphone |
 | --- | --- |
-| ![Every Blue VO!CE stage with its controls](docs/screenshots/effects.png) | ![Input device, default microphone, latency and service](docs/screenshots/microphone.png) |
+| ![Effects page](docs/screenshots/effects.png) | ![Microphone page](docs/screenshots/microphone.png) |
 
 ## Install
 
@@ -38,13 +37,8 @@ cd Lghub
 ./install.sh
 ```
 
-The installer builds one small native helper, downloads Logitech's Blue VO!CE files straight
-from G HUB's own update server (they are not in this repository) and checks their SHA-256, adds
-a menu entry, and starts a user service. Nothing needs root, and Wine is not used.
-`./uninstall.sh` reverses all of it.
-
-**Requirements:** an x86-64 PC, Python 3 with GTK 4 and libadwaita, PipeWire with WirePlumber,
-and gcc with the PipeWire headers to build the helper.
+You need an x86-64 PC with PipeWire, Python with GTK 4 and libadwaita, and gcc to build the
+helper:
 
 | Distro | Packages |
 | --- | --- |
@@ -52,51 +46,47 @@ and gcc with the PipeWire headers to build the helper.
 | Fedora | `python3-gobject gtk4 libadwaita gcc pipewire-devel` |
 | Arch | `python-gobject gtk4 libadwaita gcc libpipewire` |
 
-## Using it
+The installer downloads Logitech's files from G HUB's own update server (they aren't in this
+repo), checks their hashes, builds the helper, adds a menu entry and starts a user service. No
+root needed. `./uninstall.sh` undoes all of it.
 
-Open **Blue VO!CE** from your menu, pick a preset, and choose **Blue VO!CE Microphone** as the
-input in your apps (or turn on *Use as default microphone*). The *Microphone* page picks your
-G Pro X automatically when it is plugged in; you can choose any other microphone there too.
+Then open **Blue VO!CE** from your menu, pick a preset, and select *Blue VO!CE Microphone* in
+your voice app. Or flip *Use as default microphone* and skip that step.
+
+## Is it heavy?
+
+No. While you're talking it uses about 4% of one CPU core and 7 MB of memory; when nothing is
+recording it's close to zero. It adds 8 ms of delay and doesn't change how the rest of your
+audio runs, so games aren't affected.
 
 ## How it works
 
-```
-G Pro X mic ──► bluevoice-bridge (PipeWire filter, runs Logitech's DSP in-process) ──► “Blue VO!CE Microphone”
-```
+The Windows effect (`logi_audio_dts_studio_capture_apo.dll`) exports the DSP directly:
+`dts_micopt_init`, `dts_micopt_set`, `dts_micopt_process` and a few more. So instead of
+emulating the Windows audio engine, `bridge/peloader.c` maps the DLL into a normal Linux
+process and gives it the handful of Windows functions that code path needs.
+`bridge/micopt.c` calls it the way the Windows effect does: 256-frame blocks, the same
+defaults, and the same quirks (on/off switches go in as integers, not floats). The
+`bluevoice-bridge` program wraps that in a PipeWire filter.
 
-- **`logi_audio_dts_studio_capture_apo.dll`** is the Windows audio effect G HUB installs for
-  Blue VO!CE, built on DTS MicOpt. `fetch.py` takes it from G HUB's `driver_audio_apo` package
-  and the presets from the `pro_headset` package.
-- The DLL exports the DSP itself (`dts_micopt_init`, `dts_micopt_set`, `dts_micopt_process`, …).
-  **`bridge/peloader.c`** loads the DLL into the Linux process — sections, relocations, and
-  stand-ins for the handful of Windows calls the DSP path makes — and **`bridge/micopt.c`** drives
-  it exactly as the Windows effect does (same block size, defaults and parameter encoding).
-- **`bridge/bluevoice-bridge`** is the PipeWire filter: microphone in, MicOpt in 256-frame blocks,
-  virtual microphone out, 8 ms of added delay. Settings changes build a new DSP instance, warm it
-  up and crossfade, so switching presets doesn't click.
-- **`engine.py`** (the `lghub-bluevoice` user service) runs the bridge, opens your microphone only
-  while some app uses Blue VO!CE, follows replugs, and applies your settings; **`app.py`** is the
-  GTK interface.
+`engine.py` is the background service. It starts the bridge, connects your mic to it when an
+app is listening, and applies whatever you change in `app.py`.
 
-[docs/apo-parameters.md](docs/apo-parameters.md) lists every Blue VO!CE parameter with its units
-and defaults, as recovered from the DLL.
+Every parameter, its unit and its default is written down in
+[docs/apo-parameters.md](docs/apo-parameters.md).
 
-### Verified against Windows
+To check the result, `host/bluevoice_host.c` loads the same DLL the way Windows does (as a COM
+audio effect, under Wine) and `host/compare_native.py` feeds both the same recording.
 
-`host/bluevoice_host.c` hosts the same DLL the way the Windows audio engine does (as a COM audio
-effect, under Wine), and `host/compare_native.py` runs both on the same recording. For every
-stage and all 22 G HUB presets the native output is identical, sample for sample.
+## If something's off
 
-## Troubleshooting
+`systemctl --user status lghub-bluevoice` and `journalctl --user -u lghub-bluevoice` show what
+the service is doing. If the installer says a download doesn't match, Logitech has released a
+new version of the files; open an issue. If you have the files from somewhere else you can
+point the installer at them with `./install.sh --depot-dir DIR`.
 
-- **No “Blue VO!CE Microphone”** — `systemctl --user status lghub-bluevoice` and
-  `journalctl --user -u lghub-bluevoice` show what the service is doing.
-- **Install says a depot doesn't match** — Logitech published a new version. Install G HUB's
-  files from another source with `./install.sh --depot-dir DIR` (a folder holding
-  `driver_audio_apo.depot` and `pro_headset.depot`), or open an issue.
+## Notes
 
-## Disclaimer
-
-Not affiliated with Logitech. Blue VO!CE, G HUB and G Pro X are Logitech trademarks; DTS is a
-trademark of DTS, Inc. This project only contains its own code; Logitech's files are downloaded
-from Logitech at install time and used on your own machine.
+Not affiliated with Logitech. Blue VO!CE, G HUB and G Pro X are Logitech's trademarks, DTS is
+DTS, Inc.'s. This repo only has my own code; Logitech's files are downloaded from Logitech when
+you install and stay on your machine.

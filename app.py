@@ -634,8 +634,8 @@ class MainWindow(Adw.ApplicationWindow):
 		card.append(headline)
 		self.side_input = label('', ['muted', 'small'], wrap=True, max_width_chars=24)
 		card.append(self.side_input)
+		card.append(label('Voice level', ['muted', 'small']))
 		self.side_bar = meter_bar()
-		self.side_value = label('', ['value', 'small'])
 		card.append(self.side_bar)
 		side.append(card)
 		return side
