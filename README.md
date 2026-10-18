@@ -112,10 +112,18 @@ Then open **Lghub** from your menu (or run `lghub`).
 
 ## Is it heavy?
 
-No. Blue VO!CE uses about 4% of one CPU core while you talk and close to nothing otherwise,
-and adds 8 ms of delay. Surround uses about 1.5% of one core while something plays and lets
-the headset go idle otherwise. The equalizer only runs while it's switched on. The app itself
-does nothing once closed; mouse and keyboard settings live in the devices.
+No. Measured on a laptop (Intel Alder Lake), as a share of one CPU core:
+
+| Part | While in use | Otherwise |
+| --- | --- | --- |
+| Background service (keeps everything below running) | | 0.6%, 30 MB |
+| Blue VO!CE | about 4% while you talk, 8 ms delay | nothing: your mic is only opened while an app records |
+| Surround | about 1.5% while something plays | nothing: the headset can go idle |
+| Equalizer | about 0.5% while something plays | nothing (and not running when switched off) |
+| Webcam preview | about 5% in the app while it shows | nothing (off, or app closed) |
+| Mice, keyboards | | nothing: their settings are stored in the device |
+
+The app itself does nothing once closed.
 
 ## How it works
 
