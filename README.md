@@ -1,49 +1,41 @@
 # Lghub
 
-Logitech G HUB for Linux, more or less. I use a G Pro X, a G502 and a C920, and G HUB only
-runs on Windows, so this does the same jobs natively: no Wine, no Windows, nothing running
-that you don't need.
-
-It started as Blue VO!CE for the G Pro X. That one turned out to be a Windows audio effect,
-not something in the headset, so this project loads Logitech's own DSP on Linux and puts the
-result on a virtual microphone. Same code Logitech ships, so it sounds the same: all 22
-presets come out identical to the Windows effect, sample for sample. The rest of the devices
-are talked to directly, the way G HUB does.
+Lghub is a Linux app for Logitech G headsets, mice, keyboards and webcams: the settings G HUB
+gives you on Windows, done natively (no Wine). Devices show up as you plug them in, including
+wireless ones behind a LIGHTSPEED, Unifying or Bolt receiver; pick one to change its settings.
 
 ![Devices](docs/screenshots/home.png)
 
-Open the app, pick a device, change what you want. Devices show up and disappear as you plug
-them in, including wireless ones behind a LIGHTSPEED, Unifying or Bolt receiver. The first
-time a device shows up, Lghub fetches its product picture from G HUB's update server: only
-that picture, a few hundred KB, not the whole package.
-
 ## Headsets
 
-**Blue VO!CE.** A new input device called *Blue VO!CE Microphone* that Discord, OBS, your
-browser or anything else can use:
+The G Pro X, G Pro X Wireless and G733 open on Blue VO!CE; other headsets get the page
+described under *Keyboards and the rest*.
 
-- every Blue VO!CE preset G HUB has for the G Pro X (and the Pro X Wireless set)
+**Blue VO!CE.** Logitech's own voice processing (it runs the DTS code G HUB ships, so all
+presets sound exactly as on Windows), on a new input device called *Blue VO!CE Microphone*
+that Discord, OBS, your browser or anything else can use:
+
+- every Blue VO!CE preset G HUB has for the headset
 - all the advanced controls: high-pass, noise reduction, noise gate, voice EQ, de-esser,
   compressor and limiter. Changes apply while you talk, without clicks
 - your own presets, with import and export
 - an on/off switch that keeps the device around, so your apps don't lose their mic
 
-It works with any microphone, not only the headset's. Your real mic is only opened while some
-app is recording from Blue VO!CE.
+It keeps running in the background, and your real mic is only opened while some app is
+recording from Blue VO!CE.
 
 **Equalizer.** 10 bands from 32 Hz to 16 kHz with a handful of presets, on a new output
 *… (Equalizer)* in front of the headset. This one is ours (PipeWire's filters), not
 Logitech's.
 
-**Headset.** Sidetone, volume and mic level, set in the headset's own sound card.
+**Headset.** Sidetone, volume and mic level from the headset's sound card, plus lighting and
+battery on headsets that have them.
 
 | Voice | Effects |
 | --- | --- |
 | ![Voice](docs/screenshots/voice.png) | ![Effects](docs/screenshots/effects.png) |
 | **Equalizer** | **Microphone** |
 | ![Equalizer](docs/screenshots/equalizer.png) | ![Microphone](docs/screenshots/microphone.png) |
-
-Other headsets (G733, G935, …) get the page described under *Keyboards and the rest*.
 
 ## Mice
 
@@ -70,9 +62,9 @@ speakers, Yeti mics) also get its controls.
 
 ## Webcams
 
-Brightness, contrast, saturation, sharpness, white balance, exposure, focus, zoom, pan and
-tilt: every setting the camera has. Webcams forget their settings when unplugged, so Lghub
-saves them and puts them back whenever the camera shows up again.
+A live preview, and every setting the camera has: brightness, contrast, saturation,
+sharpness, white balance, exposure, focus, zoom, pan and tilt. Webcams forget their settings
+when unplugged, so Lghub saves them and puts them back whenever the camera shows up again.
 
 ![Webcam](docs/screenshots/webcam.png)
 
@@ -93,8 +85,11 @@ Blue VO!CE helper:
 | Fedora | `python3-gobject gtk4 libadwaita gcc pipewire-devel alsa-utils` |
 | Arch | `python-gobject gtk4 libadwaita gcc libpipewire alsa-utils` |
 
-The installer downloads Logitech's Blue VO!CE files from G HUB's own update server (they aren't in this repo), checks their hashes, builds the helper, adds a menu
-entry and starts a user service. `./uninstall.sh` undoes all of it.
+The installer downloads Logitech's Blue VO!CE files from G HUB's own update server (they
+aren't in this repo), checks their hashes, builds the helper, adds a menu entry and starts a
+user service. `./uninstall.sh` undoes all of it. Later, the first time a device shows up, the
+app fetches its product picture from the same server (and, for the G733, its Blue VO!CE
+presets): just those files, a few hundred KB.
 
 Mice and keyboards need permission to talk to the device. One udev rule does it; this is the
 only step that needs root:
@@ -124,14 +119,15 @@ nothing once closed; mouse and keyboard settings live in the devices.
   (`hidpp.py`): ask the device which features it has, then use them. Onboard profiles
   (`mouse.py`) are read, changed and written back with their checksum, then read again to
   make sure.
-- **Webcams.** The standard Linux video interface, V4L2 (`v4l2.py`).
+- **Webcams.** The standard Linux video interface, V4L2 (`v4l2.py`), for the settings and
+  the preview (MJPEG frames, decoded by GTK).
 - **Headset sound card.** ALSA's mixer (`headset.py`).
 - **Background service.** `engine.py` keeps Blue VO!CE and the equalizer running and puts
   webcam settings back. `systemctl --user status lghub-bluevoice` shows it.
 
 Which device is which comes from a small table of model facts (`devices.py`): USB ids,
-lighting zones, and so on. `images.py` knows where each model's G HUB package lives and reads
-just the picture out of it with HTTP range requests.
+lighting zones, and so on. `depots.py` knows where each model's G HUB package lives and reads
+just the files it needs out of it with HTTP range requests.
 
 ## Trying it without the hardware
 
@@ -149,7 +145,6 @@ simulator. The webcam screenshot is a real camera.
 
 - DTS Headphone:X surround: Logitech's playback effects need a different way of loading.
 - Per-key lighting, G-key macros, and keyboard onboard profiles.
-- A live webcam preview.
 - Most devices here have only met the simulator. If something doesn't work on yours, open an
   issue with `journalctl --user -u lghub-bluevoice` and what the device's page says.
 
