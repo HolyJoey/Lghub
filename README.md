@@ -1,33 +1,78 @@
-# Blue VO!CE for Linux
+# Lghub
 
-I use a Logitech G Pro X, and the one thing I missed after moving to Linux was Blue VO!CE.
-G HUB only runs on Windows, so I took it apart to see where Blue VO!CE actually lives.
+Logitech G HUB for Linux, more or less. I use a G Pro X, a G502 and a C920, and G HUB only
+runs on Windows, so this does the same jobs natively: no Wine, no Windows, nothing running
+that you don't need.
 
-Turns out it isn't in the headset at all. It's a Windows audio effect that G HUB installs, a
-DLL built on DTS's MicOpt library. This project loads that same DLL on Linux, without Wine,
-and puts the result on a virtual microphone. Same code Logitech ships, so it sounds the same:
-I checked all 22 presets against the Windows effect and the output is identical, sample for
-sample.
+It started as Blue VO!CE for the G Pro X. That one turned out to be a Windows audio effect,
+not something in the headset, so this project loads Logitech's own DSP on Linux and puts the
+result on a virtual microphone. Same code Logitech ships, so it sounds the same: all 22
+presets come out identical to the Windows effect, sample for sample. The rest of the devices
+are talked to directly, the way G HUB does.
 
-![Voice page](docs/screenshots/voice.png)
+![Devices](docs/screenshots/home.png)
 
-## What you get
+Open the app, pick a device, change what you want. Devices show up and disappear as you plug
+them in, including wireless ones behind a LIGHTSPEED, Unifying or Bolt receiver.
 
-A new input device called **Blue VO!CE Microphone** that Discord, OBS, your browser or anything
-else can use, plus a small app to control it:
+## Headsets
 
-- every Blue VO!CE preset G HUB has for the G Pro X (and the Pro X Wireless set too)
+**Blue VO!CE.** A new input device called *Blue VO!CE Microphone* that Discord, OBS, your
+browser or anything else can use:
+
+- every Blue VO!CE preset G HUB has for the G Pro X (and the Pro X Wireless set)
 - all the advanced controls: high-pass, noise reduction, noise gate, voice EQ, de-esser,
   compressor and limiter. Changes apply while you talk, without clicks
-- save your own presets, import and export them
+- your own presets, with import and export
 - an on/off switch that keeps the device around, so your apps don't lose their mic
 
-It runs in the background, so you can close the app. Your real microphone is only opened while
-some app is actually recording from Blue VO!CE.
+It works with any microphone, not only the headset's. Your real mic is only opened while some
+app is recording from Blue VO!CE.
 
-| Effects | Microphone |
+**Equalizer.** 10 bands from 32 Hz to 16 kHz with a handful of presets, on a new output
+*… (Equalizer)* in front of the headset. This one is ours (PipeWire's filters), not
+Logitech's.
+
+**Headset.** Sidetone, volume and mic level, set in the headset's own sound card.
+
+| Voice | Effects |
 | --- | --- |
-| ![Effects page](docs/screenshots/effects.png) | ![Microphone page](docs/screenshots/microphone.png) |
+| ![Voice](docs/screenshots/voice.png) | ![Effects](docs/screenshots/effects.png) |
+| **Equalizer** | **Microphone** |
+| ![Equalizer](docs/screenshots/equalizer.png) | ![Microphone](docs/screenshots/microphone.png) |
+
+Other headsets (G733, G935, …) get the page described under *Keyboards and the rest*.
+
+## Mice
+
+DPI levels (and the default and DPI-shift level), report rate, what every button does
+(including keystrokes and a G-Shift layer), lighting, and the profiles stored in the mouse.
+Like G HUB's on-board memory mode, everything is saved *in the mouse*, so it keeps working on
+any computer and nothing has to run in the background. Before the first change, the mouse's
+memory is backed up to `~/.local/share/lghub-bluevoice/backups/`.
+
+| Sensitivity | Buttons | Lighting |
+| --- | --- | --- |
+| ![Mouse](docs/screenshots/mouse.png) | ![Buttons](docs/screenshots/mouse-buttons.png) | ![Lighting](docs/screenshots/mouse-lighting.png) |
+
+Wireless mice also show their battery.
+
+## Keyboards and the rest
+
+Keyboards, other headsets, the G560 speakers, POWERPLAY and anything else Logitech: Lghub
+asks the device what it can do and shows that. Lighting zones and effects, brightness, report
+rate, sidetone, on-board memory and battery. Devices with a USB sound card (headsets,
+speakers, Yeti mics) also get its controls.
+
+![Keyboard](docs/screenshots/keyboard.png)
+
+## Webcams
+
+Brightness, contrast, saturation, sharpness, white balance, exposure, focus, zoom, pan and
+tilt: every setting the camera has. Webcams forget their settings when unplugged, so Lghub
+saves them and puts them back whenever the camera shows up again.
+
+![Webcam](docs/screenshots/webcam.png)
 
 ## Install
 
@@ -38,58 +83,87 @@ cd Lghub
 ```
 
 You need an x86-64 PC with PipeWire, Python with GTK 4 and libadwaita, and gcc to build the
-helper:
+Blue VO!CE helper:
 
 | Distro | Packages |
 | --- | --- |
-| Debian / Ubuntu | `python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 gcc libpipewire-0.3-dev` |
-| Fedora | `python3-gobject gtk4 libadwaita gcc pipewire-devel` |
-| Arch | `python-gobject gtk4 libadwaita gcc libpipewire` |
+| Debian / Ubuntu | `python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 gcc libpipewire-0.3-dev alsa-utils` |
+| Fedora | `python3-gobject gtk4 libadwaita gcc pipewire-devel alsa-utils` |
+| Arch | `python-gobject gtk4 libadwaita gcc libpipewire alsa-utils` |
 
-The installer downloads Logitech's files from G HUB's own update server (they aren't in this
-repo), checks their hashes, builds the helper, adds a menu entry and starts a user service. No
-root needed. `./uninstall.sh` undoes all of it.
+The installer downloads Logitech's Blue VO!CE files and the G Pro X picture from G HUB's own
+update server (they aren't in this repo), checks their hashes, builds the helper, adds a menu
+entry and starts a user service. `./uninstall.sh` undoes all of it.
 
-Then open **Blue VO!CE** from your menu, pick a preset, and select *Blue VO!CE Microphone* in
-your voice app. Or flip *Use as default microphone* and skip that step.
+Mice and keyboards need permission to talk to the device. One udev rule does it; this is the
+only step that needs root:
+
+```bash
+echo 'SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", TAG+="uaccess"' | sudo tee /etc/udev/rules.d/70-lghub.rules
+sudo udevadm control --reload && sudo udevadm trigger
+```
+
+Then open **Lghub** from your menu (or run `lghub`).
 
 ## Is it heavy?
 
-No. While you're talking it uses about 4% of one CPU core and 7 MB of memory; when nothing is
-recording it's close to zero. It adds 8 ms of delay and doesn't change how the rest of your
-audio runs, so games aren't affected.
+No. Blue VO!CE uses about 4% of one CPU core while you talk and close to nothing otherwise,
+and adds 8 ms of delay. The equalizer only runs while it's switched on. The app itself does
+nothing once closed; mouse and keyboard settings live in the devices.
 
 ## How it works
 
-The Windows effect (`logi_audio_dts_studio_capture_apo.dll`) exports the DSP directly:
-`dts_micopt_init`, `dts_micopt_set`, `dts_micopt_process` and a few more. So instead of
-emulating the Windows audio engine, `bridge/peloader.c` maps the DLL into a normal Linux
-process and gives it the handful of Windows functions that code path needs.
-`bridge/micopt.c` calls it the way the Windows effect does: 256-frame blocks, the same
-defaults, and the same quirks (on/off switches go in as integers, not floats). The
-`bluevoice-bridge` program wraps that in a PipeWire filter.
+- **Blue VO!CE.** The Windows effect (`logi_audio_dts_studio_capture_apo.dll`) exports its DSP
+  directly. `bridge/peloader.c` maps the DLL into a normal Linux process and gives it the few
+  Windows functions it needs; `bridge/micopt.c` calls it the way the Windows effect does, and
+  `bluevoice-bridge` wraps that in a PipeWire filter. Every parameter is written down in
+  [docs/apo-parameters.md](docs/apo-parameters.md). `host/` checks the result against the
+  real effect under Wine.
+- **Mice, keyboards, receivers.** Logitech's HID++ 2.0 protocol over `/dev/hidraw`
+  (`hidpp.py`): ask the device which features it has, then use them. Onboard profiles
+  (`mouse.py`) are read, changed and written back with their checksum, then read again to
+  make sure.
+- **Webcams.** The standard Linux video interface, V4L2 (`v4l2.py`).
+- **Headset sound card.** ALSA's mixer (`headset.py`).
+- **Background service.** `engine.py` keeps Blue VO!CE and the equalizer running and puts
+  webcam settings back. `systemctl --user status lghub-bluevoice` shows it.
 
-`engine.py` is the background service. It starts the bridge, connects your mic to it when an
-app is listening, and applies whatever you change in `app.py`.
+Which device is which comes from a small table of model facts (`devices.py`): USB ids,
+lighting zones, and so on.
 
-Every parameter, its unit and its default is written down in
-[docs/apo-parameters.md](docs/apo-parameters.md).
+## Trying it without the hardware
 
-To check the result, `host/bluevoice_host.c` loads the same DLL the way Windows does (as a COM
-audio effect, under Wine) and `host/compare_native.py` feeds both the same recording.
+```bash
+LGHUB_FAKE_DEVICES=0aaa,c08b,c539,c33f,082d lghub
+```
+
+pretends a G Pro X, a G502 HERO, a receiver with a G502 LIGHTSPEED, a G815 and a C920 are
+plugged in. Mice and keyboards are simulated (`simulate.py`), and the tests run against the
+same simulator: `python3 -m unittest discover tests`. `082d@3-4` makes the camera on USB port
+3-4 pose as a C920. The mouse, keyboard and wireless screenshots above are from the
+simulator. The webcam screenshot is a real camera.
+
+## Not there yet
+
+- DTS Headphone:X surround: Logitech's playback effects need a different way of loading.
+- Per-key lighting, G-key macros, and keyboard onboard profiles.
+- A live webcam preview.
+- Most devices here have only met the simulator. If something doesn't work on yours, open an
+  issue with `journalctl --user -u lghub-bluevoice` and what the device's page says.
 
 ## If something's off
 
 `systemctl --user status lghub-bluevoice` and `journalctl --user -u lghub-bluevoice` show what
-the service is doing. If the installer says a download doesn't match, Logitech has released a
-new version of the files; open an issue. If you have the files from somewhere else you can
-point the installer at them with `./install.sh --depot-dir DIR`.
+the service is doing. If a mouse or keyboard page says it can't talk to the device, check the
+udev rule above and replug it. If the installer says a download doesn't match, Logitech has
+released new files; open an issue. If you have the files from somewhere else, point the
+installer at them with `./install.sh --depot-dir DIR`.
 
 ## License
 
 MIT, see [LICENSE](LICENSE). That covers the code in this repo. Logitech's files that the
-installer downloads (the Blue VO!CE DLL and the presets) are not part of it and stay under
-Logitech's own terms.
+installer downloads (the Blue VO!CE DLL, its presets and the product picture) are not part of
+it and stay under Logitech's own terms.
 
-Not affiliated with Logitech. Blue VO!CE, G HUB and G Pro X are Logitech's trademarks, DTS is
-DTS, Inc.'s.
+Not affiliated with Logitech. Logitech, G HUB, Blue VO!CE, LIGHTSPEED and the product names
+are Logitech's trademarks; DTS is DTS, Inc.'s.

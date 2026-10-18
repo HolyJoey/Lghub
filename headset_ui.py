@@ -207,24 +207,26 @@ class HeadsetPage(Gtk.Box):
 		if not device:
 			self._show_message('Plug in the headset to change its own settings.')
 			return
-		port = device.id.split(':', 1)[1]
+		self.worker.submit(lambda: self._read(device), self._show)
 
-		def job():
-			card = headset.alsa_card(port)
-			ctrls = headset.controls(card) if card is not None else []
-			level = None
-			if self.hidpp is None:
-				try:
-					self.hidpp = devices.open_hidpp(device)
-				except Exception:  # noqa: BLE001 - no HID++ on this headset is normal
-					self.hidpp = False
-			if self.hidpp:
-				try:
-					level = headset.sidetone(self.hidpp) if self.hidpp.has(headset.SIDETONE) else None
-				except Exception:  # noqa: BLE001
-					level = None
-			return card, ctrls, level
-		self.worker.submit(job, self._show)
+	def _read(self, device):
+		"""(sound card, its controls, HID++ sidetone level or None). On the worker thread."""
+		card = headset.alsa_card(device.port)
+		ctrls = headset.controls(card) if card is not None else []
+		return card, ctrls, self._hidpp_level(device)
+
+	def _hidpp_level(self, device):
+		if self.hidpp is None:
+			try:
+				self.hidpp = devices.open_hidpp(device)
+			except Exception:  # noqa: BLE001 - no HID++ on this headset is normal
+				self.hidpp = False
+		if not self.hidpp:
+			return None
+		try:
+			return headset.sidetone(self.hidpp) if self.hidpp.has(headset.SIDETONE) else None
+		except Exception:  # noqa: BLE001 - the headset may refuse while asleep
+			return None
 
 	def _show_message(self, text):
 		while (child := self.body.get_first_child()):
@@ -248,25 +250,27 @@ class HeadsetPage(Gtk.Box):
 		self.loading = True
 		side = [c for c in ctrls if c.is_sidetone]
 		if level is not None or side:
-			c = box(spacing=12, css=['card'])
-			c.append(label('Sidetone', ['section-title']))
-			c.append(label('Hear your own voice in the headset, so you don’t talk louder than you mean to.',
-			               ['muted', 'small'], wrap=True))
-			if level is not None:
-				c.append(self._slider('Level', level, lambda v: self._hidpp_sidetone(v)))
-			for ctrl in side:
-				self._control_rows(c, ctrl)
-			self.body.append(c)
-		mics = [c for c in ctrls if c.capture and not c.is_sidetone]
-		outs = [c for c in ctrls if not c.capture and not c.is_sidetone]
-		for title, group in (('Microphone', mics), ('Volume', outs)):
+			self.body.append(self._sidetone_card(level, side))
+		for title, group in (('Microphone', [c for c in ctrls if c.capture and not c.is_sidetone]),
+		                     ('Volume', [c for c in ctrls if not c.capture and not c.is_sidetone])):
 			if group:
-				c = box(spacing=12, css=['card'])
-				c.append(label(title, ['section-title']))
-				for ctrl in group:
-					self._control_rows(c, ctrl)
-				self.body.append(c)
+				self.body.append(self._group_card(title, group))
 		self.loading = False
+
+	def _sidetone_card(self, level, controls):
+		c = self._group_card('Sidetone', controls)
+		c.insert_child_after(label('Hear your own voice in the headset, so you don’t talk louder than you mean to.',
+		                           ['muted', 'small'], wrap=True), c.get_first_child())
+		if level is not None:
+			c.append(self._slider('Level', level, self._hidpp_sidetone))
+		return c
+
+	def _group_card(self, title, controls):
+		c = box(spacing=12, css=['card'])
+		c.append(label(title, ['section-title']))
+		for ctrl in controls:
+			self._control_rows(c, ctrl)
+		return c
 
 	def _slider(self, title, value, on_change):
 		r = box(Gtk.Orientation.HORIZONTAL, 14)

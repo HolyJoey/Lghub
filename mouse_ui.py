@@ -396,17 +396,17 @@ class MouseView(Gtk.Box):
 
 		def pressed(_c, keyval, _code, state):
 			name = Gdk.keyval_name(keyval) or ''
-			if name in MODIFIER_KEYS:
-				return True
 			usage = hid_usage(keyval)
-			if usage is None:
+			if name in MODIFIER_KEYS:
+				pass                       # wait for the key that goes with them
+			elif usage is None:
 				shown.set_text(f'{name}: not supported')
-				return True
-			action = mouse.Action.key(hid_modifiers(state), usage)
-			self._edit(lambda: self.profile.set_button(i, action, shifted))
-			dialog.close()
-			self.rebuild()
-			return True
+			else:
+				action = mouse.Action.key(hid_modifiers(state), usage)
+				self._edit(lambda: self.profile.set_button(i, action, shifted))
+				dialog.close()
+				self.rebuild()
+			return True                    # every key press is ours while recording
 		keys.connect('key-pressed', pressed)
 		dialog.add_controller(keys)
 		dialog.connect('close-request', lambda *_: self.rebuild() and False)

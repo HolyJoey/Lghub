@@ -50,7 +50,16 @@ Working, tested on this machine with the laptop microphone:
   and the persist flag; the current effect isn't read back (the page starts at the first
   effect). Not done: per-key lighting (0x8080/0x8081), G-keys/macros (0x8010), keyboard
   onboard profiles, Yeti's own protocol.
-- [ ] Product images, downloaded at install time.
+- [x] Product images: the G Pro X photos from the pro_headset depot the installer already
+  downloads. Other models use icons (their depots' URLs aren't known to us).
+- [x] Scans at 0 (2026-10-18): SonarQube 0 issues / 0 hotspots (Python, tests, docs),
+  clang-tidy and gcc -fanalyzer 0 in bridge/, shellcheck 0, gitleaks no leaks. README rewritten
+  per device type; screenshots by `docs/screenshots.sh`.
+
+## Next: the hardware round
+
+Plug in the G Pro X, G502 and C920 and go through each page. Known guesses to confirm are
+marked **Check** above.
 
 ## Needs the headset
 

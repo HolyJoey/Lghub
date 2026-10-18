@@ -91,14 +91,15 @@ CATALOG = (
 )
 
 # Wireless receivers: the devices paired to them are found over HID++ (later).
+LIGHTSPEED = 'LIGHTSPEED Receiver'
 RECEIVERS = {
 	'046d:c52b': 'Unifying Receiver',
-	'046d:c539': 'LIGHTSPEED Receiver',
-	'046d:c53a': 'LIGHTSPEED Receiver',
-	'046d:c53f': 'LIGHTSPEED Receiver',
-	'046d:c541': 'LIGHTSPEED Receiver',
-	'046d:c545': 'LIGHTSPEED Receiver',
-	'046d:c547': 'LIGHTSPEED Receiver',
+	'046d:c539': LIGHTSPEED,
+	'046d:c53a': LIGHTSPEED,
+	'046d:c53f': LIGHTSPEED,
+	'046d:c541': LIGHTSPEED,
+	'046d:c545': LIGHTSPEED,
+	'046d:c547': LIGHTSPEED,
 	'046d:c548': 'Bolt Receiver',
 }
 

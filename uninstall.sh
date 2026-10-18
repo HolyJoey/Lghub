@@ -15,7 +15,7 @@ rm -rf "$APP_DIR"
 rm -f "$HOME/.local/bin/lghub" "$HOME/.local/bin/lghub-bluevoice"
 rm -f "$PREFIX/applications/lghub-bluevoice.desktop"
 rm -f "$PREFIX/icons/hicolor/scalable/apps/lghub-bluevoice.svg"
-command -v update-desktop-database >/dev/null && update-desktop-database "$PREFIX/applications" || true
+if command -v update-desktop-database >/dev/null; then update-desktop-database "$PREFIX/applications" || true; fi
 echo "App, background service and Logitech files removed."
 
 if [ -d "$CONFIG_DIR" ]; then

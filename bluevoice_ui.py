@@ -605,8 +605,11 @@ class BlueVoiceView(Gtk.Box):
 	# --- status --------------------------------------------------------------------------
 
 	def _poll_status(self):
-		if not self.get_mapped():
-			return True
+		if self.get_mapped():   # nothing to show while another device's page is open
+			self._show_status()
+		return True
+
+	def _show_status(self):
 		status = store.read_status()
 		if status.get('updated', 0) <= GLib.get_real_time() / 1e6 - 3:
 			status = {'state': 'stopped'}  # the engine isn't running (or is stuck)
@@ -615,7 +618,6 @@ class BlueVoiceView(Gtk.Box):
 		self.voice_page.update_status(status)
 		self.mic_page.update_status(status, self._service_active)
 		self._show_sidebar_status(status)
-		return True
 
 	def _show_sidebar_status(self, status):
 		state = status.get('state')

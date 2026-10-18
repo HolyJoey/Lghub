@@ -62,6 +62,35 @@ class Control:
 		return 'sidetone' in self.name.lower()
 
 
+DB = re.compile(r'\[(-?[\d.]+)dB\]')
+SWITCH = re.compile(r'\[(on|off)\]')
+JOINED = {'pvolume-joined': 'pvolume', 'cvolume-joined': 'cvolume'}
+
+
+def _capabilities(control, text):
+	words = text.split()
+	control.caps = {JOINED.get(w, w) for w in words if not w.endswith('switch-joined') and w != 'volume-joined'}
+
+
+def _limits(control, text):
+	nums = [int(n) for n in re.findall(r'-?\d+', text)]
+	if len(nums) >= 2:
+		control.low, control.high = nums[-2], nums[-1]
+
+
+def _channel(control, text):
+	"""A channel line, e.g. 'Front Left: Playback 56 [64%] [-23.25dB] [on]'."""
+	words = text.split()
+	for before, word in zip(words, words[1:]):
+		if word.startswith('[') and word.endswith('%]') and before.lstrip('-').isdigit():
+			control.values.append(int(before))
+			if (d := DB.search(text)):
+				control.db = float(d[1])
+			break
+	if (sw := SWITCH.search(text)):
+		control.on = sw[1] == 'on'
+
+
 def parse_scontents(text):
 	controls, current = [], None
 	for line in text.splitlines():
@@ -70,25 +99,15 @@ def parse_scontents(text):
 			current = Control(m[1], int(m[2]))
 			controls.append(current)
 			continue
-		if current is None:
+		key, _, rest = line.strip().partition(':')
+		if current is None or not rest:
 			continue
-		line = line.strip()
-		if line.startswith('Capabilities:'):
-			current.caps = set(line.split(':', 1)[1].split()) - {'volume-joined', 'pswitch-joined', 'cswitch-joined'}
-			if 'pvolume-joined' in line or 'cvolume-joined' in line:
-				current.caps |= {'pvolume' if 'pvolume-joined' in line else 'cvolume'}
-		elif line.startswith('Limits:'):
-			nums = [int(n) for n in re.findall(r'-?\d+', line)]
-			if len(nums) >= 2:
-				current.low, current.high = nums[-2], nums[-1]
-		elif ':' in line and (m := re.search(r'(?:Playback|Capture)?\s*(-?\d+)\s*\[\d+%\]', line)):
-			current.values.append(int(m[1]))
-			if (d := re.search(r'\[(-?[\d.]+)dB\]', line)):
-				current.db = float(d[1])
-			if (s := re.search(r'\[(on|off)\]', line)):
-				current.on = s[1] == 'on'
-		elif ':' in line and (s := re.search(r'\[(on|off)\]', line)):
-			current.on = s[1] == 'on'
+		if key == 'Capabilities':
+			_capabilities(current, rest)
+		elif key == 'Limits':
+			_limits(current, rest)
+		elif not key.endswith('channels'):
+			_channel(current, rest)
 	return controls
 
 

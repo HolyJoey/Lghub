@@ -32,6 +32,7 @@ class FakeMouse:
 	"""A corded G502 HERO-like mouse with factory profiles only (empty user memory)."""
 	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, mouse.DPI,
 	            mouse.REPORT_RATE, mouse.ONBOARD]
+	KIND = 3   # mouse
 
 	def __init__(self, name='G502 HERO Gaming Mouse'):
 		self.device_name = name.encode()
@@ -58,43 +59,42 @@ class FakeMouse:
 		return self.outbox.pop(0) if self.outbox else None
 
 	def close(self):
-		pass
+		pass   # nothing to release: no file is open
 
 	def sector(self, n):
 		return self.memory.get(n, b'\xff' * SECTOR)
 
 	def handle(self, feature, fn, p):
-		if feature == hidpp.ROOT:
-			if fn == 0:
-				fid = struct.unpack('>H', p[:2])[0]
-				return bytes([self.FEATURES.index(fid) if fid in self.FEATURES else 0, 0, 0])
-			return bytes([4, 2, p[2]])
-		if feature == hidpp.FEATURE_SET:
-			if fn == 0:
-				return bytes([len(self.FEATURES) - 1])
-			return struct.pack('>HB', self.FEATURES[p[0]], 0)
-		if feature == hidpp.NAME:
-			if fn == 0:
-				return bytes([len(self.device_name)])
-			if fn == 1:
-				return self.device_name[p[0]:p[0] + 16]
-			return bytes([3])
-		if feature == hidpp.FIRMWARE:
-			if fn == 0:
-				return bytes([1])
-			return b'\0U1 ' + bytes([0x12, 0x02, 0x00, 0x07])
-		if feature == mouse.DPI:
-			return self._dpi(fn, p)
-		if feature == features.UNIFIED_BATTERY:
-			return bytes([72, 4, 0, 0])
-		if feature == mouse.REPORT_RATE:
-			if fn == 0:
-				return bytes([0b10001011])
-			if fn == 1:
-				return bytes([self.rate_ms])
-			self.rate_ms = p[0]
-			return b''
-		return self._onboard(fn, p)
+		handlers = {hidpp.ROOT: self._root, hidpp.FEATURE_SET: self._feature_set, hidpp.NAME: self._name,
+		            hidpp.FIRMWARE: self._firmware, mouse.DPI: self._dpi, mouse.REPORT_RATE: self._rate,
+		            features.UNIFIED_BATTERY: lambda _fn, _p: bytes([72, 4, 0, 0]), mouse.ONBOARD: self._onboard}
+		return handlers[feature](fn, p)
+
+	def _root(self, fn, p):
+		if fn == 0:
+			fid = struct.unpack('>H', p[:2])[0]
+			return bytes([self.FEATURES.index(fid) if fid in self.FEATURES else 0, 0, 0])
+		return bytes([4, 2, p[2]])
+
+	def _feature_set(self, fn, p):
+		return bytes([len(self.FEATURES) - 1]) if fn == 0 else struct.pack('>HB', self.FEATURES[p[0]], 0)
+
+	def _name(self, fn, p):
+		answers = {0: lambda: bytes([len(self.device_name)]), 1: lambda: self.device_name[p[0]:p[0] + 16],
+		           2: lambda: bytes([self.KIND])}
+		return answers[fn]()
+
+	@staticmethod
+	def _firmware(fn, _p):
+		return bytes([1]) if fn == 0 else b'\0U1 ' + bytes([0x12, 0x02, 0x00, 0x07])
+
+	def _rate(self, fn, p):
+		if fn == 0:
+			return bytes([0b10001011])
+		if fn == 1:
+			return bytes([self.rate_ms])
+		self.rate_ms = p[0]
+		return b''
 
 	def _dpi(self, fn, p):
 		if fn == 0:
@@ -148,6 +148,7 @@ class FakeKeyboard(FakeMouse):
 	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, features.COLOR_LED_EFFECTS,
 	            features.BRIGHTNESS, mouse.REPORT_RATE, mouse.ONBOARD, 0x8010, 0x8020, 0x4522]
 	ZONE_EFFECTS = [features.FIXED, features.BREATHING, features.CYCLE, 0x0008, 0x0000]
+	KIND = 0   # keyboard
 
 	def __init__(self):
 		super().__init__('G815 RGB MECHANICAL GAMING KEYBOARD')
@@ -155,25 +156,29 @@ class FakeKeyboard(FakeMouse):
 		self.level = 80
 
 	def handle(self, feature, fn, p):
-		if feature == hidpp.NAME and fn == 2:
-			return bytes([0])
 		if feature == features.COLOR_LED_EFFECTS:
-			if fn == 0:
-				return bytes([2])
-			if fn == 1:
-				return bytes([p[0]]) + struct.pack('>H', 1 if p[0] == 0 else 2) + bytes([len(self.ZONE_EFFECTS)])
-			if fn == 2:
-				return bytes([p[0], p[1]]) + struct.pack('>H', self.ZONE_EFFECTS[p[1]])
-			self.effects[p[0]] = (p[1], bytes(p[2:12]))
-			return b''
+			return self._lighting(fn, p)
 		if feature == features.BRIGHTNESS:
-			if fn == 0:
-				return struct.pack('>HB', 100, 10)
-			if fn == 1:
-				return struct.pack('>H', self.level)
-			self.level = struct.unpack('>H', p[:2])[0]
-			return b''
+			return self._brightness(fn, p)
 		return super().handle(feature, fn, p)
+
+	def _lighting(self, fn, p):
+		if fn == 0:
+			return bytes([2])
+		if fn == 1:
+			return bytes([p[0]]) + struct.pack('>H', 1 if p[0] == 0 else 2) + bytes([len(self.ZONE_EFFECTS)])
+		if fn == 2:
+			return bytes([p[0], p[1]]) + struct.pack('>H', self.ZONE_EFFECTS[p[1]])
+		self.effects[p[0]] = (p[1], bytes(p[2:12]))
+		return b''
+
+	def _brightness(self, fn, p):
+		if fn == 0:
+			return struct.pack('>HB', 100, 10)
+		if fn == 1:
+			return struct.pack('>H', self.level)
+		self.level = struct.unpack('>H', p[:2])[0]
+		return b''
 
 
 class FakeReceiver:
@@ -197,7 +202,7 @@ class FakeReceiver:
 		return self.outbox.pop(0) if self.outbox else None
 
 	def close(self):
-		pass
+		pass   # nothing to release: no file is open
 
 
 MICE = ('c08b', 'c08d', 'c332', 'c07d', 'c084', 'c092')

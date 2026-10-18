@@ -38,20 +38,20 @@ def forget(device):
 
 def apply(camera, values):
 	"""Set saved values: switches and menus first (auto modes decide which manual controls
-	are allowed), then the rest."""
-	controls = camera.controls()
-	for first in (True, False):
-		if not first:
-			controls = camera.controls()     # re-read: manual controls may be active now
-		for c in controls:
-			if c.key not in values or c.read_only or (c.kind == v4l2.T_INTEGER) == first:
-				continue
-			if not first and c.inactive:
-				continue
-			try:
-				camera.set(c.id, values[c.key])
-			except OSError:
-				pass
+	are allowed), then the rest, re-read because manual controls may be active now."""
+	_apply_pass(camera, camera.controls(), values, integers=False)
+	_apply_pass(camera, camera.controls(), values, integers=True)
+
+
+def _apply_pass(camera, controls, values, integers):
+	for c in controls:
+		wanted = c.key in values and not c.read_only and (c.kind == v4l2.T_INTEGER) == integers
+		if not wanted or (integers and c.inactive):
+			continue
+		try:
+			camera.set(c.id, values[c.key])
+		except OSError:
+			pass   # the camera refused this one; the others still apply
 
 
 class Restorer:

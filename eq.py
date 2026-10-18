@@ -65,8 +65,8 @@ def band_label(i):
 
 def config_text(target, description, gains):
 	nodes, links = [], []
-	for i, freq in enumerate(BANDS):
-		kind = 'bq_lowshelf' if i == 0 else 'bq_highshelf' if i == len(BANDS) - 1 else 'bq_peaking'
+	kinds = ['bq_lowshelf'] + ['bq_peaking'] * (len(BANDS) - 2) + ['bq_highshelf']
+	for i, (freq, kind) in enumerate(zip(BANDS, kinds)):
 		nodes.append(f'{{ type = builtin name = {band_name(i)} label = {kind} '
 		             f'control = {{ "Freq" = {freq} "Q" = {Q} "Gain" = {gains[i]:.2f} }} }}')
 		if i:

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Installs Lghub (Logitech G devices on Linux, with Blue VO!CE) for the current user.
+# No root needed; mice and keyboards also want the udev rule printed at the end.
 #   ./install.sh                     download Logitech's files from G HUB's update server
 #   ./install.sh --depot-dir DIR     use driver_audio_apo.depot / pro_headset.depot from DIR
 set -euo pipefail
@@ -24,6 +25,7 @@ python3 -c "import gi; gi.require_version('Gtk','4.0'); gi.require_version('Adw'
 need pw-dump "PipeWire tools (pipewire-bin / pipewire-utils / pipewire)"
 need pw-link "PipeWire tools (pipewire-bin / pipewire-utils / pipewire)"
 need wpctl "WirePlumber (wireplumber)"
+need amixer "ALSA utilities (alsa-utils)"
 need gcc "gcc"
 pkg-config --exists libpipewire-0.3 2>/dev/null \
   || missing+=("PipeWire headers (Debian/Ubuntu: libpipewire-0.3-dev · Fedora: pipewire-devel · Arch: libpipewire)")
@@ -76,8 +78,8 @@ Terminal=false
 Categories=AudioVideo;Audio;Settings;HardwareSettings;
 StartupWMClass=$APP_ID
 EOF
-command -v update-desktop-database >/dev/null && update-desktop-database "$PREFIX/applications" || true
-command -v gtk-update-icon-cache >/dev/null && gtk-update-icon-cache -qf "$PREFIX/icons/hicolor" 2>/dev/null || true
+if command -v update-desktop-database >/dev/null; then update-desktop-database "$PREFIX/applications" || true; fi
+if command -v gtk-update-icon-cache >/dev/null; then gtk-update-icon-cache -qf "$PREFIX/icons/hicolor" 2>/dev/null || true; fi
 
 say "Starting the background service"
 mkdir -p "$UNIT_DIR"
@@ -102,6 +104,12 @@ echo "Running. A new input device, 'Blue VO!CE Microphone', appears in a few sec
 
 say "Done"
 echo "Open 'Lghub' from your menu, or run: lghub"
+if [ ! -f /etc/udev/rules.d/70-lghub.rules ]; then
+  echo
+  echo "Mice and keyboards need one udev rule (the only step that needs root):"
+  echo "  echo 'SUBSYSTEM==\"hidraw\", ATTRS{idVendor}==\"046d\", TAG+=\"uaccess\"' | sudo tee /etc/udev/rules.d/70-lghub.rules"
+  echo "  sudo udevadm control --reload && sudo udevadm trigger"
+fi
 case ":$PATH:" in
   *":$BIN_DIR:"*) ;;
   *) echo "Note: $BIN_DIR is not on your PATH." ;;
