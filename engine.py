@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Blue VO!CE engine: keeps the virtual microphone running.
+"""Lghub engine: keeps the Blue VO!CE virtual microphone and the headset equalizer running.
 
 Runs bluevoice-bridge (Logitech's Blue VO!CE DSP as a native PipeWire filter), keeps the links
 mic -> bluevoice_dsp -> "Blue VO!CE Microphone" in place, applies config.json changes live, and
@@ -11,6 +11,7 @@ import subprocess
 import threading
 import time
 
+import eq
 import presets
 import pw
 import store
@@ -41,6 +42,7 @@ class Engine:
 		self.last_listener = 0.0
 		self.link_event = threading.Event()
 		self.last_publish = 0.0
+		self.eq = eq.Runner()
 
 	# --- configuration -------------------------------------------------------------------
 
@@ -220,8 +222,11 @@ class Engine:
 				self.publish()
 			if not self.proc:
 				self.link_event.clear()  # nothing to relink until the bridge is back
+			if self.eq.due():
+				self.eq.check(pw.dump())
 			self.link_event.wait(POLL)
 		self.stop_bridge()
+		self.eq.stop()
 		store.write_status({'state': 'stopped', 'error': '', 'updated': time.time()})
 
 

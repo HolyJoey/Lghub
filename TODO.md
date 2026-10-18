@@ -32,7 +32,13 @@ Working, tested on this machine with the laptop microphone:
   0x0a), report-rate byte = ms, the write of a 255-byte sector in 16-byte chunks, button order
   (names after Back/Forward are generic "Button n"). Backups of every sector we write are in
   `~/.local/share/lghub-bluevoice/backups/<serial>/`.
-- [ ] G Pro X extras: sidetone, mic level, EQ / DTS surround.
+- [x] G Pro X extras: 10-band equalizer (our own PipeWire filter-chain, run by the engine,
+  live gains), Headset page (the headset sound card's ALSA controls: sidetone, mic level,
+  volume; plus HID++ sidetone 0x8300 if the adapter has it). **Check on the real G Pro X**:
+  which mixer controls its card has; that Automatic finds its sink (`pw.is_pro_x`).
+- [ ] DTS Headphone:X surround: Logitech's render APOs only export COM; needs a COM host for
+  `logi_audio_headset_render_apo.dll` (like the Blue VO!CE bridge, but for playback). Not
+  started.
 - [ ] Webcams (C920): V4L2 controls.
 - [ ] Keyboards and the rest; receivers (devices paired to LIGHTSPEED/Unifying).
 - [ ] Product images, downloaded at install time.

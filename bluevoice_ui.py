@@ -10,6 +10,7 @@ import threading
 
 from gi.repository import Adw, GLib, Gtk
 
+import headset_ui
 import presets
 import pw
 import service
@@ -21,7 +22,9 @@ APP_TITLE = 'Blue VO!CE'
 MY_PRESETS = 'My presets'
 SAVE_DELAY_MS = 150
 CUSTOM = 'Custom'
-PAGES = ('voice', 'effects', 'microphone', 'presets')
+PAGES = ('voice', 'effects', 'microphone', 'presets', 'equalizer', 'headset')
+HEADSET_PAGES = (('equalizer', 'Equalizer', 'multimedia-equalizer-symbolic'),
+                 ('headset', 'Headset', 'audio-headset-symbolic'))
 
 
 # --- Voice page ----------------------------------------------------------------------------
@@ -460,8 +463,11 @@ class BlueVoiceView(Gtk.Box):
 		self.effects_page = EffectsPage(self)
 		self.mic_page = MicrophonePage(self)
 		self.presets_page = PresetsPage(self)
+		self.eq_page = headset_ui.EqualizerPage(self)
+		self.headset_page = headset_ui.HeadsetPage(self)
 		for page, name in ((self.voice_page, 'voice'), (self.effects_page, 'effects'),
-		                   (self.mic_page, 'microphone'), (self.presets_page, 'presets')):
+		                   (self.mic_page, 'microphone'), (self.presets_page, 'presets'),
+		                   (self.eq_page, 'equalizer'), (self.headset_page, 'headset')):
 			self.stack.add_named(scrolled(page), name)
 		self.sidebar = None
 		self.set_device(None)
@@ -477,6 +483,7 @@ class BlueVoiceView(Gtk.Box):
 	def set_device(self, device):
 		"""Title the sidebar after the headset it was opened from (or Blue VO!CE itself)."""
 		title = device.name if device else APP_TITLE
+		self.headset_page.set_device(device)
 		if self.sidebar and title == self.device_title:
 			return
 		self.device_title = title
@@ -484,7 +491,8 @@ class BlueVoiceView(Gtk.Box):
 			self.root.remove(self.sidebar)
 		self.sidebar = self._build_sidebar(device)
 		self.root.prepend(self.sidebar)
-		self.show_page(self.stack.get_visible_child_name() or 'voice')
+		page = self.stack.get_visible_child_name() or 'voice'
+		self.show_page(page if page in self.nav_buttons else 'voice')
 
 	def toast(self, text):
 		self.window.toast(text)
@@ -512,6 +520,12 @@ class BlueVoiceView(Gtk.Box):
 			b = nav_button(text, icon_name, lambda k=key: self.show_page(k))
 			nav.append(b)
 			self.nav_buttons[key] = b
+		if device:
+			nav.append(label('Headset', ['muted', 'small'], margin_top=14, margin_bottom=4, margin_start=12))
+			for key, text, icon_name in HEADSET_PAGES:
+				b = nav_button(text, icon_name, lambda k=key: self.show_page(k))
+				nav.append(b)
+				self.nav_buttons[key] = b
 		side.append(nav)
 		side.append(box(vexpand=True))
 
@@ -537,6 +551,10 @@ class BlueVoiceView(Gtk.Box):
 			(b.add_css_class if k == key else b.remove_css_class)('active')
 		if key == 'microphone':
 			self.mic_page.refresh_inputs()
+		elif key == 'equalizer':
+			self.eq_page.refresh_targets()
+		elif key == 'headset':
+			self.headset_page.refresh()
 
 	# --- settings ------------------------------------------------------------------------
 
