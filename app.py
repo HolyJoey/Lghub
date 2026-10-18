@@ -15,11 +15,11 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango  # noqa: E402
 import bluevoice_ui  # noqa: E402
 import devices  # noqa: E402
 import hidpp_ui  # noqa: E402
-import images  # noqa: E402
+import depots  # noqa: E402
 import mouse_ui  # noqa: E402
 import webcam_ui  # noqa: E402
 from worker import Worker  # noqa: E402
-from ui import (APP_DIR, CSS, box, device_icon, device_sidebar, forget_image, label, nav_button,  # noqa: E402
+from ui import (CSS, box, device_icon, device_sidebar, forget_image, label, nav_button,  # noqa: E402
                 page_header, scrolled)
 
 APP_ID = 'dev.local.LghubBlueVoice'
@@ -62,15 +62,6 @@ class HomePage(Gtk.Box):
 		                        min_children_per_line=1, max_children_per_line=5, homogeneous=True,
 		                        valign=Gtk.Align.START)
 		self.append(self.flow)
-		self.append(label('Software', ['section-title']))
-		soft = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, column_spacing=16, row_spacing=16,
-		                   min_children_per_line=1, max_children_per_line=5, homogeneous=True)
-		icon_path = os.path.join(APP_DIR, 'lghub-bluevoice.svg')
-		logo = Gtk.Image.new_from_file(icon_path) if os.path.exists(icon_path) else \
-			Gtk.Image.new_from_icon_name('audio-input-microphone-symbolic')
-		soft.append(device_tile(logo, bluevoice_ui.APP_TITLE, 'Virtual microphone', 'Works with any microphone',
-		                        lambda: win.show_device(None)))
-		self.append(soft)
 		self.empty = label('No Logitech devices found. Plug one in; it shows up here within a few seconds.',
 		                   ['muted'], wrap=True)
 		self.append(self.empty)
@@ -218,7 +209,7 @@ class MainWindow(Adw.ApplicationWindow):
 		self.stack.set_visible_child_name('home')
 
 	def show_device(self, device):
-		"""Open a device's page; None opens Blue VO!CE without a headset."""
+		"""Open a device's page (None: the headset view without a headset, for --page)."""
 		self.current = device
 		if device is None or devices.blue_voice_model(device):
 			self.blue_voice.set_device(device)
@@ -254,10 +245,15 @@ class MainWindow(Adw.ApplicationWindow):
 	def _fetch_pictures(self, shown):
 		for d in shown:
 			key = d.model.key
-			if key in self.asked or key not in images.DEPOTS or os.path.exists(images.path_for(key)):
+			if key in self.asked:
 				continue
 			self.asked.add(key)
-			self.pictures.submit(lambda k=key: images.fetch(k), lambda path, k=key: path and self._got_picture(k))
+			if key in depots.PRESET_FILES:
+				self.pictures.submit(lambda k=key: depots.fetch_presets(k),
+				                     lambda path: path and self.blue_voice.refresh_model())
+			if key in depots.DEPOTS and not os.path.exists(depots.path_for(key)):
+				self.pictures.submit(lambda k=key: depots.fetch_picture(k),
+				                     lambda path, k=key: path and self._got_picture(k))
 
 	def _got_picture(self, key):
 		forget_image(key)
@@ -279,11 +275,7 @@ class MainWindow(Adw.ApplicationWindow):
 		self._open_pending()
 		if self.current and self.current.id not in {d.id for d in shown}:
 			self.toast(f'{self.current.name} was disconnected')
-			if devices.blue_voice_model(self.current):
-				self.blue_voice.set_device(None)  # Blue VO!CE keeps working with another mic
-				self.current = None
-			else:
-				self.show_home()
+			self.show_home()
 
 
 class App(Adw.Application):

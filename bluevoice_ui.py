@@ -1,4 +1,4 @@
-"""Blue VO!CE: the G Pro X page (and usable with any microphone).
+"""The page of a Blue VO!CE headset (G Pro X, G Pro X Wireless, G733).
 
 These pages only edit config.json and show status.json; the engine (engine.py, a systemd user
 service) does the processing, so the virtual microphone keeps working with the app closed.
@@ -10,6 +10,7 @@ import threading
 
 from gi.repository import Adw, GLib, Gtk
 
+import devices
 import headset_ui
 import presets
 import pw
@@ -237,7 +238,7 @@ class MicrophonePage(Gtk.Box):
 
 		card = box(spacing=12, css=['card'])
 		card.append(label('Input', ['section-title']))
-		card.append(label('The microphone Blue VO!CE processes. Automatic picks a G Pro X when one is '
+		card.append(label('The microphone Blue VO!CE processes. Automatic picks the headset’s when it is '
 		                  'connected, otherwise your default microphone.', ['muted', 'small'], wrap=True))
 		self.inputs = [('auto', 'Automatic')]
 		self.dropdown = Gtk.DropDown.new_from_strings([d for _, d in self.inputs])
@@ -246,7 +247,7 @@ class MicrophonePage(Gtk.Box):
 		card.append(label('Headset', ['section-title']))
 		card.append(label('G HUB tunes its Blue VO!CE presets per headset. Automatic chooses from the '
 		                  'microphone in use.', ['muted', 'small'], wrap=True))
-		self.models = [('auto', 'Automatic'), ('wired', 'G Pro X'), ('wireless', 'G Pro X Wireless')]
+		self.models = [('auto', 'Automatic')] + list(store.MODEL_NAMES.items())
 		self.model_dropdown = Gtk.DropDown.new_from_strings([d for _, d in self.models])
 		self.model_dropdown.connect('notify::selected', self._on_model)
 		card.append(self.model_dropdown)
@@ -434,12 +435,11 @@ class PresetsPage(Gtk.Box):
 		dialog.open(self.win.get_root(), None, done)
 
 
-# --- Blue VO!CE (G Pro X page) -------------------------------------------------------------
+# --- the headset view --------------------------------------------------------------------
 
 class BlueVoiceView(Gtk.Box):
-	"""Blue VO!CE settings. The G Pro X page, and reachable without a headset too, since it
-	works on any microphone."""
-
+	"""A Blue VO!CE headset's page: Blue VO!CE, the equalizer and the headset's own settings.
+	Blue VO!CE itself keeps running in the background with any microphone."""
 
 	def __init__(self, win):
 		super().__init__(orientation=Gtk.Orientation.VERTICAL, vexpand=True)
@@ -448,6 +448,7 @@ class BlueVoiceView(Gtk.Box):
 		self._save_id = 0
 		self.device_title = APP_TITLE
 		self.cfg = store.load_config()
+		self.hint = None           # preset set of the headset whose page is open
 		self.model = store.headset_model(self.cfg, store.read_status())
 		self.ghub_presets = store.ghub_presets(self.model)
 		self.base_params = copy.deepcopy(self.cfg['params'])  # what "Reset to preset" returns to
@@ -484,6 +485,8 @@ class BlueVoiceView(Gtk.Box):
 		"""Title the sidebar after the headset it was opened from (or Blue VO!CE itself)."""
 		title = device.name if device else APP_TITLE
 		self.headset_page.set_device(device)
+		self.hint = devices.blue_voice_model(device)
+		self.refresh_model()
 		if self.sidebar and title == self.device_title:
 			return
 		self.device_title = title
@@ -596,8 +599,8 @@ class BlueVoiceView(Gtk.Box):
 
 	def refresh_model(self, status=None):
 		"""Switch the G HUB preset list when the headset model (chosen or detected) changes."""
-		model = store.headset_model(self.cfg, status if status is not None else store.read_status())
-		if model != self.model:
+		model = store.headset_model(self.cfg, status if status is not None else store.read_status(), self.hint)
+		if model != self.model or not self.ghub_presets:
 			self.model = model
 			self.ghub_presets = store.ghub_presets(model)
 			self.voice_page.load()

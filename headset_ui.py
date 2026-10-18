@@ -1,11 +1,11 @@
-"""G Pro X pages besides Blue VO!CE: the equalizer and the headset's own controls."""
+"""Headset pages besides Blue VO!CE: the equalizer and the headset's own controls."""
 import threading
 
 from gi.repository import GLib, Gtk
 
-import devices
 import eq
 import headset
+from hidpp_panel import SettingsPanel
 from ui import NOTIFY_ACTIVE, box, label, page_header
 from worker import Worker
 
@@ -84,7 +84,7 @@ class EqualizerPage(Gtk.Box):
 		out = box(spacing=12, css=['card'])
 		out.append(label('Output', ['section-title']))
 		out.append(label('Apps play into a new output, “… (Equalizer)”, which feeds the headset. Automatic follows '
-		                 'the G Pro X.', ['muted', 'small'], wrap=True))
+		                 'the headset.', ['muted', 'small'], wrap=True))
 		self.targets = [('auto', 'Automatic')]
 		self.target_dd = Gtk.DropDown.new_from_strings([d for _, d in self.targets])
 		self.target_dd.connect('notify::selected', self._on_target)
@@ -178,28 +178,45 @@ class EqualizerPage(Gtk.Box):
 
 
 class HeadsetPage(Gtk.Box):
-	"""Sidetone, volume and mic level: whatever the headset's sound card (and HID++) offers."""
+	"""Sidetone, volume and mic level from the headset's sound card, and, with hidpp, whatever
+	the headset offers over HID++ (lighting, battery, sidetone)."""
 
-	def __init__(self, win):
+	def __init__(self, win, hidpp=True):
 		super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=20, css_classes=['page'])
 		self.win = win
 		self.device = None
+		self.use_hidpp = hidpp
+		self.panel = None
 		self.worker = Worker()
-		self.hidpp = None
 		self.card = None
 		self.loading = False
 		self._shown = None
-		self.append(page_header('Headset', 'Sidetone (hearing your own voice), volume and microphone level, '
-		                        'set in the headset itself.'))
+		self.append(page_header('Headset', 'Sidetone (hearing your own voice), volume, microphone level and '
+		                        'lighting, set in the headset itself.'))
 		self.body = box(spacing=20)
 		self.append(self.body)
 		self.message = label('', ['muted'], wrap=True)
 		self.body.append(self.message)
+		self.extra = box(spacing=20)
+		self.append(self.extra)
+
+	def close(self):
+		self.worker.stop()
+		if self.panel:
+			self.panel.close()
 
 	def set_device(self, device):
+		if device is self.device:
+			return
 		self.device = device
-		self.hidpp = None
 		self._shown = None
+		if self.panel:
+			self.panel.close()
+			self.extra.remove(self.panel)
+			self.panel = None
+		if device and self.use_hidpp:
+			self.panel = SettingsPanel(self.win, device, quiet=True)
+			self.extra.append(self.panel)
 		self.refresh()
 
 	def refresh(self):
@@ -207,26 +224,16 @@ class HeadsetPage(Gtk.Box):
 		if not device:
 			self._show_message('Plug in the headset to change its own settings.')
 			return
+		if device.wireless:
+			self._show_message('')   # no sound card of its own: everything is over HID++ below
+			return
 		self.worker.submit(lambda: self._read(device), self._show)
 
-	def _read(self, device):
-		"""(sound card, its controls, HID++ sidetone level or None). On the worker thread."""
+	@staticmethod
+	def _read(device):
+		"""(sound card, its controls). On the worker thread."""
 		card = headset.alsa_card(device.port)
-		ctrls = headset.controls(card) if card is not None else []
-		return card, ctrls, self._hidpp_level(device)
-
-	def _hidpp_level(self, device):
-		if self.hidpp is None:
-			try:
-				self.hidpp = devices.open_hidpp(device)
-			except Exception:  # noqa: BLE001 - no HID++ on this headset is normal
-				self.hidpp = False
-		if not self.hidpp:
-			return None
-		try:
-			return headset.sidetone(self.hidpp) if self.hidpp.has(headset.SIDETONE) else None
-		except Exception:  # noqa: BLE001 - the headset may refuse while asleep
-			return None
+		return card, headset.controls(card) if card is not None else []
 
 	def _show_message(self, text):
 		while (child := self.body.get_first_child()):
@@ -235,13 +242,13 @@ class HeadsetPage(Gtk.Box):
 		self.body.append(self.message)
 
 	def _show(self, result):
-		card, ctrls, level = result
-		key = (card, [(c.name, c.index, c.percent, c.on) for c in ctrls], level)
+		card, ctrls = result
+		key = (card, [(c.name, c.index, c.percent, c.on) for c in ctrls])
 		if key == self._shown:
 			return
 		self._shown = key
 		self.card = card
-		if card is None and level is None:
+		if card is None:
 			self._show_message('This headset’s sound card wasn’t found. Is it plugged in directly (not through a hub '
 			                   'that hides it)?')
 			return
@@ -249,20 +256,18 @@ class HeadsetPage(Gtk.Box):
 			self.body.remove(child)
 		self.loading = True
 		side = [c for c in ctrls if c.is_sidetone]
-		if level is not None or side:
-			self.body.append(self._sidetone_card(level, side))
+		if side:
+			self.body.append(self._sidetone_card(side))
 		for title, group in (('Microphone', [c for c in ctrls if c.capture and not c.is_sidetone]),
 		                     ('Volume', [c for c in ctrls if not c.capture and not c.is_sidetone])):
 			if group:
 				self.body.append(self._group_card(title, group))
 		self.loading = False
 
-	def _sidetone_card(self, level, controls):
+	def _sidetone_card(self, controls):
 		c = self._group_card('Sidetone', controls)
 		c.insert_child_after(label('Hear your own voice in the headset, so you don’t talk louder than you mean to.',
 		                           ['muted', 'small'], wrap=True), c.get_first_child())
-		if level is not None:
-			c.append(self._slider('Level', level, self._hidpp_sidetone))
 		return c
 
 	def _group_card(self, title, controls):
@@ -310,9 +315,3 @@ class HeadsetPage(Gtk.Box):
 		if sw:
 			r.append(sw)
 		parent.append(r)
-
-	def _hidpp_sidetone(self, value):
-		dev = self.hidpp
-		if dev:
-			self.worker.submit(lambda: headset.set_sidetone(dev, value), None,
-			                   lambda e: self.win.toast(f'The headset refused: {e}'))

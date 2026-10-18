@@ -44,13 +44,14 @@ def default_source_name():
 	return None
 
 
-def is_pro_x(src):
+def is_blue_voice_headset(src):
+	"""A G Pro X or G733 microphone/output, going by its PipeWire name."""
 	text = f"{src['name']} {src['description']}".lower().replace('_', ' ')
-	return 'pro x' in text or 'prox' in text or 'g pro' in text
+	return any(name in text for name in ('pro x', 'prox', 'g pro', 'g733'))
 
 
 def pick_input(wanted, objs=None):
-	"""The source to process: the configured one if present, else a G Pro X, else the default mic."""
+	"""The source to process: the configured one if present, else a Blue VO!CE headset, else the default mic."""
 	srcs = sources(objs)
 	if wanted and wanted != 'auto':
 		for s in srcs:
@@ -58,7 +59,7 @@ def pick_input(wanted, objs=None):
 				return s
 		return None  # the chosen mic is unplugged; wait for it rather than grabbing another
 	for s in srcs:
-		if is_pro_x(s):
+		if is_blue_voice_headset(s):
 			return s
 	default = default_source_name()
 	for s in srcs:

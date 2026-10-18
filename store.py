@@ -28,8 +28,9 @@ APO_DLL = os.path.join(DATA_DIR, 'apo', 'logi_audio_dts_studio_capture_apo.dll')
 GHUB_PRESETS = {
 	'wired': os.path.join(DATA_DIR, 'presets', 'pro_x_headset_device_presets.json'),
 	'wireless': os.path.join(DATA_DIR, 'presets', 'pro_x_wireless_headset_device_presets.json'),
+	'g733': os.path.join(DATA_DIR, 'presets', 'g733_device_presets.json'),   # fetched on first sight
 }
-MODEL_NAMES = {'wired': 'G Pro X', 'wireless': 'G Pro X Wireless'}
+MODEL_NAMES = {'wired': 'G Pro X', 'wireless': 'G Pro X Wireless', 'g733': 'G733'}
 BRIDGE = os.path.join(DATA_DIR, 'bin', 'bluevoice-bridge')
 IMAGE_DIR = os.path.join(DATA_DIR, 'images')   # product images, from Logitech's depots
 
@@ -53,14 +54,19 @@ def _write_json(path, data):
 	os.replace(tmp, path)
 
 
-def headset_model(cfg, status=None):
-	"""'wired' or 'wireless': G HUB ships different presets for each. 'auto' follows the
-	microphone the engine is using."""
+def headset_model(cfg, status=None, hint=None):
+	"""Which headset's presets to offer ('wired', 'wireless' or 'g733'): G HUB tunes them per
+	headset. 'auto' follows the headset whose page is open (hint), else the microphone the
+	engine is using."""
 	chosen = cfg.get('headset', 'auto')
 	if chosen in GHUB_PRESETS:
 		return chosen
+	if hint in GHUB_PRESETS:
+		return hint
 	inp = (status or {}).get('input') or {}
 	text = f"{inp.get('name', '')} {inp.get('description', '')}".lower()
+	if 'g733' in text:
+		return 'g733'
 	return 'wireless' if 'wireless' in text else 'wired'
 
 
@@ -82,7 +88,7 @@ def default_config():
 		'enabled': True,          # off = clean pass-through; the virtual mic stays available
 		'input': 'auto',          # node.name of the real microphone, or 'auto'
 		'make_default': False,    # make "Blue VO!CE Microphone" the system's default input
-		'headset': 'auto',        # which G HUB preset set to offer: 'auto', 'wired' or 'wireless'
+		'headset': 'auto',        # which G HUB preset set to offer: 'auto' or a GHUB_PRESETS key
 		'preset': name,           # label only; 'params' is what is applied
 		'params': params,
 	}

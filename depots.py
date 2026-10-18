@@ -1,10 +1,11 @@
-"""Product pictures, fetched from G HUB's update server the first time a device shows up.
+"""Product pictures and Blue VO!CE presets, fetched from G HUB's update server the first time
+a device shows up.
 
 Each model's G HUB package (a "depot") holds its pictures. A depot can be tens of MB, but
 it is just a header plus files laid end to end, and the server answers HTTP range requests,
 so we read the header, hop over the file lengths, and download only the manifest and the
 one picture it names for the model: a few hundred KB, once per model. Nothing from Logitech
-is stored in this repo; the pictures land in ~/.local/share/lghub-bluevoice/images.
+is stored in this repo; the files land in ~/.local/share/lghub-bluevoice.
 """
 import json
 import os
@@ -181,7 +182,7 @@ def _to_png(data, out):
 	return False
 
 
-def fetch(model):
+def fetch_picture(model):
 	"""Path of the model's picture, downloading it if needed; None if there is none (yet).
 	Blocks on the network: call from a worker thread."""
 	path = path_for(model)
@@ -203,3 +204,29 @@ def fetch(model):
 	with open(marker, 'w'):
 		pass   # remember the failure (its mtime) so we don't ask the server again soon
 	return None
+
+
+# Headsets whose Blue VO!CE presets come from their depot at first sight (the G Pro X ones come
+# with the installer): model -> (file in the depot, preset set in store.GHUB_PRESETS).
+PRESET_FILES = {'g733': ('device_presets.json', 'g733')}
+
+
+def fetch_presets(model):
+	"""Path of the headset's G HUB preset file, downloading it if needed, or None. Blocks."""
+	name, preset_set = PRESET_FILES[model]
+	path = store.GHUB_PRESETS[preset_set]
+	if os.path.exists(path):
+		return path
+	url = SERVER + DEPOTS[model]
+	try:
+		files = _files(url)
+		data = _get(url, *files[name])
+		json.loads(data)
+	except (OSError, ValueError, KeyError, struct.error) as e:
+		print(f'lghub: no presets for {model}: {e}', flush=True)
+		return None
+	os.makedirs(os.path.dirname(path), exist_ok=True)
+	with open(path + '.tmp', 'wb') as f:
+		f.write(data)
+	os.replace(path + '.tmp', path)
+	return path

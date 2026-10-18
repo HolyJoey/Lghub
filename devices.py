@@ -116,8 +116,9 @@ TYPE_ICONS = {
 	'receiver': 'network-wireless-symbolic', 'other': 'input-gaming-symbolic',
 }
 
-# Headsets whose page is Blue VO!CE (Logitech ships presets for these).
-BLUE_VOICE_MODELS = {'pro_71_gaming_headset': 'wired', 'pro_71_gaming_wireless_headset': 'wireless'}
+# Headsets with Blue VO!CE (G HUB has presets for them) -> their preset set in store.GHUB_PRESETS.
+BLUE_VOICE_MODELS = {'pro_71_gaming_headset': 'wired', 'pro_71_gaming_wireless_headset': 'wireless',
+                     'g733': 'g733'}
 
 
 @dataclass(frozen=True)
@@ -274,5 +275,5 @@ def scan_receiver(receiver):
 
 
 def blue_voice_model(device):
-	"""'wired'/'wireless' if the device's page is Blue VO!CE, else None."""
+	"""The device's Blue VO!CE preset set if it has Blue VO!CE, else None."""
 	return BLUE_VOICE_MODELS.get(device.model.key) if device else None

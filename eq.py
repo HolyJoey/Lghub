@@ -118,10 +118,10 @@ def sinks(objs=None):
 
 
 def pick_target(wanted, objs=None):
-	"""The sink to equalize: the chosen one, else the G Pro X; None when it isn't there."""
+	"""The sink to equalize: the chosen one, else the headset; None when it isn't there."""
 	found = sinks(objs)
 	for s in found:
-		if (wanted not in ('auto', None) and s['name'] == wanted) or (wanted in ('auto', None) and pw.is_pro_x(s)):
+		if (wanted not in ('auto', None) and s['name'] == wanted) or (wanted in ('auto', None) and pw.is_blue_voice_headset(s)):
 			return s
 	return None
 
