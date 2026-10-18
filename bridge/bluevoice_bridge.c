@@ -12,6 +12,7 @@
  *
  * Parameters come from a "name value" file, re-read whenever it changes. A change builds a new
  * MicOpt instance off the audio thread, warms it up on the live input, then crossfades to it.
+ * If the graph's sample rate changes, an instance for the new rate replaces the old one outright.
  *
  * stderr: "ready ..." once, then "meter <in dBFS> <out dBFS>" every 100 ms.
  *
@@ -31,8 +32,9 @@
 
 #include "micopt.h"
 
-#define RATE 48000
-#define FIFO_SIZE 8192              /* frames; power of two, > max quantum + block */
+#define RATE 48000                  /* until the graph tells us otherwise */
+#define MAX_BLOCK 1024              /* MicOpt's block at 176.4/192 kHz */
+#define FIFO_SIZE 16384             /* frames; power of two, > max quantum + block */
 #define WARMUP_BLOCKS 19            /* ~100 ms */
 #define XFADE_BLOCKS 6              /* ~30 ms */
 
@@ -63,6 +65,7 @@ struct bridge {
 	struct port *in_port, *out_port;
 	struct pw_proxy *virtual_mic;
 	const char *dll_path, *params_path;
+	int rate;                       /* main thread: rate of the newest instance */
 	struct timespec params_mtime;
 
 	/* audio-thread state */
@@ -72,6 +75,7 @@ struct bridge {
 	micopt *next;
 	int next_age;
 	int block;
+	_Atomic int graph_rate;         /* audio -> main: rate the graph runs at */
 	struct fifo in_fifo, out_fifo;
 	float *blk_in, *blk_out, *blk_next;
 
@@ -104,8 +108,11 @@ static void process_block(struct bridge *b)
 {
 	micopt_process(b->current, b->blk_in, b->blk_out);
 	if (!b->next) {
-		micopt *p = atomic_exchange(&b->pending, NULL);
-		if (p) { b->next = p; b->next_age = 0; }
+		micopt *p = atomic_load(&b->pending);
+		if (p && micopt_block(p) == b->block && atomic_compare_exchange_strong(&b->pending, &p, NULL)) {
+			b->next = p;
+			b->next_age = 0;
+		}
 	}
 	if (!b->next) return;
 	micopt_process(b->next, b->blk_in, b->blk_next);
@@ -134,7 +141,22 @@ static void on_process(void *data, struct spa_io_position *position)
 	float *in = pw_filter_get_dsp_buffer(b->in_port, n);
 	float *out = pw_filter_get_dsp_buffer(b->out_port, n);
 	if (!out) return;
-	if (n + (uint32_t)b->block > FIFO_SIZE / 2) { memset(out, 0, n * sizeof(float)); return; }
+	if (n + MAX_BLOCK > FIFO_SIZE / 2) { memset(out, 0, n * sizeof(float)); return; }
+	atomic_store(&b->graph_rate, (int)position->clock.rate.denom);
+
+	/* A new instance for a different sample rate can't be crossfaded (other block size): swap it
+	 * in directly and restart the FIFOs. */
+	micopt *p = atomic_load(&b->pending);
+	if (p && !b->next && micopt_block(p) != b->block && atomic_compare_exchange_strong(&b->pending, &p, NULL)) {
+		micopt *old = b->current, *expect = NULL;
+		b->current = p;
+		b->block = micopt_block(p);
+		b->in_fifo.read = b->in_fifo.write;
+		b->out_fifo.read = 0;
+		b->out_fifo.write = b->block;
+		memset(b->out_fifo.data, 0, b->block * sizeof(float));
+		if (!atomic_compare_exchange_strong(&b->retired, &expect, old)) micopt_close(old);
+	}
 
 	if (in) {
 		fifo_push(&b->in_fifo, in, n);
@@ -165,9 +187,9 @@ static const struct pw_filter_events filter_events = {
 	PW_VERSION_FILTER_EVENTS, .state_changed = on_state, .process = on_process,
 };
 
-static micopt *new_instance(struct bridge *b)
+static micopt *new_instance(struct bridge *b, int rate)
 {
-	micopt *m = micopt_open(b->dll_path, RATE);
+	micopt *m = micopt_open(b->dll_path, rate);
 	if (m && micopt_load_params(m, b->params_path) < 0) fprintf(stderr, "bridge: cannot read %s\n", b->params_path);
 	return m;
 }
@@ -195,11 +217,14 @@ static void on_timer(void *data, uint64_t expirations)
 	struct bridge *b = data;
 	micopt *old = atomic_exchange(&b->retired, NULL);
 	if (old) micopt_close(old);
-	if (params_changed(b) && !atomic_load(&b->pending)) {
-		micopt *m = new_instance(b);
+	int rate = atomic_load(&b->graph_rate);
+	int rate_changed = rate && rate != b->rate && micopt_supports_rate(rate);
+	if ((rate_changed || params_changed(b)) && !atomic_load(&b->pending)) {
+		if (rate_changed) b->rate = rate;
+		micopt *m = new_instance(b, b->rate);
 		if (m) {
 			atomic_store(&b->pending, m);
-			fprintf(stderr, "reloaded parameters\n");
+			fprintf(stderr, rate_changed ? "sample rate now %d\n" : "reloaded parameters\n", b->rate);
 		}
 	}
 	double in_db = to_db(&b->meter_in), out_db = to_db(&b->meter_out);
@@ -222,15 +247,16 @@ int main(int argc, char **argv)
 	}
 
 	params_changed(b);
-	b->current = new_instance(b);
+	b->rate = RATE;
+	b->current = new_instance(b, b->rate);
 	if (!b->current) {
 		fprintf(stderr, "bridge: cannot load Blue VO!CE from %s\n", b->dll_path);
 		return 1;
 	}
 	b->block = micopt_block(b->current);
-	b->blk_in = calloc(b->block, sizeof(float));
-	b->blk_out = calloc(b->block, sizeof(float));
-	b->blk_next = calloc(b->block, sizeof(float));
+	b->blk_in = calloc(MAX_BLOCK, sizeof(float));
+	b->blk_out = calloc(MAX_BLOCK, sizeof(float));
+	b->blk_next = calloc(MAX_BLOCK, sizeof(float));
 	b->out_fifo.write = b->block; /* one block of silence: the fixed delay that keeps output flowing */
 
 	pw_init(&argc, &argv);

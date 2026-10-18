@@ -29,7 +29,7 @@ struct micopt {
 	/* The DSP may write to its input, so it gets private copies. Like the APO, it always gets two
 	 * input and two output buffers, even for mono (the second pair is scratch). */
 	float *in[2], *out[2];
-	int block;
+	int block, rate;
 };
 
 /* The APO's own defaults, in its order (FUN_18000e080). */
@@ -106,6 +106,7 @@ micopt *micopt_open(const char *dll_path, int rate)
 	int state_size, params_size, temp_size;
 	if (get_sizes(&state_size, &params_size, &temp_size, 1, block)) { free(m); return NULL; }
 	m->block = block;
+	m->rate = rate;
 	m->state = aligned_alloc(64, (state_size + 63) & ~63);
 	m->params = aligned_alloc(64, (params_size + 63) & ~63);
 	m->temp = aligned_alloc(64, (temp_size + 63) & ~63);
@@ -123,6 +124,10 @@ micopt *micopt_open(const char *dll_path, int rate)
 }
 
 int micopt_block(const micopt *m) { return m->block; }
+
+int micopt_rate(const micopt *m) { return m->rate; }
+
+int micopt_supports_rate(int rate) { return block_for_rate(rate) != 0; }
 
 /* Parameters G HUB stores as integers (VT_I4). The APO's GetUserSettings hands the DSP their raw
  * integer bits through the float pointer, and the DSP reads them back as integers, so passing 1.0f

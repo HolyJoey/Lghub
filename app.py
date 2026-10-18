@@ -200,8 +200,9 @@ class VoicePage(Gtk.Box):
 			while (child := flow.get_first_child()):
 				flow.remove(child)
 		self.preset_buttons = {}
+		origin = f'G HUB · {store.MODEL_NAMES[self.win.model]}'
 		for _key, name, params in self.win.ghub_presets:
-			self._add_preset(self.flow, name, params, 'Logitech G HUB')
+			self._add_preset(self.flow, name, params, origin)
 		mine = store.list_user_presets()
 		for name in mine:
 			params = store.load_user_preset(name)
@@ -358,6 +359,13 @@ class MicrophonePage(Gtk.Box):
 		self.dropdown = Gtk.DropDown.new_from_strings([d for _, d in self.inputs])
 		self.dropdown.connect('notify::selected', self._on_input)
 		card.append(self.dropdown)
+		card.append(label('Headset', ['section-title']))
+		card.append(label('G HUB tunes its Blue VO!CE presets per headset. Automatic chooses from the '
+		                  'microphone in use.', ['muted', 'small'], wrap=True))
+		self.models = [('auto', 'Automatic'), ('wired', 'G Pro X'), ('wireless', 'G Pro X Wireless')]
+		self.model_dropdown = Gtk.DropDown.new_from_strings([d for _, d in self.models])
+		self.model_dropdown.connect('notify::selected', self._on_model)
+		card.append(self.model_dropdown)
 		self.append(card)
 
 		card = box(spacing=14, css=['card'])
@@ -400,6 +408,8 @@ class MicrophonePage(Gtk.Box):
 	def load(self):
 		self.win.loading = True
 		self.default_switch.set_active(self.win.cfg.get('make_default', False))
+		chosen = self.win.cfg.get('headset', 'auto')
+		self.model_dropdown.set_selected(next((i for i, (k, _) in enumerate(self.models) if k == chosen), 0))
 		self.autostart.set_active(service.is_enabled())
 		self.win.loading = False
 		self.refresh_inputs()
@@ -429,6 +439,14 @@ class MicrophonePage(Gtk.Box):
 			return
 		self.win.cfg['input'] = self.inputs[i][0]
 		self.win.save_soon()
+
+	def _on_model(self, *_):
+		i = self.model_dropdown.get_selected()
+		if self.win.loading or i == Gtk.INVALID_LIST_POSITION:
+			return
+		self.win.cfg['headset'] = self.models[i][0]
+		self.win.save_soon()
+		self.win.refresh_model()
 
 	def _on_default(self, sw):
 		if not self.win.loading:
@@ -541,8 +559,9 @@ class MainWindow(Adw.ApplicationWindow):
 		super().__init__(application=app, title='Blue VO!CE', default_width=1100, default_height=760)
 		self.loading = False
 		self._save_id = 0
-		self.ghub_presets = store.ghub_presets()
 		self.cfg = store.load_config()
+		self.model = store.headset_model(self.cfg, store.read_status())
+		self.ghub_presets = store.ghub_presets(self.model)
 		self.base_params = copy.deepcopy(self.cfg['params'])  # what "Reset to preset" returns to
 
 		self.toasts = Adw.ToastOverlay()
@@ -670,6 +689,14 @@ class MainWindow(Adw.ApplicationWindow):
 		self.voice_page.load()
 		self.presets_page.load()
 
+	def refresh_model(self, status=None):
+		"""Switch the G HUB preset list when the headset model (chosen or detected) changes."""
+		model = store.headset_model(self.cfg, status if status is not None else store.read_status())
+		if model != self.model:
+			self.model = model
+			self.ghub_presets = store.ghub_presets(model)
+			self.voice_page.load()
+
 	# --- status --------------------------------------------------------------------------
 
 	def _poll_status(self):
@@ -678,6 +705,8 @@ class MainWindow(Adw.ApplicationWindow):
 		if not fresh:
 			status = {'state': 'stopped'}
 		state = status.get('state')
+		if self.cfg.get('headset', 'auto') == 'auto' and status.get('input'):
+			self.refresh_model(status)
 		self.voice_page.update_status(status)
 		self.mic_page.update_status(status, self._service_active)
 		for c in ('ok', 'warn', 'err', 'muted'):

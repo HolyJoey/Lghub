@@ -22,7 +22,11 @@ PARAMS_FILE = os.path.join(RUN_DIR, 'live.params')
 
 # Files fetched from Logitech at install time (see fetch.py).
 APO_DLL = os.path.join(DATA_DIR, 'apo', 'logi_audio_dts_studio_capture_apo.dll')
-GHUB_PRESETS = os.path.join(DATA_DIR, 'presets', 'pro_x_headset_device_presets.json')
+GHUB_PRESETS = {
+	'wired': os.path.join(DATA_DIR, 'presets', 'pro_x_headset_device_presets.json'),
+	'wireless': os.path.join(DATA_DIR, 'presets', 'pro_x_wireless_headset_device_presets.json'),
+}
+MODEL_NAMES = {'wired': 'G Pro X', 'wireless': 'G Pro X Wireless'}
 BRIDGE = os.path.join(DATA_DIR, 'bin', 'bluevoice-bridge')
 
 DEFAULT_PRESET = 'BLUE_VOICE_PRESET_BROADCASTER_1'
@@ -45,10 +49,21 @@ def _write_json(path, data):
 	os.replace(tmp, path)
 
 
-def ghub_presets():
-	"""[(key, display name, params)], or [] before the Logitech files are installed."""
+def headset_model(cfg, status=None):
+	"""'wired' or 'wireless': G HUB ships different presets for each. 'auto' follows the
+	microphone the engine is using."""
+	chosen = cfg.get('headset', 'auto')
+	if chosen in GHUB_PRESETS:
+		return chosen
+	inp = (status or {}).get('input') or {}
+	text = f"{inp.get('name', '')} {inp.get('description', '')}".lower()
+	return 'wireless' if 'wireless' in text else 'wired'
+
+
+def ghub_presets(model='wired'):
+	"""[(key, display name, params)] for a headset model, or [] before Logitech's files are in."""
 	try:
-		return presets.load_ghub_presets(GHUB_PRESETS)
+		return presets.load_ghub_presets(GHUB_PRESETS[model])
 	except (OSError, ValueError, KeyError):
 		return []
 
@@ -63,6 +78,7 @@ def default_config():
 		'enabled': True,          # off = clean pass-through; the virtual mic stays available
 		'input': 'auto',          # node.name of the real microphone, or 'auto'
 		'make_default': False,    # make "Blue VO!CE Microphone" the system's default input
+		'headset': 'auto',        # which G HUB preset set to offer: 'auto', 'wired' or 'wireless'
 		'preset': name,           # label only; 'params' is what is applied
 		'params': params,
 	}
