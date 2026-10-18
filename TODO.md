@@ -9,7 +9,7 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 
 | Area | What it is | Logitech's or ours |
 | --- | --- | --- |
-| Blue VO!CE | DTS MicOpt from G HUB's capture APO, native (`bridge/micopt.c`) | Logitech's DSP and presets |
+| Blue VO!CE | DTS MicOpt from G HUB's capture APO, native (`bridge/micopt.c`); G Pro X, G Pro X Wireless, G733 (presets fetched on first sight) | Logitech's DSP and presets |
 | Surround | DTS Headphone:X 2.0 from G HUB's HX2E APO, native (`bridge/hx2e.c`) | Logitech's DSP and tunings |
 | Equalizer | G HUB's 10-band presets on PipeWire biquads | Logitech's presets, our filters |
 | Mice | HID++ 2.0 onboard profiles (0x8100), DPI (0x2201), report rate (0x8060) | the devices' own features |
@@ -27,6 +27,10 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
   byte = ms, writing a 255-byte sector in 16-byte chunks, button order (after Back/Forward the
   names are generic). Backups of every sector written: `~/.local/share/lghub-bluevoice/backups/`.
 - **C920**: control names and ranges, preview at 640x360 MJPEG.
+- **G733** (not owned, untested): its presets download on first sight; Blue VO!CE picks its mic;
+  lighting/battery appear on the Headset page over HID++.
+- **Wireless receivers** (simulated only): slots 1-6 answer to a short-report ping; Bolt pairs
+  differently and may not.
 - **HID++ lighting (0x8070)**: effect parameter bytes and the persist flag; the current effect
   isn't read back (the page starts at the first effect).
 
@@ -38,6 +42,11 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 - Blue VO!CE 2 (newer headsets: `logi_audio_dts_clearvoice_2_capture_apo.dll`), same approach.
 - Headsets' own EQ presets: G HUB's headsets point at a preset id that sits in a part of G HUB
   we don't have; the 10-band set comes from the G560 package.
+
+## Could be better
+
+- The background service idles at about 0.6% of one core (measured): headset/webcam/link
+  checks on timers. Event-driven checks (udev, PipeWire registry) would bring that near 0.
 
 ## Depot updates
 
