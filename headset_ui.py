@@ -5,6 +5,7 @@ from gi.repository import GLib, Gtk
 
 import eq
 import headset
+import surround
 from hidpp_panel import SettingsPanel
 from ui import NOTIFY_ACTIVE, box, label, page_header
 from worker import Worker
@@ -175,6 +176,115 @@ class EqualizerPage(Gtk.Box):
 		if not self.loading:
 			self.settings['make_default'] = on
 			self._save_soon()
+
+
+class SurroundPage(Gtk.Box):
+	"""G HUB's DTS Headphone:X 2.0: a virtual 7.1 output for games and films."""
+
+	def __init__(self, win):
+		super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=20, css_classes=['page'])
+		self.win = win
+		self.settings = surround.load()
+		self.loading = False
+		self._save_id = 0
+		self.append(page_header('Surround', 'DTS Headphone:X 2.0, the virtual 7.1 surround G HUB uses, running '
+		                        'Logitech’s own DTS processing with your headset’s tuning.'))
+		hero = box(Gtk.Orientation.HORIZONTAL, 20, ['card', 'hero'])
+		left = box(spacing=6, hexpand=True)
+		left.append(label('DTS Headphone:X 2.0', ['muted', 'small']))
+		self.state_word = label('', ['big-word'])
+		left.append(self.state_word)
+		self.route = label('', ['muted', 'small'], wrap=True)
+		left.append(self.route)
+		hero.append(left)
+		self.switch = Gtk.Switch(valign=Gtk.Align.CENTER)
+		self.switch.connect(NOTIFY_ACTIVE, self._on_enable)
+		hero.append(self.switch)
+		self.append(hero)
+		if not surround.available():
+			self.append(label('Logitech’s surround files are missing. Run ./install.sh again.', ['warn'], wrap=True))
+
+		out = box(spacing=12, css=['card'])
+		out.append(label('Output', ['section-title']))
+		out.append(label('Apps play into a new 7.1 output, “… (Surround 7.1)”. Games set to 7.1 get every '
+		                 'speaker placed around you; stereo is spread out too. With the equalizer on, both apply.',
+		                 ['muted', 'small'], wrap=True))
+		self.default_switch = switch_row(out, 'Use as default output', 'Apps that play to the system default get '
+		                                 'surround.', self.settings['make_default'], self._on_default)
+		self.append(out)
+
+		vol = box(spacing=12, css=['card'])
+		head = box(Gtk.Orientation.HORIZONTAL, 12)
+		head.append(label('Channel volume', ['section-title'], hexpand=True))
+		reset = Gtk.Button(label='Reset')
+		reset.add_css_class('ghost')
+		reset.connect('clicked', lambda _w: self._reset())
+		head.append(reset)
+		vol.append(head)
+		self.scales = {}
+		for c in surround.CHANNELS:
+			r = box(Gtk.Orientation.HORIZONTAL, 14)
+			r.append(label(surround.CHANNEL_NAMES[c], ['muted'], width_chars=14))
+			scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 200, 1)
+			scale.set_hexpand(True)
+			scale.set_draw_value(False)
+			scale.add_mark(surround.DEFAULT_GAIN * 100, Gtk.PositionType.BOTTOM, None)
+			value = label('', ['value'], width_chars=6, xalign=1.0)
+			scale.connect('value-changed', lambda w, c=c, v=value: self._on_gain(c, w, v))
+			r.append(scale)
+			r.append(value)
+			vol.append(r)
+			self.scales[c] = (scale, value)
+		self.append(vol)
+		self.load()
+
+	def load(self):
+		self.loading = True
+		self.switch.set_active(self.settings['enabled'])
+		self.default_switch.set_active(self.settings['make_default'])
+		for c, (scale, value) in self.scales.items():
+			scale.set_value(self.settings['gains'][c] * 100)
+			value.set_text(f'{scale.get_value():.0f} %')
+		self.loading = False
+		self._state()
+
+	def _state(self):
+		on = self.settings['enabled']
+		self.state_word.set_text('On' if on else 'Off')
+		self.route.set_text('Apps playing to “… (Surround 7.1)” get virtual 7.1.' if on else
+		                    'Sound goes to the headset in plain stereo.')
+
+	def _save_soon(self):
+		self._state()
+		if self._save_id:
+			GLib.source_remove(self._save_id)
+		self._save_id = GLib.timeout_add(SAVE_DELAY_MS, self._save_now)
+
+	def _save_now(self):
+		self._save_id = 0
+		surround.save(self.settings)
+		return False
+
+	def _on_enable(self, *_):
+		if not self.loading:
+			self.settings['enabled'] = self.switch.get_active()
+			self._save_soon()
+
+	def _on_default(self, on):
+		if not self.loading:
+			self.settings['make_default'] = on
+			self._save_soon()
+
+	def _on_gain(self, channel, scale, value):
+		value.set_text(f'{scale.get_value():.0f} %')
+		if not self.loading:
+			self.settings['gains'][channel] = round(scale.get_value()) / 100
+			self._save_soon()
+
+	def _reset(self):
+		self.settings['gains'] = dict(surround.default_settings()['gains'])
+		self.load()
+		self._save_soon()
 
 
 class HeadsetPage(Gtk.Box):

@@ -32,6 +32,8 @@ GHUB_PRESETS = {
 }
 MODEL_NAMES = {'wired': 'G Pro X', 'wireless': 'G Pro X Wireless', 'g733': 'G733'}
 BRIDGE = os.path.join(DATA_DIR, 'bin', 'bluevoice-bridge')
+HX2E_DLL = os.path.join(DATA_DIR, 'apo', 'logi_audio_hx2e_render_apo.dll')
+SURROUND_BRIDGE = os.path.join(DATA_DIR, 'bin', 'surround-bridge')
 IMAGE_DIR = os.path.join(DATA_DIR, 'images')   # product images, from Logitech's depots
 
 DEFAULT_PRESET = 'BLUE_VOICE_PRESET_BROADCASTER_1'

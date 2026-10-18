@@ -23,8 +23,9 @@ APP_TITLE = 'Blue VO!CE'
 MY_PRESETS = 'My presets'
 SAVE_DELAY_MS = 150
 CUSTOM = 'Custom'
-PAGES = ('voice', 'effects', 'microphone', 'presets', 'equalizer', 'headset')
+PAGES = ('voice', 'effects', 'microphone', 'presets', 'equalizer', 'surround', 'headset')
 HEADSET_PAGES = (('equalizer', 'Equalizer', 'multimedia-equalizer-symbolic'),
+                 ('surround', 'Surround', 'audio-speakers-symbolic'),
                  ('headset', 'Headset', 'audio-headset-symbolic'))
 
 
@@ -465,10 +466,12 @@ class BlueVoiceView(Gtk.Box):
 		self.mic_page = MicrophonePage(self)
 		self.presets_page = PresetsPage(self)
 		self.eq_page = headset_ui.EqualizerPage(self)
+		self.surround_page = headset_ui.SurroundPage(self)
 		self.headset_page = headset_ui.HeadsetPage(self)
 		for page, name in ((self.voice_page, 'voice'), (self.effects_page, 'effects'),
 		                   (self.mic_page, 'microphone'), (self.presets_page, 'presets'),
-		                   (self.eq_page, 'equalizer'), (self.headset_page, 'headset')):
+		                   (self.eq_page, 'equalizer'), (self.surround_page, 'surround'),
+		                   (self.headset_page, 'headset')):
 			self.stack.add_named(scrolled(page), name)
 		self.sidebar = None
 		self.set_device(None)
@@ -528,7 +531,10 @@ class BlueVoiceView(Gtk.Box):
 				b = nav_button(text, icon_name, lambda k=key: self.show_page(k))
 				nav.append(b)
 				self.nav_buttons[key] = b
-		side.append(nav)
+		# The list scrolls rather than pushing the status card off a short window (which would
+		# also make GTK widen the sidebar to fit it).
+		side.append(Gtk.ScrolledWindow(child=nav, vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER,
+		                               propagate_natural_height=True, valign=Gtk.Align.START))
 		side.append(box(vexpand=True))
 
 		card = box(spacing=8, css=['card'])

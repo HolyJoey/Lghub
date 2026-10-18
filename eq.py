@@ -15,6 +15,7 @@ import store
 EQ_FILE = os.path.join(store.CONFIG_DIR, 'equalizer.json')
 CONF_FILE = os.path.join(store.RUN_DIR, 'equalizer.conf')
 SINK = 'lghub_eq'
+OWN_NODES = (SINK, 'lghub_surround', pw.VIRTUAL_MIC)   # ours, never a target
 OUT = 'lghub_eq_out'
 BANDS = (32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000)
 Q = 1.41                 # about one octave per band
@@ -124,12 +125,12 @@ context.modules = [
 
 
 def sinks(objs=None):
-	"""Real outputs: [{'id', 'name', 'description'}], without our own EQ sink."""
+	"""Real outputs: [{'id', 'name', 'description'}], without our own (equalizer, surround)."""
 	out = []
 	for o in objs if objs is not None else pw.dump():
 		p = pw._props(o)
 		if o.get('type', '').endswith('Node') and p.get('media.class') == 'Audio/Sink' \
-				and p.get(pw.NODE_NAME) not in (SINK, pw.VIRTUAL_MIC):
+				and p.get(pw.NODE_NAME) not in OWN_NODES:
 			out.append({'id': o['id'], 'name': p.get(pw.NODE_NAME, ''),
 			            'description': p.get('node.description') or p.get(pw.NODE_NAME, '')})
 	return out

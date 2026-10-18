@@ -129,6 +129,14 @@ def links_out_of(node_name, objs=None):
 	           and o.get('info', {}).get('output-node-id') == nid)
 
 
+def links_into_node(node_name, objs=None):
+	"""Number of links arriving at any input port of the node (i.e. apps playing into it)."""
+	objs = objs if objs is not None else dump()
+	nid = node_id(node_name, objs)
+	return sum(1 for o in objs if o.get('type', '').endswith('Link')
+	           and o.get('info', {}).get('input-node-id') == nid)
+
+
 def link(out_port, in_port):
 	return subprocess.run(['pw-link', out_port, in_port], capture_output=True, text=True).returncode == 0
 

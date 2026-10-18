@@ -41,6 +41,9 @@ read -ra PW_FLAGS <<< "$(pkg-config --cflags --libs libpipewire-0.3)"
 gcc -O2 -o "$APP_DIR/bin/bluevoice-bridge" \
   "$SRC/bridge/bluevoice_bridge.c" "$SRC/bridge/micopt.c" "$SRC/bridge/peloader.c" \
   "${PW_FLAGS[@]}" -lm
+gcc -O2 -o "$APP_DIR/bin/surround-bridge" \
+  "$SRC/bridge/surround_bridge.c" "$SRC/bridge/hx2e.c" "$SRC/bridge/peloader.c" \
+  "${PW_FLAGS[@]}" -lm
 # Earlier versions ran the DSP under Wine; that's no longer needed.
 rm -rf "$APP_DIR/wine" "$APP_DIR/bin/bluevoice_host.exe"
 echo "OK"
@@ -49,7 +52,7 @@ say "Installing to $APP_DIR"
 cp "$SRC"/*.py "$SRC/lghub-bluevoice.svg" "$APP_DIR/"
 
 say "Getting Logitech's Blue VO!CE files"
-if [ -f "$APP_DIR/apo/logi_audio_dts_studio_capture_apo.dll" ] && [ -d "$APP_DIR/images" ] \
+if [ -f "$APP_DIR/apo/logi_audio_dts_studio_capture_apo.dll" ] && [ -f "$APP_DIR/apo/logi_audio_hx2e_render_apo.dll" ] \
    && [ ${#DEPOT_ARGS[@]} -eq 0 ]; then
   echo "Already present."
 else

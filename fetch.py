@@ -2,6 +2,7 @@
 """Fetch Logitech's Blue VO!CE files from G HUB's update server (they are not in this repo).
 
   driver_audio_apo depot -> ghub_audio_driver_apo.exe -> logi_audio_dts_studio_capture_apo.dll
+                                                      -> logi_audio_hx2e_render_apo.dll (surround)
   pro_headset depot      -> pro_x_headset_device_presets.json (the 22 G Pro X presets) and the
                             headset's product image (images/<model>.png, as its manifest lists)
 
@@ -32,6 +33,8 @@ DEPOTS = {
 }
 APO_NAME = 'logi_audio_dts_studio_capture_apo'
 APO_SHA256 = 'efaabe5c8b5a246ad5fb0d84a157c8a8330d055d601f041e43423cb0e53481a6'
+HX2E_NAME = 'logi_audio_hx2e_render_apo'
+HX2E_SHA256 = 'f6662b76008433d6f6137ca252a9965fbbb9a0aba100d0a6eb2ed8d1ec28dcde'
 DEPOT_MAGIC = 0x20170110
 
 
@@ -120,6 +123,12 @@ def main():
 	os.makedirs(os.path.join(args.dest, 'apo'), exist_ok=True)
 	with open(os.path.join(args.dest, 'apo', APO_NAME + '.dll'), 'wb') as f:
 		f.write(dll)
+	surround = embedded_pe(apo_files['ghub_audio_driver_apo.exe'], HX2E_NAME)
+	if sha256(surround) == HX2E_SHA256:
+		with open(os.path.join(args.dest, 'apo', HX2E_NAME + '.dll'), 'wb') as f:
+			f.write(surround)
+	else:
+		print('The surround DLL is not the expected build; surround sound stays off.')
 
 	headset_files = depot_files(get_depot('pro_headset', args.depot_dir))
 	os.makedirs(os.path.join(args.dest, 'presets'), exist_ok=True)

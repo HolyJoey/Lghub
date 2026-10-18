@@ -16,6 +16,7 @@ import eq
 import presets
 import pw
 import store
+import surround
 import webcam
 
 POLL = 0.25          # config / status interval, seconds
@@ -46,6 +47,7 @@ class Engine:
 		self.last_publish = 0.0
 		self.eq = eq.Runner()
 		self.webcams = webcam.Restorer()
+		self.surround = surround.Runner()
 
 	# --- configuration -------------------------------------------------------------------
 
@@ -146,6 +148,9 @@ class Engine:
 					break
 				if line[:1] in '+-' and pw.VIRTUAL_MIC + ':' in line:
 					self.link_event.set()
+				if line[:1] in '+-' and surround.SINK + ':playback' in line:
+					self.surround.wake = True     # an app started or stopped playing into surround
+					self.link_event.set()
 			mon.kill()
 			self.stop.wait(2)
 
@@ -225,12 +230,16 @@ class Engine:
 				self.publish()
 			if not self.proc:
 				self.link_event.clear()  # nothing to relink until the bridge is back
-			if self.eq.due():
-				self.eq.check(pw.dump())
+			eq_due, surround_due = self.eq.due(), self.surround.due()
+			if eq_due or surround_due:
+				objs = pw.dump()
+				self.eq.check(objs)
+				self.surround.check(objs)
 			if self.webcams.due():
 				self.webcams.check()
 			self.link_event.wait(POLL)
 		self.stop_bridge()
+		self.surround.stop()
 		self.eq.stop()
 		store.write_status({'state': 'stopped', 'error': '', 'updated': time.time()})
 
