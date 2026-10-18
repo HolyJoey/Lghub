@@ -23,3 +23,6 @@ bridge/*
 
 # design mockups stay local for now
 docs/mockups/
+
+# local session notes
+NEXT_SESSION.md
