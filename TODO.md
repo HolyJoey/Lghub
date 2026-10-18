@@ -67,6 +67,28 @@ Details:
   frequencies aren't in the preset files; the 10-band headset presets are in.
 - **Service idle**: checks run when a sound card or USB device comes or goes, 60 s fallbacks.
 
+## Compared with G HUB: still missing
+
+Checked against the device features G HUB's agent knows (its `Feature####` classes) and its
+app features. Lghub handles 0x0000-0x0005, battery (0x1000/0x1001/0x1004), 0x2201 DPI, 0x8040,
+0x8060, 0x8070, 0x8100, 0x8110, 0x8010 and 0x8300; partly 0x8081. Not yet:
+
+- [ ] Mice: 0x2202 extended DPI and 0x8061 extended report rate (newer mice, 2-8 kHz), 0x1B04
+  special keys / divert (newer mice' buttons), 0x2121 hi-res wheel, 0x2130 ratchet wheel,
+  0x2110/0x2111 SmartShift, 0x2230 angle snapping, 0x2240 surface tuning.
+- [ ] Keyboards: 0x8071 RGB effects (newer lighting), 0x8080 per-key (older), 0x8020 M-keys and
+  0x8030 MR (macro record) keys, 0x4522 game mode (disable keys), 0x40A3 Fn inversion,
+  0x1B08 analog keys / 0x80A4 actuation curves (analog keyboards).
+- [ ] Headsets: 0x8305 bass tone, 0x8310 device EQ, 0x8320 jack detection, 0x1F20 battery for
+  older wireless headsets; the newer "Centurion" protocol (0x06xx: mic mute 0x0601, sidetone
+  0x0604, ANC 0x0605, mic gain 0x0611, onboard EQ 0x0636) for G735 / PRO X 2.
+- [ ] Mics: 0x8330/0x8350/0x8360/0x8370 (Yeti, see above).
+- [ ] Wireless: 0x1814/0x1815 host switching, 0x1D4B wireless status, receiver pairing.
+- [ ] App features: per-game profiles (switch settings when a game starts), LIGHTSYNC screen
+  and audio lighting, firmware updates, Discord/OBS integrations.
+- [ ] Racing wheels and pedals (0x8123+): G HUB supports them; nobody here owns one.
+- [ ] Re-check this list against a newer G HUB now and then (agent strings: `Feature####`).
+
 ## Depot updates
 
 `fetch.py` (APO hashes), `depots.py` (depot paths, the icon's offset and hash) and the two DLL
