@@ -203,6 +203,13 @@ def product_image(model_key, size):
 	return picture
 
 
+def forget_image(model_key):
+	"""Drop cached lookups for a model, e.g. after its picture was downloaded."""
+	path = os.path.join(store.IMAGE_DIR, f'{model_key}.png')
+	for key in [k for k in _textures if k[0] == path]:
+		_textures.pop(key)
+
+
 def device_icon(device, size):
 	"""Photo if we have one, else the device type's symbolic icon."""
 	picture = product_image(device.model.key, size)

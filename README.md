@@ -13,7 +13,9 @@ are talked to directly, the way G HUB does.
 ![Devices](docs/screenshots/home.png)
 
 Open the app, pick a device, change what you want. Devices show up and disappear as you plug
-them in, including wireless ones behind a LIGHTSPEED, Unifying or Bolt receiver.
+them in, including wireless ones behind a LIGHTSPEED, Unifying or Bolt receiver. The first
+time a device shows up, Lghub fetches its product picture from G HUB's update server: only
+that picture, a few hundred KB, not the whole package.
 
 ## Headsets
 
@@ -91,8 +93,7 @@ Blue VO!CE helper:
 | Fedora | `python3-gobject gtk4 libadwaita gcc pipewire-devel alsa-utils` |
 | Arch | `python-gobject gtk4 libadwaita gcc libpipewire alsa-utils` |
 
-The installer downloads Logitech's Blue VO!CE files and the G Pro X picture from G HUB's own
-update server (they aren't in this repo), checks their hashes, builds the helper, adds a menu
+The installer downloads Logitech's Blue VO!CE files from G HUB's own update server (they aren't in this repo), checks their hashes, builds the helper, adds a menu
 entry and starts a user service. `./uninstall.sh` undoes all of it.
 
 Mice and keyboards need permission to talk to the device. One udev rule does it; this is the
@@ -129,7 +130,8 @@ nothing once closed; mouse and keyboard settings live in the devices.
   webcam settings back. `systemctl --user status lghub-bluevoice` shows it.
 
 Which device is which comes from a small table of model facts (`devices.py`): USB ids,
-lighting zones, and so on.
+lighting zones, and so on. `images.py` knows where each model's G HUB package lives and reads
+just the picture out of it with HTTP range requests.
 
 ## Trying it without the hardware
 
@@ -162,7 +164,7 @@ installer at them with `./install.sh --depot-dir DIR`.
 ## License
 
 MIT, see [LICENSE](LICENSE). That covers the code in this repo. Logitech's files that the
-installer downloads (the Blue VO!CE DLL, its presets and the product picture) are not part of
+app downloads (the Blue VO!CE DLL, its presets and the product pictures) are not part of
 it and stay under Logitech's own terms.
 
 Not affiliated with Logitech. Logitech, G HUB, Blue VO!CE, LIGHTSPEED and the product names

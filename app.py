@@ -15,10 +15,12 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango  # noqa: E402
 import bluevoice_ui  # noqa: E402
 import devices  # noqa: E402
 import hidpp_ui  # noqa: E402
+import images  # noqa: E402
 import mouse_ui  # noqa: E402
 import webcam_ui  # noqa: E402
 from worker import Worker  # noqa: E402
-from ui import APP_DIR, CSS, box, device_icon, device_sidebar, label, nav_button, page_header, scrolled  # noqa: E402
+from ui import (APP_DIR, CSS, box, device_icon, device_sidebar, forget_image, label, nav_button,  # noqa: E402
+                page_header, scrolled)
 
 APP_ID = 'dev.local.LghubBlueVoice'
 APP_NAME = 'Lghub'
@@ -185,6 +187,8 @@ class MainWindow(Adw.ApplicationWindow):
 		self.paired = {}       # receiver id -> devices paired to it and switched on
 		self.scanned = {}      # receiver id -> when it was last asked
 		self.scanner = Worker()
+		self.pictures = Worker()  # downloads product pictures, one at a time
+		self.asked = set()        # models whose picture was looked for this run
 		self.pending = start_page if start_page.startswith('device:') else None
 
 		self._discover()
@@ -247,6 +251,18 @@ class MainWindow(Adw.ApplicationWindow):
 		self._show_devices()
 		return True
 
+	def _fetch_pictures(self, shown):
+		for d in shown:
+			key = d.model.key
+			if key in self.asked or key not in images.DEPOTS or os.path.exists(images.path_for(key)):
+				continue
+			self.asked.add(key)
+			self.pictures.submit(lambda k=key: images.fetch(k), lambda path, k=key: path and self._got_picture(k))
+
+	def _got_picture(self, key):
+		forget_image(key)
+		self.home.show(self.home.devices)
+
 	def _paired(self, receiver_id, paired):
 		if receiver_id in self.scanned:
 			self.paired[receiver_id] = paired
@@ -259,6 +275,7 @@ class MainWindow(Adw.ApplicationWindow):
 			shown.extend(paired if paired else [d])
 		if [d.id for d in shown] != [d.id for d in self.home.devices] or not self.home.devices:
 			self.home.show(shown)
+		self._fetch_pictures(shown)
 		self._open_pending()
 		if self.current and self.current.id not in {d.id for d in shown}:
 			self.toast(f'{self.current.name} was disconnected')

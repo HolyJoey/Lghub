@@ -50,8 +50,9 @@ Working, tested on this machine with the laptop microphone:
   and the persist flag; the current effect isn't read back (the page starts at the first
   effect). Not done: per-key lighting (0x8080/0x8081), G-keys/macros (0x8010), keyboard
   onboard profiles, Yeti's own protocol.
-- [x] Product images: the G Pro X photos from the pro_headset depot the installer already
-  downloads. Other models use icons (their depots' URLs aren't known to us).
+- [x] Product pictures for 69 of 70 models: `images.py` reads just the picture out of the
+  model's depot (HTTP range requests) the first time the device shows up. Depot URLs are
+  from G HUB 2026.6; a newer G HUB moves them (a failed fetch is retried after a week).
 - [x] Scans at 0 (2026-10-18): SonarQube 0 issues / 0 hotspots (Python, tests, docs),
   clang-tidy and gcc -fanalyzer 0 in bridge/, shellcheck 0, gitleaks no leaks. README rewritten
   per device type; screenshots by `docs/screenshots.sh`.
