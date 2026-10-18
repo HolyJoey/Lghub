@@ -258,57 +258,58 @@ ICON_SHA256 = '743180184d0ebcc498f112c36845909496a1048793ba392294ef4660acfa9a08'
 RT_ICON, RT_GROUP_ICON = 3, 14
 
 
-def _largest_icon(read):
-	"""(width, image bytes) of the biggest image in a PE file's first icon group."""
-	pe = struct.unpack('<I', read(0x3c, 4))[0]
-	head = read(pe, 24 + 240)
-	nsec, optsize = struct.unpack_from('<H', head, 6)[0], struct.unpack_from('<H', head, 20)[0]
-	magic = struct.unpack_from('<H', head, 24)[0]
-	dirs = 24 + (112 if magic == 0x20b else 96)
-	rsrc_rva, rsrc_size = struct.unpack_from('<II', head, dirs + 8 * 2)
-	secs = read(pe + 24 + optsize, 40 * nsec)
-	for i in range(nsec):
-		vsz, va, rsz, raw = struct.unpack_from('<IIII', secs, 40 * i + 8)
-		if va <= rsrc_rva < va + max(vsz, rsz):
-			base_raw = raw + rsrc_rva - va
-			break
-	else:
+class _Resources:
+	"""A PE file's resource tree, read through read(offset, length)."""
+
+	def __init__(self, read):
+		self.read = read
+		pe = struct.unpack('<I', read(0x3c, 4))[0]
+		head = read(pe, 24 + 240)
+		nsec, optsize = struct.unpack_from('<H', head, 6)[0], struct.unpack_from('<H', head, 20)[0]
+		dirs = 24 + (112 if struct.unpack_from('<H', head, 24)[0] == 0x20b else 96)
+		self.rva, size = struct.unpack_from('<II', head, dirs + 8 * 2)
+		self.raw = self._section_offset(read(pe + 24 + optsize, 40 * nsec), nsec)
+		self.data = read(self.raw, size)
+
+	def _section_offset(self, secs, nsec):
+		for i in range(nsec):
+			vsz, va, rsz, raw = struct.unpack_from('<IIII', secs, 40 * i + 8)
+			if va <= self.rva < va + max(vsz, rsz):
+				return raw + self.rva - va
 		raise ValueError('no resource section')
-	rsrc = read(base_raw, rsrc_size)
 
-	def entries(off):
-		named, ids = struct.unpack_from('<HH', rsrc, off + 12)
+	def entries(self, off):
+		named, ids = struct.unpack_from('<HH', self.data, off + 12)
 		for k in range(named + ids):
-			name, ptr = struct.unpack_from('<II', rsrc, off + 16 + 8 * k)
-			yield name, ptr
+			yield struct.unpack_from('<II', self.data, off + 16 + 8 * k)
 
-	def leaf(ptr):
+	def leaf(self, ptr):
 		while ptr >> 31:
-			ptr = next(entries(ptr & 0x7fffffff))[1]
-		rva, size = struct.unpack_from('<II', rsrc, ptr)
-		return read(base_raw + rva - rsrc_rva, size)
+			ptr = next(self.entries(ptr & 0x7fffffff))[1]
+		rva, size = struct.unpack_from('<II', self.data, ptr)
+		return self.read(self.raw + rva - self.rva, size)
 
-	icons = {}
-	groups = []
-	for typ, ptr in entries(0):
-		if typ == RT_ICON:
-			for ident, p in entries(ptr & 0x7fffffff):
-				icons[ident] = p
-		elif typ == RT_GROUP_ICON:
-			for _ident, p in entries(ptr & 0x7fffffff):
-				groups.append(p)
-	best = None
-	for g in groups[:1]:   # the first group is the application icon
-		data = leaf(g)
-		count = struct.unpack_from('<H', data, 4)[0]
-		for k in range(count):
-			w, h, _c, _r, _planes, _bits, size, ident = struct.unpack_from('<BBBBHHIH', data, 6 + 14 * k)
-			w = w or 256
-			if best is None or w > best[0]:
-				best = (w, ident)
-	if best is None:
+	def of_type(self, kind):
+		"""{id: entry pointer} for every resource of a type."""
+		for typ, ptr in self.entries(0):
+			if typ == kind:
+				return dict(self.entries(ptr & 0x7fffffff))
+		return {}
+
+
+def _largest_icon(read):
+	"""(width, image bytes) of the biggest image in a PE file's first icon group (the app's)."""
+	res = _Resources(read)
+	icons, groups = res.of_type(RT_ICON), list(res.of_type(RT_GROUP_ICON).values())
+	if not groups:
 		raise ValueError('no icon')
-	return best[0], leaf(icons[best[1]])
+	group = res.leaf(groups[0])
+	sizes = []
+	for k in range(struct.unpack_from('<H', group, 4)[0]):
+		width, *_rest, ident = struct.unpack_from('<BBBBHHIH', group, 6 + 14 * k)
+		sizes.append((width or 256, ident))
+	width, ident = max(sizes)
+	return width, res.leaf(icons[ident])
 
 
 def fetch_app_icon(out):

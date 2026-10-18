@@ -30,7 +30,7 @@ TUNINGS = (('g733', 'G733'), ('g735', 'G735'), ('g935', 'G935'), ('g635', 'G635'
 
 
 def default_settings():
-	return {'enabled': False, 'make_default': True, 'gains': {c: DEFAULT_GAIN for c in CHANNELS}}
+	return {'enabled': False, 'make_default': True, 'gains': dict.fromkeys(CHANNELS, DEFAULT_GAIN)}
 
 
 def load():

@@ -6,6 +6,7 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import eq  # noqa: E402
+import surround  # noqa: E402
 import headset  # noqa: E402
 import v4l2  # noqa: E402
 import webcam  # noqa: E402
@@ -71,6 +72,28 @@ class EqualizerTest(unittest.TestCase):
 		for gains in eq.PRESETS.values():
 			self.assertEqual(len(gains), len(eq.BANDS))
 			self.assertTrue(all(abs(g) <= eq.RANGE for g in gains))
+
+
+class SurroundTest(unittest.TestCase):
+	def test_tuning_follows_the_headset(self):
+		def sink(name, desc):
+			return {'name': name, 'description': desc}
+		self.assertEqual(surround.tuning(sink('alsa_output.usb-Logitech_PRO_X_000000-00.analog-stereo', 'PRO X')),
+		                 'PRO_X')
+		self.assertEqual(surround.tuning(sink('alsa_output.usb-Logitech_PRO_X_Wireless-00', 'PRO X Wireless')),
+		                 'PRO_X_WIRELESS')
+		self.assertEqual(surround.tuning(sink('alsa_output.usb-Logitech_G733-00', 'G733 Gaming Headset')), 'G733')
+
+	def test_params(self):
+		settings = surround.default_settings()
+		settings['gains']['LFE'] = 0.5
+		text = surround.params_text(settings)
+		self.assertIn('gain_LFE 0.500', text)
+		self.assertIn('gain_FL 1.100', text)
+		self.assertNotIn('eq ', text)
+		with_eq = surround.params_text(settings, {'enabled': True, 'gains': [3.0] * 10})
+		self.assertIn('eq 1', with_eq)
+		self.assertIn('eq_10 3.00', with_eq)
 
 
 class FakeCamera:

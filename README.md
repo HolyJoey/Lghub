@@ -1,8 +1,11 @@
 # Lghub
 
-Lghub is a Linux app for Logitech G headsets, mice, keyboards and webcams: the settings G HUB
-gives you on Windows, done natively (no Wine). Devices show up as you plug them in, including
-wireless ones behind a LIGHTSPEED, Unifying or Bolt receiver; pick one to change its settings.
+Lghub is Logitech G HUB, reverse-engineered for Linux: the settings G HUB gives you for
+Logitech G headsets, mice, keyboards and webcams, running natively (no Wine). Where G HUB's
+features are Logitech's own code, like Blue VO!CE and DTS surround, Lghub runs that same code
+from G HUB's packages; everything else talks to the devices directly, the way G HUB does.
+Devices show up as you plug them in, including wireless ones behind a LIGHTSPEED, Unifying or
+Bolt receiver; pick one to change its settings.
 
 ![Devices](docs/screenshots/home.png)
 
@@ -29,14 +32,19 @@ Communications) and bands, 32 Hz to 16 kHz, on a new output *… (Equalizer)* in
 headset. The presets come from Logitech's own files; the filters doing the work are PipeWire's,
 not Logitech's DSP.
 
+**Surround.** G HUB's DTS Headphone:X 2.0 virtual 7.1, running Logitech's own DTS processing
+with your headset's tuning (G Pro X, G Pro X Wireless, G733 and more), on a new output
+*… (Surround 7.1)*. Games set to 7.1 get every speaker placed around you. Per-channel volumes
+like in G HUB. It only runs while something plays, and it works together with the equalizer.
+
 **Headset.** Sidetone, volume and mic level from the headset's sound card, plus lighting and
 battery on headsets that have them.
 
 | Voice | Effects |
 | --- | --- |
 | ![Voice](docs/screenshots/voice.png) | ![Effects](docs/screenshots/effects.png) |
-| **Equalizer** | **Microphone** |
-| ![Equalizer](docs/screenshots/equalizer.png) | ![Microphone](docs/screenshots/microphone.png) |
+| **Equalizer** | **Surround** |
+| ![Equalizer](docs/screenshots/equalizer.png) | ![Surround](docs/screenshots/surround.png) |
 
 ## Mice
 
@@ -86,9 +94,9 @@ Blue VO!CE helper:
 | Fedora | `python3-gobject gtk4 libadwaita gcc pipewire-devel alsa-utils` |
 | Arch | `python-gobject gtk4 libadwaita gcc libpipewire alsa-utils` |
 
-The installer downloads Logitech's Blue VO!CE files from G HUB's own update server (they
-aren't in this repo), checks their hashes, builds the helper, adds a menu entry and starts a
-user service. `./uninstall.sh` undoes all of it. Later, the first time a device shows up, the
+The installer downloads Logitech's audio effects (Blue VO!CE and DTS Headphone:X), G HUB's
+equalizer presets and G HUB's app icon from G HUB's own update server (none of it is in this
+repo), checks the hashes, builds the helpers, adds a menu entry and starts a user service. `./uninstall.sh` undoes all of it. Later, the first time a device shows up, the
 app fetches its product picture from the same server (and, for the G733, its Blue VO!CE
 presets): just those files, a few hundred KB.
 
@@ -105,11 +113,16 @@ Then open **Lghub** from your menu (or run `lghub`).
 ## Is it heavy?
 
 No. Blue VO!CE uses about 4% of one CPU core while you talk and close to nothing otherwise,
-and adds 8 ms of delay. The equalizer only runs while it's switched on. The app itself does
-nothing once closed; mouse and keyboard settings live in the devices.
+and adds 8 ms of delay. Surround uses about 1.5% of one core while something plays and lets
+the headset go idle otherwise. The equalizer only runs while it's switched on. The app itself
+does nothing once closed; mouse and keyboard settings live in the devices.
 
 ## How it works
 
+- **Surround.** The DTS Headphone:X effect (`logi_audio_hx2e_render_apo.dll`) doesn't export
+  its DSP, but the C++ object that holds it has a plain vtable: `bridge/hx2e.c` creates it with
+  the DLL's own factory and calls Init (the headset's tuning), SetStreamsParams and Process
+  the way G HUB's effect does. `surround-bridge` puts that behind a 7.1 PipeWire output.
 - **Blue VO!CE.** The Windows effect (`logi_audio_dts_studio_capture_apo.dll`) exports its DSP
   directly. `bridge/peloader.c` maps the DLL into a normal Linux process and gives it the few
   Windows functions it needs; `bridge/micopt.c` calls it the way the Windows effect does, and
@@ -123,8 +136,8 @@ nothing once closed; mouse and keyboard settings live in the devices.
 - **Webcams.** The standard Linux video interface, V4L2 (`v4l2.py`), for the settings and
   the preview (MJPEG frames, decoded by GTK).
 - **Headset sound card.** ALSA's mixer (`headset.py`).
-- **Background service.** `engine.py` keeps Blue VO!CE and the equalizer running and puts
-  webcam settings back. `systemctl --user status lghub-bluevoice` shows it.
+- **Background service.** `engine.py` keeps Blue VO!CE, the equalizer and surround running and
+  puts webcam settings back. `systemctl --user status lghub-bluevoice` shows it.
 
 Which device is which comes from a small table of model facts (`devices.py`): USB ids,
 lighting zones, and so on. `depots.py` knows where each model's G HUB package lives and reads
@@ -144,7 +157,8 @@ simulator. The webcam screenshot is a real camera.
 
 ## Not there yet
 
-- DTS Headphone:X surround: Logitech's playback effects need a different way of loading.
+- DTS room choice: the effect has three rooms, but nothing in Logitech's files names them, so
+  Lghub uses the default one.
 - Per-key lighting, G-key macros, and keyboard onboard profiles.
 - Most devices here have only met the simulator. If something doesn't work on yours, open an
   issue with `journalctl --user -u lghub-bluevoice` and what the device's page says.
@@ -159,9 +173,9 @@ installer at them with `./install.sh --depot-dir DIR`.
 
 ## License
 
-MIT, see [LICENSE](LICENSE). That covers the code in this repo. Logitech's files that the
-app downloads (the Blue VO!CE DLL, its presets and the product pictures) are not part of
-it and stay under Logitech's own terms.
+MIT, see [LICENSE](LICENSE). That covers the code in this repo. Logitech's files that Lghub
+downloads (the Blue VO!CE and DTS Headphone:X effects, Blue VO!CE and equalizer presets,
+product pictures and the G HUB icon) are not part of it and stay under Logitech's own terms.
 
-Not affiliated with Logitech. Logitech, G HUB, Blue VO!CE, LIGHTSPEED and the product names
-are Logitech's trademarks; DTS is DTS, Inc.'s.
+Not affiliated with Logitech. Logitech, G HUB, Blue VO!CE, LIGHTSPEED, the G HUB icon and the
+product names are Logitech's trademarks; DTS and DTS Headphone:X are DTS, Inc.'s.

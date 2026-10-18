@@ -146,13 +146,19 @@ class Engine:
 			for line in mon.stdout:
 				if self.stop.is_set():
 					break
-				if line[:1] in '+-' and pw.VIRTUAL_MIC + ':' in line:
-					self.link_event.set()
-				if line[:1] in '+-' and surround.SINK + ':playback' in line:
-					self.surround.wake = True     # an app started or stopped playing into surround
-					self.link_event.set()
+				self.on_link_change(line)
 			mon.kill()
 			self.stop.wait(2)
+
+	def on_link_change(self, line):
+		"""A line from pw-link -m: '+' or '-' and the link."""
+		if line[:1] not in '+-':
+			return
+		if pw.VIRTUAL_MIC + ':' in line:
+			self.link_event.set()
+		if surround.SINK + ':playback' in line:
+			self.surround.wake = True     # an app started or stopped playing into surround
+			self.link_event.set()
 
 	def check_links(self):
 		"""The real mic and the virtual mic are only linked while some app records from the

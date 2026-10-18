@@ -7,7 +7,7 @@ from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
 
 import v4l2
 import webcam
-from ui import box, button_widget, device_icon, device_sidebar, label, nav_button, page_header, scrolled
+from ui import NOTIFY_ACTIVE, box, button_widget, device_icon, device_sidebar, label, nav_button, page_header, scrolled
 from worker import Worker
 
 PREVIEW_HEIGHT = 300
@@ -80,9 +80,9 @@ class WebcamView(Gtk.Box):
 		head.append(label('Preview', ['section-title'], hexpand=True, valign=Gtk.Align.CENTER))
 		# LGHUB_PREVIEW=0 starts with the preview off (docs/screenshots.sh: no faces in the README)
 		self.preview_switch = Gtk.Switch(active=os.environ.get('LGHUB_PREVIEW') != '0', valign=Gtk.Align.CENTER)
-		self.preview_switch.connect('notify::active', lambda w, _p: self._start_preview() if w.get_active()
+		self.preview_switch.connect(NOTIFY_ACTIVE, lambda w, _p: self._start_preview() if w.get_active()
 		                            else self._stop_preview())
-		self.preview_switch.connect('notify::active', lambda w, _p: self.picture.set_visible(w.get_active()))
+		self.preview_switch.connect(NOTIFY_ACTIVE, lambda w, _p: self.picture.set_visible(w.get_active()))
 		head.append(self.preview_switch)
 		c.append(head)
 		self.picture = Gtk.Picture(content_fit=Gtk.ContentFit.CONTAIN, height_request=PREVIEW_HEIGHT,
@@ -132,10 +132,9 @@ class WebcamView(Gtk.Box):
 		try:
 			loader.write(data)
 			loader.close()
+			self.picture.set_paintable(Gdk.Texture.new_for_pixbuf(loader.get_pixbuf()))
 		except GLib.Error:
-			return False   # a damaged frame; the next one will do
-		self.picture.set_paintable(Gdk.Texture.new_for_pixbuf(loader.get_pixbuf()))
-		return False
+			pass   # a damaged frame; the next one will do
 
 	def _open(self):
 		node = v4l2.video_node(self.device.id.split(':', 1)[1])
@@ -176,7 +175,7 @@ class WebcamView(Gtk.Box):
 		r.append(label(NICE_NAMES.get(ctrl.key, ctrl.name), ['muted'], width_chars=26, wrap=True))
 		if ctrl.kind == v4l2.T_BOOLEAN:
 			widget = Gtk.Switch(active=bool(ctrl.value), valign=Gtk.Align.CENTER, halign=Gtk.Align.END, hexpand=True)
-			widget.connect('notify::active', lambda w, _p, c=ctrl: self._set(c, int(w.get_active())))
+			widget.connect(NOTIFY_ACTIVE, lambda w, _p, c=ctrl: self._set(c, int(w.get_active())))
 		elif ctrl.menu:
 			values = list(ctrl.menu)
 			widget = Gtk.DropDown.new_from_strings([ctrl.menu[v] for v in values])

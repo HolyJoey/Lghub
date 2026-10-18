@@ -21,6 +21,7 @@ shot voice 0aaa voice -
 shot effects 0aaa effects -
 shot microphone 0aaa microphone -
 shot equalizer 0aaa equalizer -
+shot surround 0aaa surround -
 shot mouse c08b device:c08b sensitivity
 shot mouse-buttons c08b device:c08b buttons
 shot mouse-lighting c08b device:c08b lighting
