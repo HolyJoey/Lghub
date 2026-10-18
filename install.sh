@@ -35,9 +35,10 @@ echo "OK"
 say "Building"
 [ "$(uname -m)" = x86_64 ] || { echo "Blue VO!CE's DSP is x86-64 code; this machine is $(uname -m)."; exit 1; }
 mkdir -p "$APP_DIR/bin"
+read -ra PW_FLAGS <<< "$(pkg-config --cflags --libs libpipewire-0.3)"
 gcc -O2 -o "$APP_DIR/bin/bluevoice-bridge" \
   "$SRC/bridge/bluevoice_bridge.c" "$SRC/bridge/micopt.c" "$SRC/bridge/peloader.c" \
-  $(pkg-config --cflags --libs libpipewire-0.3) -lm
+  "${PW_FLAGS[@]}" -lm
 # Earlier versions ran the DSP under Wine; that's no longer needed.
 rm -rf "$APP_DIR/wine" "$APP_DIR/bin/bluevoice_host.exe"
 echo "OK"
@@ -93,10 +94,10 @@ EOF
 systemctl --user daemon-reload
 systemctl --user enable --now lghub-bluevoice.service
 systemctl --user restart lghub-bluevoice.service
-echo "Running. A new input device, “Blue VO!CE Microphone”, appears in a few seconds."
+echo "Running. A new input device, 'Blue VO!CE Microphone', appears in a few seconds."
 
 say "Done"
-echo "Open “Blue VO!CE” from your menu, or run: lghub-bluevoice"
+echo "Open 'Blue VO!CE' from your menu, or run: lghub-bluevoice"
 case ":$PATH:" in
   *":$BIN_DIR:"*) ;;
   *) echo "Note: $BIN_DIR is not on your PATH." ;;

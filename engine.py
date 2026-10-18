@@ -145,11 +145,10 @@ class Engine:
 			self.stop.wait(2)
 
 	def check_links(self):
-		"""Virtual mic always fed by the DSP; the real mic only linked while some app listens,
-		so it isn't kept open (and its in-use indicator lit) for nothing."""
+		"""The real mic and the virtual mic are only linked while some app records from the
+		virtual one, so the mic isn't kept open (and its in-use light on) and nothing runs idle."""
 		objs = pw.dump()
 		self.input = pw.pick_input(self.config.get('input', 'auto'), objs)
-		dsp_in, dsp_out = f'{pw.DSP}:in', f'{pw.DSP}:out'
 		mic_in = next((n for _, _, n in pw.ports(pw.VIRTUAL_MIC, 'in', objs)), None)
 		if not pw.node_id(pw.DSP, objs) or not mic_in:
 			return  # bridge still starting
@@ -157,27 +156,40 @@ class Engine:
 		if pw.links_out_of(pw.VIRTUAL_MIC, objs):
 			self.last_listener = now
 		self.listening = now - self.last_listener < IDLE_GRACE
+		self.link_input(objs)
+		self.link_output(objs, mic_in)
+		if self.config.get('make_default') and not self.defaulted:
+			pw.set_default_source(pw.VIRTUAL_MIC)
+			self.defaulted = True
+
+	def link_input(self, objs):
+		"""Exactly the chosen microphone into the DSP while listening; nothing otherwise."""
+		dsp_in = f'{pw.DSP}:in'
 		want = pw.capture_port(self.input['name'], objs) if self.input and self.listening else None
 		for port in pw.links_into(dsp_in, objs):
 			if port != want:
 				pw.unlink(port, dsp_in)
 		if want and want not in pw.links_into(dsp_in, objs):
 			pw.link(want, dsp_in)
-		# Feed the virtual mic only while it's used, so nothing runs (no CPU) when idle.
+
+	def link_output(self, objs, mic_in):
+		dsp_out = f'{pw.DSP}:out'
 		fed = dsp_out in pw.links_into(mic_in, objs)
 		if self.listening and not fed:
 			pw.link(dsp_out, mic_in)
 		elif not self.listening and fed:
 			pw.unlink(dsp_out, mic_in)
-		if self.config.get('make_default') and not self.defaulted:
-			pw.set_default_source(pw.VIRTUAL_MIC)
-			self.defaulted = True
 
 	# --- status --------------------------------------------------------------------------
 
 	def publish(self):
 		running = bool(self.proc and self.proc.poll() is None)
-		state = 'running' if running and self.ready else 'starting' if running else 'error'
+		if not running:
+			state = 'error'
+		elif self.ready:
+			state = 'running'
+		else:
+			state = 'starting'
 		store.write_status({
 			'state': state,
 			'error': self.last_error,

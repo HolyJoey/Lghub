@@ -22,6 +22,9 @@ gi.require_version('Adw', '1')
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
 APP_ID = 'dev.local.LghubBlueVoice'
+APP_TITLE = 'Blue VO!CE'
+NOTIFY_ACTIVE = 'notify::active'
+MY_PRESETS = 'My presets'
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 ACCENT = '#2f8cff'
 SAVE_DELAY_MS = 150
@@ -129,7 +132,7 @@ def format_value(value, unit):
 def meter_bar():
 	bar = Gtk.LevelBar(min_value=0, max_value=60, hexpand=True, valign=Gtk.Align.CENTER)
 	bar.add_css_class('meter')
-	for name in list(('low', 'high', 'full')):
+	for name in ('low', 'high', 'full'):
 		bar.remove_offset_value(name)
 	bar.add_offset_value('filled', 48)
 	bar.add_offset_value('high', 57)
@@ -154,21 +157,21 @@ class VoicePage(Gtk.Box):
 
 		hero = box(Gtk.Orientation.HORIZONTAL, 20, ['card', 'hero'])
 		left = box(spacing=6, hexpand=True)
-		left.append(label('Blue VO!CE', ['muted', 'small']))
+		left.append(label(APP_TITLE, ['muted', 'small']))
 		self.state_word = label('On', ['big-word'])
 		left.append(self.state_word)
 		self.route = label('', ['muted', 'small'], wrap=True)
 		left.append(self.route)
 		hero.append(left)
 		self.switch = Gtk.Switch(valign=Gtk.Align.CENTER)
-		self.switch.connect('notify::active', self._on_switch)
+		self.switch.connect(NOTIFY_ACTIVE, self._on_switch)
 		hero.append(self.switch)
 		self.append(hero)
 
 		meters = box(spacing=12, css=['card'])
 		meters.append(label('Levels', ['section-title']))
 		self.bars = {}
-		for key, text in (('in', 'Microphone'), ('out', 'Blue VO!CE')):
+		for key, text in (('in', 'Microphone'), ('out', APP_TITLE)):
 			row = box(Gtk.Orientation.HORIZONTAL, 14)
 			row.append(label(text, ['muted'], width_chars=11))
 			bar = meter_bar()
@@ -183,7 +186,7 @@ class VoicePage(Gtk.Box):
 		self.flow = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, column_spacing=10, row_spacing=10,
 		                        min_children_per_line=2, max_children_per_line=6, homogeneous=True)
 		self.append(self.flow)
-		self.mine_title = label('My presets', ['section-title'])
+		self.mine_title = label(MY_PRESETS, ['section-title'])
 		self.append(self.mine_title)
 		self.mine_flow = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, column_spacing=10, row_spacing=10,
 		                             min_children_per_line=2, max_children_per_line=6, homogeneous=True)
@@ -293,7 +296,7 @@ class EffectsPage(Gtk.Box):
 			head.append(titles)
 			if enable:
 				sw = Gtk.Switch(valign=Gtk.Align.CENTER)
-				sw.connect('notify::active', lambda w, _pspec, p=enable: self._on_switch(p, w))
+				sw.connect(NOTIFY_ACTIVE, lambda w, _pspec, p=enable: self._on_switch(p, w))
 				head.append(sw)
 				self.switches[enable] = (sw, card)
 			card.append(head)
@@ -400,7 +403,7 @@ class MicrophonePage(Gtk.Box):
 		titles.append(label(hint, ['muted', 'small'], wrap=True))
 		row.append(titles)
 		sw = Gtk.Switch(valign=Gtk.Align.CENTER)
-		sw.connect('notify::active', lambda *_: on_change(sw))
+		sw.connect(NOTIFY_ACTIVE, lambda *_: on_change(sw))
 		row.append(sw)
 		parent.append(row)
 		return sw
@@ -485,7 +488,7 @@ class PresetsPage(Gtk.Box):
 	def __init__(self, win):
 		super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=20, css_classes=['page'])
 		self.win = win
-		self.append(page_header('My presets', 'Presets you saved. Logitech’s are on the Voice page.',
+		self.append(page_header(MY_PRESETS, 'Presets you saved. Logitech’s are on the Voice page.',
 		                        button_widget('Import…', ['ghost'], self._import)))
 		self.list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
 		self.list.add_css_class('plain')
@@ -556,7 +559,7 @@ class MainWindow(Adw.ApplicationWindow):
 	PAGES = ['voice', 'effects', 'microphone', 'presets']
 
 	def __init__(self, app, start_page='voice'):
-		super().__init__(application=app, title='Blue VO!CE', default_width=1100, default_height=760)
+		super().__init__(application=app, title=APP_TITLE, default_width=1100, default_height=760)
 		self.loading = False
 		self._save_id = 0
 		self.cfg = store.load_config()
@@ -601,7 +604,7 @@ class MainWindow(Adw.ApplicationWindow):
 			Gtk.Image.new_from_icon_name('audio-input-microphone-symbolic')
 		logo.set_pixel_size(32)
 		brand.append(logo)
-		brand.append(label('Blue VO!CE', ['brand-title'], valign=Gtk.Align.CENTER))
+		brand.append(label(APP_TITLE, ['brand-title'], valign=Gtk.Align.CENTER))
 		side.append(brand)
 
 		nav = box(spacing=4)
@@ -610,7 +613,7 @@ class MainWindow(Adw.ApplicationWindow):
 			('voice', 'Voice', 'audio-input-microphone-symbolic'),
 			('effects', 'Effects', 'preferences-other-symbolic'),
 			('microphone', 'Microphone', 'audio-card-symbolic'),
-			('presets', 'My presets', 'view-list-symbolic'),
+			('presets', MY_PRESETS, 'view-list-symbolic'),
 		):
 			b = Gtk.Button()
 			b.add_css_class('nav')
@@ -701,39 +704,46 @@ class MainWindow(Adw.ApplicationWindow):
 
 	def _poll_status(self):
 		status = store.read_status()
-		fresh = status.get('updated', 0) > GLib.get_real_time() / 1e6 - 3
-		if not fresh:
-			status = {'state': 'stopped'}
-		state = status.get('state')
+		if status.get('updated', 0) <= GLib.get_real_time() / 1e6 - 3:
+			status = {'state': 'stopped'}  # the engine isn't running (or is stuck)
 		if self.cfg.get('headset', 'auto') == 'auto' and status.get('input'):
 			self.refresh_model(status)
 		self.voice_page.update_status(status)
 		self.mic_page.update_status(status, self._service_active)
-		for c in ('ok', 'warn', 'err', 'muted'):
-			self.conn_label.remove_css_class(c)
+		self._show_sidebar_status(status)
+		return True
+
+	def _show_sidebar_status(self, status):
+		state = status.get('state')
+		running = state == 'running'
+		standby = running and not status.get('listening', True)
 		word, dot, css = {
 			'running': ('Active', '● Running', 'ok'),
 			'starting': ('Starting', '● Starting', 'warn'),
 			'error': ('Problem', '● Error', 'err'),
 		}.get(state, ('Off', '● Stopped', 'muted'))
-		if state == 'running' and not status.get('listening', True):
+		if standby:
 			word = 'Standby'
-		elif state == 'running' and not status.get('enabled', True):
+		elif running and not status.get('enabled', True):
 			word = 'Bypassed'
 		self.side_state.set_text(word)
+		for c in ('ok', 'warn', 'err', 'muted'):
+			self.conn_label.remove_css_class(c)
 		self.conn_label.set_text(dot)
 		self.conn_label.add_css_class(css)
-		inp = status.get('input')
-		if state == 'running' and not status.get('listening', True):
-			self.side_input.set_text('Ready. Your microphone opens when an app uses Blue VO!CE.')
-		elif state == 'running':
-			self.side_input.set_text(f"From {inp['description']}" if inp else 'Waiting for a microphone')
-		elif state == 'error':
-			self.side_input.set_text(status.get('error', ''))
-		else:
-			self.side_input.set_text('')
-		self.side_bar.set_value(max(0.0, status.get('meter_out', -120) + 60) if state == 'running' else 0)
-		return True
+		self.side_input.set_text(self._sidebar_detail(status, state, standby))
+		self.side_bar.set_value(max(0.0, status.get('meter_out', -120) + 60) if running else 0)
+
+	@staticmethod
+	def _sidebar_detail(status, state, standby):
+		if standby:
+			return f'Ready. Your microphone opens when an app uses {APP_TITLE}.'
+		if state == 'running':
+			inp = status.get('input')
+			return f"From {inp['description']}" if inp else 'Waiting for a microphone'
+		if state == 'error':
+			return status.get('error', '')
+		return ''
 
 	def _poll_slow(self):
 		def work():

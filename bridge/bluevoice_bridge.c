@@ -89,7 +89,7 @@ static float power(const float *x, uint32_t n)
 {
 	float acc = 0;
 	for (uint32_t i = 0; i < n; i++) acc += x[i] * x[i];
-	return acc / n;
+	return acc / (float)n;
 }
 
 static void meter_max(_Atomic uint32_t *slot, float value)
@@ -137,7 +137,7 @@ static void process_block(struct bridge *b)
 static void on_process(void *data, struct spa_io_position *position)
 {
 	struct bridge *b = data;
-	uint32_t n = position->clock.duration;
+	uint32_t n = (uint32_t)position->clock.duration; /* a quantum, far below 2^32 */
 	float *in = pw_filter_get_dsp_buffer(b->in_port, n);
 	float *out = pw_filter_get_dsp_buffer(b->out_port, n);
 	if (!out) return;
@@ -180,6 +180,8 @@ static void on_process(void *data, struct spa_io_position *position)
 
 static void on_state(void *data, enum pw_filter_state old, enum pw_filter_state state, const char *error)
 {
+	(void)data;
+	(void)old;
 	fprintf(stderr, "bridge: filter %s%s%s\n", pw_filter_state_as_string(state), error ? ": " : "", error ? error : "");
 }
 
@@ -208,12 +210,13 @@ static double to_db(_Atomic uint32_t *slot)
 	uint32_t bits = atomic_exchange(slot, 0);
 	float p;
 	memcpy(&p, &bits, 4);
-	return p > 1e-12f ? 10.0 * log10(p) : -120.0;
+	return p > 1e-12f ? 10.0 * log10((double)p) : -120.0;
 }
 
 /* Every 100 ms: meters, parameter changes, and freeing retired instances. */
 static void on_timer(void *data, uint64_t expirations)
 {
+	(void)expirations;
 	struct bridge *b = data;
 	micopt *old = atomic_exchange(&b->retired, NULL);
 	if (old) micopt_close(old);
@@ -231,7 +234,11 @@ static void on_timer(void *data, uint64_t expirations)
 	fprintf(stderr, "meter %.1f %.1f\n", in_db, out_db);
 }
 
-static void on_signal(void *data, int sig) { pw_main_loop_quit(((struct bridge *)data)->loop); }
+static void on_signal(void *data, int sig)
+{
+	(void)sig;
+	pw_main_loop_quit(((struct bridge *)data)->loop);
+}
 
 int main(int argc, char **argv)
 {
@@ -297,7 +304,7 @@ int main(int argc, char **argv)
 	}
 
 	struct spa_source *timer = pw_loop_add_timer(loop, on_timer, b);
-	struct timespec period = {0, 100 * 1000 * 1000};
+	struct timespec period = {0, 100L * 1000 * 1000};
 	pw_loop_update_timer(loop, timer, &period, &period, false);
 
 	fprintf(stderr, "ready rate=%d block=%d (native, no Wine)\n", RATE, b->block);

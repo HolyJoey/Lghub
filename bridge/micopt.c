@@ -61,7 +61,6 @@ static int set_raw(micopt *m, const char *name, void *value);
 #define RVA_SECURITY_COOKIE 0x57330
 #define RVA_USER_MATHERR    0x59958
 #define RVA_INVOKE_MATHERR  0x2df40
-#define RVA_USE_FMA3_LIB    0x594e8
 
 static int init_crt_matherr(pe_image *img)
 {
@@ -69,10 +68,19 @@ static int init_crt_matherr(pe_image *img)
 	                                       0x4c, 0x8b, 0xc1, 0x8b, 0xca,
 	                                       0x48, 0x33, 0x15, 0x05, 0xba, 0x02, 0x00}; /* xor rdx, [matherr] */
 	const unsigned char *code = pe_rva(img, RVA_INVOKE_MATHERR);
-	if (!code || memcmp(code, expect, sizeof expect)) return -1;
-	*(unsigned long long *)pe_rva(img, RVA_USER_MATHERR) = *(unsigned long long *)pe_rva(img, RVA_SECURITY_COOKIE);
-	if (getenv("MICOPT_FMA3")) *(int *)pe_rva(img, RVA_USE_FMA3_LIB) = atoi(getenv("MICOPT_FMA3"));
+	unsigned char *matherr = pe_rva(img, RVA_USER_MATHERR);
+	const unsigned char *cookie = pe_rva(img, RVA_SECURITY_COOKIE);
+	if (!code || !matherr || !cookie || memcmp(code, expect, sizeof expect) != 0) return -1;
+	memcpy(matherr, cookie, 8);
 	return 0;
+}
+
+/* Zeroed, 64-byte aligned memory (aligned_alloc needs a multiple of the alignment). */
+static void *alloc64(size_t n)
+{
+	void *p = aligned_alloc(64, (n + 63) & ~(size_t)63);
+	if (p) memset(p, 0, n);
+	return p;
 }
 
 static int block_for_rate(int rate)
@@ -90,32 +98,35 @@ micopt *micopt_open(const char *dll_path, int rate)
 	int block = block_for_rate(rate);
 	if (!block) return NULL;
 	if (!dll) {
-		if (!(dll = pe_load(dll_path))) return NULL;
+		dll = pe_load(dll_path);
+		if (!dll) return NULL;
 		if (init_crt_matherr(dll)) {
 			fprintf(stderr, "micopt: unexpected DLL build; expected Logitech's 2024.7 Blue VO!CE APO\n");
 			return NULL;
 		}
 	}
-	get_sizes_fn get_sizes = (get_sizes_fn)pe_symbol(dll, "dts_micopt_get_sizes");
-	init_fn init = (init_fn)pe_symbol(dll, "dts_micopt_init");
+	get_sizes_fn get_sizes = (get_sizes_fn)pe_function(dll, "dts_micopt_get_sizes");
+	init_fn init = (init_fn)pe_function(dll, "dts_micopt_init");
 	micopt *m = calloc(1, sizeof *m);
-	m->set = (set_fn)pe_symbol(dll, "dts_micopt_set");
-	m->process = (process_fn)pe_symbol(dll, "dts_micopt_process");
+	if (!m) return NULL;
+	m->set = (set_fn)pe_function(dll, "dts_micopt_set");
+	m->process = (process_fn)pe_function(dll, "dts_micopt_process");
 	if (!get_sizes || !init || !m->set || !m->process) { free(m); return NULL; }
 
 	int state_size, params_size, temp_size;
 	if (get_sizes(&state_size, &params_size, &temp_size, 1, block)) { free(m); return NULL; }
 	m->block = block;
 	m->rate = rate;
-	m->state = aligned_alloc(64, (state_size + 63) & ~63);
-	m->params = aligned_alloc(64, (params_size + 63) & ~63);
-	m->temp = aligned_alloc(64, (temp_size + 63) & ~63);
+	m->state = alloc64((size_t)state_size);
+	m->params = alloc64((size_t)params_size);
+	m->temp = alloc64((size_t)temp_size);
+	int ok = m->state && m->params && m->temp;
 	for (int c = 0; c < 2; c++) {
-		m->in[c] = aligned_alloc(64, block * sizeof(float));
-		m->out[c] = aligned_alloc(64, block * sizeof(float));
-		memset(m->in[c], 0, block * sizeof(float));
+		m->in[c] = alloc64((size_t)block * sizeof(float));
+		m->out[c] = alloc64((size_t)block * sizeof(float));
+		ok = ok && m->in[c] && m->out[c];
 	}
-	if (init(m->state, m->params, 1, block, rate)) { micopt_close(m); return NULL; }
+	if (!ok || init(m->state, m->params, 1, block, rate)) { micopt_close(m); return NULL; }
 	for (size_t i = 0; i < sizeof defaults / sizeof defaults[0]; i++) {
 		float v = defaults[i].value; /* FUN_18000e080 passes every default as a float */
 		set_raw(m, defaults[i].name, &v);
@@ -158,16 +169,18 @@ int micopt_load_params(micopt *m, const char *path)
 {
 	FILE *f = fopen(path, "r");
 	if (!f) return -1;
-	char line[256], name[128];
-	float value;
+	char line[256];
 	while (fgets(line, sizeof line, f)) {
-		if (line[0] == '#' || sscanf(line, "%127s %f", name, &value) != 2) continue;
+		/* "name value"; anything else (comments, blank lines, bad numbers) is skipped */
+		char *name = strtok(line, " \t\r\n"), *text = strtok(NULL, " \t\r\n"), *end;
+		if (!name || !text || name[0] == '#') continue;
+		float value = strtof(text, &end);
+		if (end == text || *end) continue;
 		/* GetUserSettings skips balance for a mono stream, and meters are not used here */
 		if (!strcmp(name, "micopt.meter_enable") || !strcmp(name, "micopt.balance")) continue;
 		micopt_set(m, name, value);
 	}
-	fclose(f);
-	return 0;
+	return fclose(f) == 0 ? 0 : -1;
 }
 
 int micopt_process(micopt *m, const float *in, float *out)
