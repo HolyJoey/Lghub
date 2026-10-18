@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs Blue VO!CE for Linux for the current user.
+# Installs Lghub (Logitech G devices on Linux, with Blue VO!CE) for the current user.
 #   ./install.sh                     download Logitech's files from G HUB's update server
 #   ./install.sh --depot-dir DIR     use driver_audio_apo.depot / pro_headset.depot from DIR
 set -euo pipefail
@@ -55,21 +55,24 @@ fi
 
 say "Adding the launcher, menu entry and icon"
 mkdir -p "$BIN_DIR" "$PREFIX/applications" "$PREFIX/icons/hicolor/scalable/apps"
-cat > "$BIN_DIR/lghub-bluevoice" <<EOF
+for launcher in lghub lghub-bluevoice; do
+  cat > "$BIN_DIR/$launcher" <<EOF
 #!/usr/bin/env bash
 exec python3 "$APP_DIR/app.py" "\$@"
 EOF
-chmod +x "$BIN_DIR/lghub-bluevoice"
+  chmod +x "$BIN_DIR/$launcher"
+done
 cp "$SRC/lghub-bluevoice.svg" "$PREFIX/icons/hicolor/scalable/apps/lghub-bluevoice.svg"
 cat > "$PREFIX/applications/lghub-bluevoice.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Name=Blue VO!CE
-Comment=Logitech Blue VO!CE microphone effects for your headset
-Exec=$BIN_DIR/lghub-bluevoice
+Name=Lghub
+GenericName=Logitech G devices
+Comment=Settings for Logitech G headsets, mice and webcams, with Blue VO!CE
+Exec=$BIN_DIR/lghub
 Icon=lghub-bluevoice
 Terminal=false
-Categories=AudioVideo;Audio;Settings;
+Categories=AudioVideo;Audio;Settings;HardwareSettings;
 StartupWMClass=$APP_ID
 EOF
 command -v update-desktop-database >/dev/null && update-desktop-database "$PREFIX/applications" || true
@@ -97,7 +100,7 @@ systemctl --user restart lghub-bluevoice.service
 echo "Running. A new input device, 'Blue VO!CE Microphone', appears in a few seconds."
 
 say "Done"
-echo "Open 'Blue VO!CE' from your menu, or run: lghub-bluevoice"
+echo "Open 'Lghub' from your menu, or run: lghub"
 case ":$PATH:" in
   *":$BIN_DIR:"*) ;;
   *) echo "Note: $BIN_DIR is not on your PATH." ;;

@@ -20,6 +20,18 @@ Working, tested on this machine with the laptop microphone:
 - Mic only open while an app records from Blue VO!CE; ~0% CPU when idle.
 - Pro X Wireless preset set; sample-rate changes handled (44.1–192 kHz).
 
+## Multi-device (full G HUB replacement)
+
+- [x] Home screen: connected devices from sysfs (polled every 2 s), our own model table in
+  `devices.py` (USB ids, lighting zones, onboard profiles, battery), per-device pages.
+  The G Pro X (wired/wireless) opens Blue VO!CE; Blue VO!CE also has its own tile.
+  Test without hardware: `LGHUB_FAKE_DEVICES=0aaa,c08b,082d lghub`.
+- [ ] Mice (G502): DPI, report rate, buttons, onboard profiles, lighting (HID++ 2.0).
+- [ ] G Pro X extras: sidetone, mic level, EQ / DTS surround.
+- [ ] Webcams (C920): V4L2 controls.
+- [ ] Keyboards and the rest; receivers (devices paired to LIGHTSPEED/Unifying).
+- [ ] Product images, downloaded at install time.
+
 ## Needs the headset
 
 1. **Test with the G Pro X**: check Automatic picks it (`pw.is_pro_x` matches "PRO X" in the

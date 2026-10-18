@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Blue VO!CE for Linux (GTK4 + libadwaita).
+"""Lghub: Logitech G devices on Linux (GTK4 + libadwaita).
 
-The app only edits config.json and shows status.json; the engine (engine.py, a systemd user
-service) does the processing, so the virtual microphone keeps working with the app closed.
+The home screen lists connected devices; each opens its own page. Blue VO!CE only edits
+config.json and shows status.json; the engine (engine.py, a systemd user service) does the
+processing, so the virtual microphone keeps working with the app closed.
 """
 import copy
 import json
@@ -12,6 +13,7 @@ import threading
 
 import gi
 
+import devices
 import presets
 import pw
 import service
@@ -19,9 +21,10 @@ import store
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango  # noqa: E402
 
 APP_ID = 'dev.local.LghubBlueVoice'
+APP_NAME = 'Lghub'
 APP_TITLE = 'Blue VO!CE'
 NOTIFY_ACTIVE = 'notify::active'
 MY_PRESETS = 'My presets'
@@ -29,6 +32,8 @@ APP_DIR = os.path.dirname(os.path.abspath(__file__))
 ACCENT = '#2f8cff'
 SAVE_DELAY_MS = 150
 CUSTOM = 'Custom'
+DISCOVER_SECONDS = 2
+BLUE_VOICE_PAGES = ('voice', 'effects', 'microphone', 'presets')
 
 CSS = f"""
 window {{ font-family: Manrope, Cantarell, sans-serif; }}
@@ -77,6 +82,16 @@ list.plain {{ background: none; }}
 list.plain > row {{ background: #161a20; border: 1px solid #22262e; border-radius: 12px; margin-bottom: 8px; padding: 8px 12px; }}
 .value {{ font-family: "JetBrains Mono", "JetBrainsMono Nerd Font", monospace; color: #c9ced8; }}
 banner {{ background: #3a2a14; }}
+button.back {{ min-height: 36px; padding: 0 10px; border-radius: 10px; background: transparent; color: #9aa0ad;
+  box-shadow: none; border: none; font-weight: 500; }}
+button.back:hover {{ background: #161a20; color: #eceef2; }}
+button.tile {{ background: #161a20; border: 1px solid #22262e; border-radius: 16px; padding: 22px 20px;
+  min-width: 200px; min-height: 190px; box-shadow: none; color: #eceef2; }}
+button.tile:hover {{ background: #1b1f26; border-color: #2f3644; }}
+button.tile image.tile-icon {{ color: {ACCENT}; }}
+.tile-name {{ font-size: 16px; font-weight: 700; }}
+.device-icon {{ color: {ACCENT}; }}
+.chip {{ background: #1c2027; border-radius: 8px; padding: 4px 10px; font-size: 12px; color: #c9ced8; }}
 """
 
 
@@ -532,7 +547,7 @@ class PresetsPage(Gtk.Box):
 			with open(path, 'w') as f:
 				json.dump({'name': name, 'params': store.load_user_preset(name)}, f, indent=2)
 			self.win.toast(f'Exported to {os.path.basename(path)}')
-		dialog.save(self.win, None, done)
+		dialog.save(self.win.get_root(), None, done)
 
 	def _import(self):
 		dialog = Gtk.FileDialog()
@@ -550,32 +565,75 @@ class PresetsPage(Gtk.Box):
 			store.save_user_preset(name, params)
 			self.win.reload_presets()
 			self.win.toast(f'Imported “{name}”')
-		dialog.open(self.win, None, done)
+		dialog.open(self.win.get_root(), None, done)
 
 
-# --- window --------------------------------------------------------------------------------
+# --- shared device layout ------------------------------------------------------------------
 
-class MainWindow(Adw.ApplicationWindow):
-	PAGES = ['voice', 'effects', 'microphone', 'presets']
+def device_sidebar(on_back, icon, title, subtitle):
+	"""The left column of every device page: back to the device list, then the device."""
+	side = box(spacing=28, css=['sidebar'], width_request=232)
+	side.set_hexpand(False)
+	back = Gtk.Button()
+	back.add_css_class('back')
+	content = box(Gtk.Orientation.HORIZONTAL, 8)
+	content.append(Gtk.Image.new_from_icon_name('go-previous-symbolic'))
+	content.append(label('All devices'))
+	back.set_child(content)
+	back.set_halign(Gtk.Align.START)
+	back.connect('clicked', lambda _w: on_back())
+	brand = box(spacing=10)
+	brand.append(back)
+	head = box(Gtk.Orientation.HORIZONTAL, 10)
+	icon.set_pixel_size(32)
+	head.append(icon)
+	titles = box(spacing=2, valign=Gtk.Align.CENTER)
+	titles.append(label(title, ['brand-title']))
+	titles.append(label(subtitle, ['muted', 'small']))
+	head.append(titles)
+	brand.append(head)
+	side.append(brand)
+	return side
 
-	def __init__(self, app, start_page='voice'):
-		super().__init__(application=app, title=APP_TITLE, default_width=1100, default_height=760)
+
+def nav_button(text, icon_name, on_click):
+	b = Gtk.Button()
+	b.add_css_class('nav')
+	content = box(Gtk.Orientation.HORIZONTAL, 12)
+	content.append(Gtk.Image.new_from_icon_name(icon_name))
+	content.append(label(text))
+	b.set_child(content)
+	b.connect('clicked', lambda _w: on_click())
+	return b
+
+
+def scrolled(child):
+	return Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER, child=child, hexpand=True)
+
+
+# --- Blue VO!CE (G Pro X page) -------------------------------------------------------------
+
+class BlueVoiceView(Gtk.Box):
+	"""Blue VO!CE settings. The G Pro X page, and reachable without a headset too, since it
+	works on any microphone."""
+	PAGES = BLUE_VOICE_PAGES
+
+	def __init__(self, win):
+		super().__init__(orientation=Gtk.Orientation.VERTICAL, vexpand=True)
+		self.window = win
 		self.loading = False
 		self._save_id = 0
+		self.device_title = APP_TITLE
 		self.cfg = store.load_config()
 		self.model = store.headset_model(self.cfg, store.read_status())
 		self.ghub_presets = store.ghub_presets(self.model)
 		self.base_params = copy.deepcopy(self.cfg['params'])  # what "Reset to preset" returns to
 
-		self.toasts = Adw.ToastOverlay()
-		outer = box()
 		self.banner = Adw.Banner(title='Logitech’s Blue VO!CE files are missing. Run ./install.sh again.')
 		self.banner.set_revealed(not os.path.exists(store.APO_DLL))
-		outer.append(self.banner)
-		root = box(Gtk.Orientation.HORIZONTAL, css=['app-bg'], vexpand=True)
-		outer.append(root)
-		self.toasts.set_child(outer)
-		self.set_content(self.toasts)
+		self.append(self.banner)
+		self.root = box(Gtk.Orientation.HORIZONTAL, vexpand=True)
+		self.append(self.root)
 
 		self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE, hexpand=True)
 		self.voice_page = VoicePage(self)
@@ -584,10 +642,11 @@ class MainWindow(Adw.ApplicationWindow):
 		self.presets_page = PresetsPage(self)
 		for page, name in ((self.voice_page, 'voice'), (self.effects_page, 'effects'),
 		                   (self.mic_page, 'microphone'), (self.presets_page, 'presets')):
-			self.stack.add_named(Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER, child=page), name)
-		root.append(self._build_sidebar())
-		root.append(self.stack)
-		self.show_page(start_page if start_page in self.PAGES else 'voice')
+			self.stack.add_named(scrolled(page), name)
+		self.sidebar = None
+		self.set_device(None)
+		self.root.append(self.stack)
+		self.show_page('voice')
 
 		self._service_active = service.is_active()
 		if not self._service_active and service.installed():
@@ -595,17 +654,32 @@ class MainWindow(Adw.ApplicationWindow):
 		GLib.timeout_add(100, self._poll_status)
 		GLib.timeout_add_seconds(3, self._poll_slow)
 
-	def _build_sidebar(self):
-		side = box(spacing=28, css=['sidebar'], width_request=232)
-		side.set_hexpand(False)
-		brand = box(Gtk.Orientation.HORIZONTAL, 10, halign=Gtk.Align.CENTER)
-		icon = os.path.join(APP_DIR, 'lghub-bluevoice.svg')
-		logo = Gtk.Image.new_from_file(icon) if os.path.exists(icon) else \
-			Gtk.Image.new_from_icon_name('audio-input-microphone-symbolic')
-		logo.set_pixel_size(32)
-		brand.append(logo)
-		brand.append(label(APP_TITLE, ['brand-title'], valign=Gtk.Align.CENTER))
-		side.append(brand)
+	def set_device(self, device):
+		"""Title the sidebar after the headset it was opened from (or Blue VO!CE itself)."""
+		title = device.name if device else APP_TITLE
+		if self.sidebar and title == self.device_title:
+			return
+		self.device_title = title
+		if self.sidebar:
+			self.root.remove(self.sidebar)
+		self.sidebar = self._build_sidebar(device)
+		self.root.prepend(self.sidebar)
+		self.show_page(self.stack.get_visible_child_name() or 'voice')
+
+	def toast(self, text):
+		self.window.toast(text)
+
+	def _build_sidebar(self, device):
+		icon_path = os.path.join(APP_DIR, 'lghub-bluevoice.svg')
+		if device:
+			logo = Gtk.Image.new_from_icon_name(device.icon)
+			logo.add_css_class('device-icon')
+		elif os.path.exists(icon_path):
+			logo = Gtk.Image.new_from_file(icon_path)
+		else:
+			logo = Gtk.Image.new_from_icon_name('audio-input-microphone-symbolic')
+		side = device_sidebar(self.window.show_home, logo, self.device_title,
+		                      APP_TITLE if device else 'Virtual microphone')
 
 		nav = box(spacing=4)
 		self.nav_buttons = {}
@@ -615,13 +689,7 @@ class MainWindow(Adw.ApplicationWindow):
 			('microphone', 'Microphone', 'audio-card-symbolic'),
 			('presets', MY_PRESETS, 'view-list-symbolic'),
 		):
-			b = Gtk.Button()
-			b.add_css_class('nav')
-			content = box(Gtk.Orientation.HORIZONTAL, 12)
-			content.append(Gtk.Image.new_from_icon_name(icon_name))
-			content.append(label(text))
-			b.set_child(content)
-			b.connect('clicked', lambda _w, k=key: self.show_page(k))
+			b = nav_button(text, icon_name, lambda k=key: self.show_page(k))
 			nav.append(b)
 			self.nav_buttons[key] = b
 		side.append(nav)
@@ -649,9 +717,6 @@ class MainWindow(Adw.ApplicationWindow):
 			(b.add_css_class if k == key else b.remove_css_class)('active')
 		if key == 'microphone':
 			self.mic_page.refresh_inputs()
-
-	def toast(self, text):
-		self.toasts.add_toast(Adw.Toast(title=GLib.markup_escape_text(text), timeout=4))
 
 	# --- settings ------------------------------------------------------------------------
 
@@ -703,6 +768,8 @@ class MainWindow(Adw.ApplicationWindow):
 	# --- status --------------------------------------------------------------------------
 
 	def _poll_status(self):
+		if not self.get_mapped():
+			return True
 		status = store.read_status()
 		if status.get('updated', 0) <= GLib.get_real_time() / 1e6 - 3:
 			status = {'state': 'stopped'}  # the engine isn't running (or is stuck)
@@ -753,6 +820,197 @@ class MainWindow(Adw.ApplicationWindow):
 		return True
 
 
+# --- home: connected devices ---------------------------------------------------------------
+
+def device_tile(icon_name, name, kind, detail, on_click, icon_file=None):
+	b = Gtk.Button()
+	b.add_css_class('tile')
+	inner = box(spacing=6, valign=Gtk.Align.CENTER)
+	icon = Gtk.Image.new_from_file(icon_file) if icon_file else Gtk.Image.new_from_icon_name(icon_name)
+	icon.set_pixel_size(64)
+	icon.add_css_class('tile-icon')
+	icon.set_margin_bottom(14)
+	inner.append(icon)
+	inner.append(label(name, ['tile-name'], xalign=0.5, ellipsize=Pango.EllipsizeMode.END))
+	inner.append(label(kind, ['muted', 'small'], xalign=0.5))
+	inner.append(label(detail, ['ok', 'small'], xalign=0.5))
+	b.set_child(inner)
+	b.connect('clicked', lambda _w: on_click())
+	return b
+
+
+class HomePage(Gtk.Box):
+	def __init__(self, win):
+		super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=24, css_classes=['page'])
+		self.win = win
+		self.append(page_header('Devices', 'Your connected Logitech G gear. Pick one to set it up.'))
+		self.flow = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, column_spacing=16, row_spacing=16,
+		                        min_children_per_line=1, max_children_per_line=5, homogeneous=True,
+		                        valign=Gtk.Align.START)
+		self.append(self.flow)
+		self.append(label('Software', ['section-title']))
+		soft = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, column_spacing=16, row_spacing=16,
+		                   min_children_per_line=1, max_children_per_line=5, homogeneous=True)
+		icon_path = os.path.join(APP_DIR, 'lghub-bluevoice.svg')
+		soft.append(device_tile('audio-input-microphone-symbolic', APP_TITLE, 'Virtual microphone',
+		                        'Works with any microphone', lambda: win.show_device(None),
+		                        icon_path if os.path.exists(icon_path) else None))
+		self.append(soft)
+		self.empty = label('No Logitech devices found. Plug one in; it shows up here within a few seconds.',
+		                   ['muted'], wrap=True)
+		self.append(self.empty)
+		self.devices = []
+
+	def show(self, found):
+		self.devices = found
+		while (child := self.flow.get_first_child()):
+			self.flow.remove(child)
+		for dev in found:
+			detail = 'Connected' if dev.model.type != 'receiver' else 'Paired devices: coming soon'
+			self.flow.append(device_tile(dev.icon, dev.name, dev.type_name, detail,
+			                             lambda d=dev: self.win.show_device(d)))
+		self.flow.set_visible(bool(found))
+		self.empty.set_visible(not found)
+
+
+# --- other devices -------------------------------------------------------------------------
+
+ZONE_NAMES = {'primary': 'Main', 'branding': 'Logo', 'combined': 'All'}
+
+
+class DeviceView(Gtk.Box):
+	"""A device without its own settings pages yet: what it is, and what G HUB offers for it."""
+
+	def __init__(self, win, device):
+		super().__init__(orientation=Gtk.Orientation.HORIZONTAL, vexpand=True)
+		self.device = device
+		icon = Gtk.Image.new_from_icon_name(device.icon)
+		icon.add_css_class('device-icon')
+		side = device_sidebar(win.show_home, icon, device.name, device.type_name)
+		nav = box(spacing=4)
+		overview = nav_button('Overview', 'view-grid-symbolic', lambda: None)
+		overview.add_css_class('active')
+		nav.append(overview)
+		side.append(nav)
+		self.append(side)
+
+		page = box(spacing=20, css=['page'])
+		page.append(page_header(device.name, f'{device.type_name} · connected over USB'))
+
+		hero = box(Gtk.Orientation.HORIZONTAL, 20, ['card', 'hero'])
+		big = Gtk.Image.new_from_icon_name(device.icon)
+		big.set_pixel_size(72)
+		big.add_css_class('device-icon')
+		hero.append(big)
+		facts = box(spacing=6, hexpand=True, valign=Gtk.Align.CENTER)
+		facts.append(label(device.name, ['big-word']))
+		facts.append(label(f'USB {device.usb_id}' + (f' · serial {device.serial}' if device.serial else ''),
+		                   ['muted', 'small', 'mono'], selectable=True))
+		hero.append(facts)
+		page.append(hero)
+
+		features = self._features(device.model)
+		if features:
+			card = box(spacing=12, css=['card'])
+			card.append(label('What this model can do', ['section-title']))
+			for title, chips in features:
+				row = box(Gtk.Orientation.HORIZONTAL, 14)
+				row.append(label(title, ['muted'], width_chars=18))
+				flow = box(Gtk.Orientation.HORIZONTAL, 6)
+				for chip in chips:
+					flow.append(label(chip, ['chip']))
+				row.append(flow)
+				card.append(row)
+			page.append(card)
+
+		card = box(spacing=8, css=['card'])
+		card.append(label('Settings', ['section-title']))
+		card.append(label(f'Lghub recognises this {device.type_name.lower()}, but its settings page isn’t '
+		                  'built yet. It’s on the way.', ['muted'], wrap=True))
+		page.append(card)
+		self.append(scrolled(page))
+
+	@staticmethod
+	def _features(model):
+		features = []
+		if model.lighting:
+			zones = [ZONE_NAMES.get(z, z.replace('_', ' ').capitalize()) for z in model.lighting]
+			features.append(('Lighting zones', zones))
+		if 'onboard' in model.flags:
+			features.append(('Memory', ['Onboard profiles']))
+		if 'battery' in model.flags:
+			features.append(('Power', ['Battery']))
+		if model.type == 'mouse':
+			features.append(('Sensor', ['DPI levels', 'Report rate']))
+		if model.type == 'camera':
+			features.append(('Picture', ['Brightness', 'Contrast', 'Focus', 'Zoom', 'White balance']))
+		return features
+
+
+# --- window --------------------------------------------------------------------------------
+
+class MainWindow(Adw.ApplicationWindow):
+	def __init__(self, app, start_page='home'):
+		super().__init__(application=app, title=APP_NAME, default_width=1100, default_height=760)
+		self.toasts = Adw.ToastOverlay()
+		self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE, vexpand=True)
+		self.stack.add_css_class('app-bg')
+		self.toasts.set_child(self.stack)
+		self.set_content(self.toasts)
+
+		self.home = HomePage(self)
+		self.stack.add_named(scrolled(self.home), 'home')
+		self.blue_voice = BlueVoiceView(self)
+		self.stack.add_named(self.blue_voice, 'bluevoice')
+		self.device_view = None
+		self.current = None  # the Device whose page is open (None: home, or Blue VO!CE on its own)
+
+		self._discover()
+		GLib.timeout_add_seconds(DISCOVER_SECONDS, self._discover)
+		if start_page in BLUE_VOICE_PAGES:
+			pro_x = next((d for d in self.home.devices if devices.blue_voice_model(d)), None)
+			self.show_device(pro_x)
+			self.blue_voice.show_page(start_page)
+		elif start_page.startswith('device:'):
+			wanted = start_page.split(':', 1)[1]
+			match = next((d for d in self.home.devices if d.model.key == wanted or d.usb_id.endswith(wanted)), None)
+			if match:
+				self.show_device(match)
+
+	def toast(self, text):
+		self.toasts.add_toast(Adw.Toast(title=GLib.markup_escape_text(text), timeout=4))
+
+	def show_home(self):
+		self.current = None
+		self.stack.set_visible_child_name('home')
+
+	def show_device(self, device):
+		"""Open a device's page; None opens Blue VO!CE without a headset."""
+		self.current = device
+		if device is None or devices.blue_voice_model(device):
+			self.blue_voice.set_device(device)
+			self.stack.set_visible_child_name('bluevoice')
+			return
+		if self.device_view:
+			self.stack.remove(self.device_view)
+		self.device_view = DeviceView(self, device)
+		self.stack.add_named(self.device_view, 'device')
+		self.stack.set_visible_child_name('device')
+
+	def _discover(self):
+		found = devices.discover()
+		if [d.id for d in found] != [d.id for d in self.home.devices] or not self.home.devices:
+			self.home.show(found)
+		if self.current and self.current.id not in {d.id for d in found}:
+			self.toast(f'{self.current.name} was disconnected')
+			if devices.blue_voice_model(self.current):
+				self.blue_voice.set_device(None)  # Blue VO!CE keeps working with another mic
+				self.current = None
+			else:
+				self.show_home()
+		return True
+
+
 class App(Adw.Application):
 	def __init__(self):
 		super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
@@ -766,7 +1024,7 @@ class App(Adw.Application):
 		                                          Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
 	def do_activate(self):
-		page = 'voice'
+		page = 'home'
 		argv = sys.argv
 		if '--page' in argv and argv.index('--page') + 1 < len(argv):
 			page = argv[argv.index('--page') + 1]
