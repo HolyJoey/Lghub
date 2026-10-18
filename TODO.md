@@ -34,27 +34,38 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 - **HID++ lighting (0x8070)**: effect parameter bytes and the persist flag; the current effect
   isn't read back (the page starts at the first effect).
 
-## Not done
+## Progress on the open work (overall about 55%)
 
-- [x] Macros: `macros.py` (G HUB's macro format), `uinput.py`, `inputd.py` (0x8110 for mice and
+| Item | Done | What's left |
+| --- | --- | --- |
+| DTS room choice | 100% | — |
+| Headsets' own EQ presets | 100% | — |
+| Background service idle cost | 90% | 0.2% of a core now; the engine loop and the link monitor remain |
+| Macros on buttons and G-keys | 85% | DPI/profile macro actions; 0x1B04 divert for newer mice; hardware check |
+| Per-key lighting | 50% | page done; sending to the keyboard (0x8081 byte layouts, zone ids) |
+| Blue VO!CE 2 (Yetis, G735, PRO X 2) | 40% | G HUB names -> pids, bridge, UI, Wine check |
+| Yeti controls | 10% | features found (0x8330/50/60/70); protocol details and UI |
+| Keyboard onboard profiles | 5% | format from G HUB's agent |
+| 5-band "PRO" equalizer | 0% | band frequencies |
+
+Details:
+
+- **Macros**: `macros.py` (G HUB's macro format), `uinput.py`, `inputd.py` (0x8110 for mice and
   0x8010 for G-keys, exactly as G HUB's agent drives them: remap entry 0 = handled in software,
   big-endian button mask), Macros page with recorder and "On buttons". **Check on the G502**:
   that 0x8110 is there and buttons behave; G-key bit order (G1 = bit 0 of the first byte) on a
-  keyboard. Not done: DPI/profile macro actions (device_action), 0x1B04 divert for newer mice.
-- Per-key lighting (0x8080/0x8081): key layout from G HUB's metadata.json; protocol from the agent.
-- Keyboard onboard profiles: G HUB's onboard_profiles.proto extracted; format from the agent.
-- Yeti: polar pattern, monitor mix, LED meter; protocol from the agent.
-- Blue VO!CE 2 (Yetis, G735, PRO X 2; `logi_audio_dts_clearvoice_2_capture_apo.dll`), in
-  progress: exported DSP API, parameter struct offsets and the 107 property keys (pid -> field)
-  are decoded; G HUB's setting names -> pids come from the agent.
-- G HUB's 5-band "PRO" equalizer (pro_eq_presets.json: TSM Bjergsen, Hamlinz, ...): the band
+  keyboard.
+- **Per-key lighting** (0x8080/0x8081): `perkey_ui.py` draws G HUB's key layout (metadata.json);
+  `perkey.py` still a stub. Function numbers found (fn 0-7); byte layouts and zone ids next.
+- **Blue VO!CE 2** (`logi_audio_dts_clearvoice_2_capture_apo.dll`): `bridge/bv2.c` runs the DSP
+  natively; parameter struct and the 107 property keys (pid -> field) decoded; G HUB's setting
+  names -> pids come from the agent.
+- **Yeti**: polar pattern 0x8330, blend 0x8350, headphone mix 0x8360, mic gain 0x8370 (G HUB's
+  own feature classes); LED meter.
+- **Keyboard onboard profiles**: G HUB's onboard_profiles.proto extracted; format from the agent.
+- **5-band "PRO" equalizer** (pro_eq_presets.json: TSM Bjergsen, Hamlinz, ...): the band
   frequencies aren't in the preset files; the 10-band headset presets are in.
-
-## Could be better
-
-- The background service idles at about 0.2% of one core (was 0.6%): checks now run when a sound
-  card or USB device comes or goes, with 60 s fallbacks. What's left is the engine loop and the
-  PipeWire link monitor.
+- **Service idle**: checks run when a sound card or USB device comes or goes, 60 s fallbacks.
 
 ## Depot updates
 
