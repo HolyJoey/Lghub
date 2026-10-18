@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Blue VO!CE engine: keeps the virtual microphone running.
 
-Runs bluevoice-bridge (which runs Logitech's APO under Wine), keeps the PipeWire links
+Runs bluevoice-bridge (Logitech's Blue VO!CE DSP as a native PipeWire filter), keeps the links
 mic -> bluevoice_dsp -> "Blue VO!CE Microphone" in place, applies config.json changes live, and
 publishes status.json for the app. Meant to run as a systemd user service.
 """
@@ -16,14 +16,10 @@ import pw
 import store
 
 POLL = 0.25          # config / status interval, seconds
-LINK_EVERY = 2.0     # link check interval, seconds (link events also trigger a check at once)
+LINK_EVERY = 5.0     # full link check interval, seconds (link events also trigger a check at once)
+IDLE_STATUS_EVERY = 1.0  # status.json interval while no app listens (meters need 10 Hz only when used)
 IDLE_GRACE = 5.0     # release the real mic this long after the last app stops recording
 MAX_BACKOFF = 30.0
-
-
-def wine_path(path):
-	"""Unix path -> the Z: drive path Windows code inside Wine understands."""
-	return 'Z:' + os.path.abspath(path).replace('/', '\\')
 
 
 class Engine:
@@ -44,6 +40,7 @@ class Engine:
 		self.listening = False       # some app records from the virtual mic
 		self.last_listener = 0.0
 		self.link_event = threading.Event()
+		self.last_publish = 0.0
 
 	# --- configuration -------------------------------------------------------------------
 
@@ -54,14 +51,11 @@ class Engine:
 			mtime = None
 		if mtime == self.config_mtime and self.params_text is not None:
 			return
-		old_input, old_latency = self.config.get('input'), self.config.get('max_latency_ms')
+		old_input = self.config.get('input')
 		self.config_mtime = mtime
 		self.config = store.load_config()
 		if self.config.get('input') != old_input:
 			self.last_link_check = 0.0  # relink now
-		if self.config.get('max_latency_ms') != old_latency and self.proc:
-			self.stop_bridge()  # the bridge only takes its latency at start; check_bridge restarts it
-			self.next_start = 0.0
 		if not self.config.get('make_default'):
 			self.defaulted = False
 		params = {**presets.DEFAULTS, **self.config['params']}
@@ -80,21 +74,16 @@ class Engine:
 	# --- bridge process ------------------------------------------------------------------
 
 	def missing_files(self):
-		return [p for p in (store.BRIDGE, store.HOST_EXE, store.APO_DLL) if not os.path.exists(p)]
+		return [p for p in (store.BRIDGE, store.APO_DLL) if not os.path.exists(p)]
 
 	def start_bridge(self):
 		missing = self.missing_files()
 		if missing:
 			self.last_error = 'Not installed: ' + ', '.join(os.path.basename(m) for m in missing)
 			return
-		env = dict(os.environ, WINEPREFIX=store.WINE_PREFIX, WINEDEBUG='-all',
-		           # The APO enumerates audio devices while initialising; Wine's audio drivers
-		           # make that hang, and the APO needs no real devices.
-		           WINEDLLOVERRIDES='winepulse.drv,winealsa.drv,wineoss.drv=d;winemenubuilder.exe=d')
-		cmd = [store.BRIDGE, '--max-latency', str(int(self.config.get('max_latency_ms', 40))), '--',
-		       'wine', store.HOST_EXE, wine_path(store.APO_DLL), wine_path(store.PARAMS_FILE)]
+		cmd = [store.BRIDGE, '--dll', store.APO_DLL, '--params', store.PARAMS_FILE]
 		self.ready = False
-		self.proc = subprocess.Popen(cmd, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+		self.proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
 		                             stderr=subprocess.PIPE, text=True, start_new_session=True)
 		threading.Thread(target=self.read_bridge_output, args=(self.proc,), daemon=True).start()
 		self.last_link_check = 0.0
@@ -137,10 +126,6 @@ class Engine:
 			except subprocess.TimeoutExpired:
 				os.killpg(self.proc.pid, signal.SIGKILL)
 		self.proc = None
-		# Wine leaves wineserver and winedevice running; without this, stopping the service
-		# waits for systemd's timeout.
-		subprocess.run(['wineserver', '-k'], env=dict(os.environ, WINEPREFIX=store.WINE_PREFIX),
-		               capture_output=True, timeout=10)
 
 	# --- links ---------------------------------------------------------------------------
 
@@ -178,8 +163,12 @@ class Engine:
 				pw.unlink(port, dsp_in)
 		if want and want not in pw.links_into(dsp_in, objs):
 			pw.link(want, dsp_in)
-		if dsp_out not in pw.links_into(mic_in, objs):
+		# Feed the virtual mic only while it's used, so nothing runs (no CPU) when idle.
+		fed = dsp_out in pw.links_into(mic_in, objs)
+		if self.listening and not fed:
 			pw.link(dsp_out, mic_in)
+		elif not self.listening and fed:
+			pw.unlink(dsp_out, mic_in)
 		if self.config.get('make_default') and not self.defaulted:
 			pw.set_default_source(pw.VIRTUAL_MIC)
 			self.defaulted = True
@@ -214,7 +203,9 @@ class Engine:
 				self.link_event.clear()
 				self.last_link_check = now
 				self.check_links()
-			self.publish()
+			if self.listening or now - self.last_publish >= IDLE_STATUS_EVERY:
+				self.last_publish = now
+				self.publish()
 			if not self.proc:
 				self.link_event.clear()  # nothing to relink until the bridge is back
 			self.link_event.wait(POLL)

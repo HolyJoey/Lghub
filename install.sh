@@ -21,12 +21,10 @@ need() { command -v "$1" >/dev/null || missing+=("$2"); }
 need python3 "python3"
 python3 -c "import gi; gi.require_version('Gtk','4.0'); gi.require_version('Adw','1')" 2>/dev/null \
   || missing+=("GTK4 + libadwaita for Python (Debian/Ubuntu: python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 · Fedora: python3-gobject gtk4 libadwaita · Arch: python-gobject gtk4 libadwaita)")
-need wine "wine (Debian/Ubuntu: wine · Fedora: wine · Arch: wine)"
 need pw-dump "PipeWire tools (pipewire-bin / pipewire-utils / pipewire)"
 need pw-link "PipeWire tools (pipewire-bin / pipewire-utils / pipewire)"
 need wpctl "WirePlumber (wireplumber)"
 need gcc "gcc"
-need x86_64-w64-mingw32-gcc "MinGW-w64 (Debian/Ubuntu: gcc-mingw-w64-x86-64 · Fedora: mingw64-gcc · Arch: mingw-w64-gcc)"
 pkg-config --exists libpipewire-0.3 2>/dev/null \
   || missing+=("PipeWire headers (Debian/Ubuntu: libpipewire-0.3-dev · Fedora: pipewire-devel · Arch: libpipewire)")
 if ((${#missing[@]})); then
@@ -35,11 +33,13 @@ fi
 echo "OK"
 
 say "Building"
+[ "$(uname -m)" = x86_64 ] || { echo "Blue VO!CE's DSP is x86-64 code; this machine is $(uname -m)."; exit 1; }
 mkdir -p "$APP_DIR/bin"
-x86_64-w64-mingw32-gcc -O2 -o "$APP_DIR/bin/bluevoice_host.exe" "$SRC/host/bluevoice_host.c" \
-  -lole32 -loleaut32 -luuid -lpropsys
-gcc -O2 -o "$APP_DIR/bin/bluevoice-bridge" "$SRC/bridge/bluevoice_bridge.c" \
-  $(pkg-config --cflags --libs libpipewire-0.3) -lpthread
+gcc -O2 -o "$APP_DIR/bin/bluevoice-bridge" \
+  "$SRC/bridge/bluevoice_bridge.c" "$SRC/bridge/micopt.c" "$SRC/bridge/peloader.c" \
+  $(pkg-config --cflags --libs libpipewire-0.3) -lm
+# Earlier versions ran the DSP under Wine; that's no longer needed.
+rm -rf "$APP_DIR/wine" "$APP_DIR/bin/bluevoice_host.exe"
 echo "OK"
 
 say "Installing to $APP_DIR"
@@ -50,16 +50,6 @@ if [ -f "$APP_DIR/apo/logi_audio_dts_studio_capture_apo.dll" ] && [ ${#DEPOT_ARG
   echo "Already present."
 else
   python3 "$APP_DIR/fetch.py" "$APP_DIR" "${DEPOT_ARGS[@]}"
-fi
-
-say "Preparing Wine"
-if [ -f "$APP_DIR/wine/system.reg" ]; then
-  echo "Wine prefix already set up."
-else
-  # No Mono/Gecko and no menu entries: the host only needs Wine's core DLLs.
-  WINEPREFIX="$APP_DIR/wine" WINEDEBUG=-all WINEDLLOVERRIDES="mscoree,mshtml=d;winemenubuilder.exe=d" \
-    wineboot -i >/dev/null 2>&1
-  echo "Created $APP_DIR/wine"
 fi
 
 say "Adding the launcher, menu entry and icon"

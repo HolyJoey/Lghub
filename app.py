@@ -367,17 +367,8 @@ class MicrophonePage(Gtk.Box):
 		                  ['muted', 'small'], wrap=True))
 		self.default_switch = self._switch_row(card, 'Use as default microphone',
 			'Apps that use the system default get Blue VO!CE automatically.', self._on_default)
-		lat = box(Gtk.Orientation.HORIZONTAL, 14)
-		titles = box(spacing=2, hexpand=True)
-		titles.append(label('Maximum latency'))
-		titles.append(label('Lower is snappier; raise it if you hear crackles.', ['muted', 'small']))
-		lat.append(titles)
-		self.latency = Gtk.SpinButton.new_with_range(20, 200, 10)
-		self.latency.set_valign(Gtk.Align.CENTER)
-		self.latency.connect('value-changed', self._on_latency)
-		lat.append(self.latency)
-		lat.append(label('ms', ['muted']))
-		card.append(lat)
+		card.append(label('Blue VO!CE adds 8 ms of delay: 5.3 ms of buffering plus 2.7 ms of look-ahead '
+		                  'in Logitech’s processing.', ['muted', 'small'], wrap=True))
 		self.append(card)
 
 		card = box(spacing=14, css=['card'])
@@ -409,7 +400,6 @@ class MicrophonePage(Gtk.Box):
 	def load(self):
 		self.win.loading = True
 		self.default_switch.set_active(self.win.cfg.get('make_default', False))
-		self.latency.set_value(self.win.cfg.get('max_latency_ms', 40))
 		self.autostart.set_active(service.is_enabled())
 		self.win.loading = False
 		self.refresh_inputs()
@@ -443,11 +433,6 @@ class MicrophonePage(Gtk.Box):
 	def _on_default(self, sw):
 		if not self.win.loading:
 			self.win.cfg['make_default'] = sw.get_active()
-			self.win.save_soon()
-
-	def _on_latency(self, spin):
-		if not self.win.loading:
-			self.win.cfg['max_latency_ms'] = int(spin.get_value())
 			self.win.save_soon()
 
 	def _on_autostart(self, sw):

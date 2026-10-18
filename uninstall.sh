@@ -10,7 +10,6 @@ UNIT="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/lghub-bluevoice.service"
 systemctl --user disable --now lghub-bluevoice.service 2>/dev/null || true
 rm -f "$UNIT"
 systemctl --user daemon-reload 2>/dev/null || true
-WINEPREFIX="$APP_DIR/wine" wineserver -k 2>/dev/null || true
 
 rm -rf "$APP_DIR"
 rm -f "$HOME/.local/bin/lghub-bluevoice"

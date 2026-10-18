@@ -23,9 +23,7 @@ PARAMS_FILE = os.path.join(RUN_DIR, 'live.params')
 # Files fetched from Logitech at install time (see fetch.py).
 APO_DLL = os.path.join(DATA_DIR, 'apo', 'logi_audio_dts_studio_capture_apo.dll')
 GHUB_PRESETS = os.path.join(DATA_DIR, 'presets', 'pro_x_headset_device_presets.json')
-HOST_EXE = os.path.join(DATA_DIR, 'bin', 'bluevoice_host.exe')
 BRIDGE = os.path.join(DATA_DIR, 'bin', 'bluevoice-bridge')
-WINE_PREFIX = os.path.join(DATA_DIR, 'wine')
 
 DEFAULT_PRESET = 'BLUE_VOICE_PRESET_BROADCASTER_1'
 JSON_EXT = '.json'
@@ -65,7 +63,6 @@ def default_config():
 		'enabled': True,          # off = clean pass-through; the virtual mic stays available
 		'input': 'auto',          # node.name of the real microphone, or 'auto'
 		'make_default': False,    # make "Blue VO!CE Microphone" the system's default input
-		'max_latency_ms': 40,
 		'preset': name,           # label only; 'params' is what is applied
 		'params': params,
 	}
