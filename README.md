@@ -27,15 +27,15 @@ that Discord, OBS, your browser or anything else can use:
 It keeps running in the background, and your real mic is only opened while some app is
 recording from Blue VO!CE.
 
-**Equalizer.** G HUB's 10-band equalizer presets (Flat, FPS, MOBA, Bass Boost, Cinematic,
-Communications) and bands, 32 Hz to 16 kHz, on a new output *… (Equalizer)* in front of the
+**Equalizer.** G HUB's 10-band headset equalizer presets (Flat, FPS, MOBA, Bass Boost,
+Cinematic, Communications) and bands, 32 Hz to 16 kHz, on a new output *… (Equalizer)* in front of the
 headset. The presets come from Logitech's own files; the filters doing the work are PipeWire's,
 not Logitech's DSP.
 
 **Surround.** G HUB's DTS Headphone:X 2.0 virtual 7.1, running Logitech's own DTS processing
 with your headset's tuning (G Pro X, G Pro X Wireless, G733 and more), on a new output
-*… (Surround 7.1)*. Games set to 7.1 get every speaker placed around you. Per-channel volumes
-like in G HUB. It only runs while something plays, and it works together with the equalizer.
+*… (Surround 7.1)*. Games set to 7.1 get every speaker placed around you. G HUB's rooms
+(Gaming, Entertainment, Sports) and per-channel volumes. It only runs while something plays, and it works together with the equalizer.
 
 **Headset.** Sidetone, volume and mic level from the headset's sound card, plus lighting and
 battery on headsets that have them.
@@ -165,8 +165,6 @@ simulator. The webcam screenshot is a real camera.
 
 ## Not there yet
 
-- DTS room choice: the effect has three rooms, but nothing in Logitech's files names them, so
-  Lghub uses the default one.
 - Per-key lighting, G-key macros, and keyboard onboard profiles.
 - Most devices here have only met the simulator. If something doesn't work on yours, open an
   issue with `journalctl --user -u lghub-bluevoice` and what the device's page says.

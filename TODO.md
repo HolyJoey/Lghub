@@ -21,7 +21,7 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 
 - **G Pro X**: Automatic picks its mic and output (`pw.is_blue_voice_headset` matches "PRO X";
   confirm the real PipeWire names); its sound card's mixer controls (sidetone?); the PRO_X
-  surround tuning by ear; whether G HUB's "HX2E_GAMING" is DTS room 0 (rooms 0-2 are accepted).
+  surround tuning by ear; rooms (Entertainment/Gaming/Sports = DLL 0/1/2, from G HUB's enum order).
   The adapter's mic may be stereo or mono; `pw.capture_port` takes MONO, else FL.
 - **G502**: profile layout offsets, LED effect bytes (cycle 0x03, breathing 0x0a), report-rate
   byte = ms, writing a 255-byte sector in 16-byte chunks, button order (after Back/Forward the
@@ -36,12 +36,11 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 
 ## Not done
 
-- DTS room choice in the UI (no names for rooms 1-2 anywhere in Logitech's files).
 - Per-key lighting (0x8080/0x8081), G-keys and macros (0x8010, needs a key-remapping daemon),
   keyboard onboard profiles, Yeti's own protocol. Need the hardware to do right.
 - Blue VO!CE 2 (newer headsets: `logi_audio_dts_clearvoice_2_capture_apo.dll`), same approach.
-- Headsets' own EQ presets: G HUB's headsets point at a preset id that sits in a part of G HUB
-  we don't have; the 10-band set comes from the G560 package.
+- G HUB's 5-band "PRO" equalizer (pro_eq_presets.json: TSM Bjergsen, Hamlinz, ...): the band
+  frequencies aren't in the preset files; the 10-band headset presets are in.
 
 ## Could be better
 

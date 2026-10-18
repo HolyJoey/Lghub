@@ -213,6 +213,15 @@ class SurroundPage(Gtk.Box):
 		                                 'surround.', self.settings['make_default'], self._on_default)
 		self.append(out)
 
+		room = box(spacing=12, css=['card'])
+		room.append(label('Room', ['section-title']))
+		room.append(label('The space DTS puts you in, as in G HUB.', ['muted', 'small'], wrap=True))
+		self.room_dd = Gtk.DropDown.new_from_strings([name for _key, name, _id in surround.ROOMS])
+		self.room_dd.set_halign(Gtk.Align.START)
+		self.room_dd.connect('notify::selected', self._on_room)
+		room.append(self.room_dd)
+		self.append(room)
+
 		vol = box(spacing=12, css=['card'])
 		head = box(Gtk.Orientation.HORIZONTAL, 12)
 		head.append(label('Channel volume', ['section-title'], hexpand=True))
@@ -242,6 +251,8 @@ class SurroundPage(Gtk.Box):
 		self.loading = True
 		self.switch.set_active(self.settings['enabled'])
 		self.default_switch.set_active(self.settings['make_default'])
+		keys = [key for key, _name, _id in surround.ROOMS]
+		self.room_dd.set_selected(keys.index(self.settings['room']) if self.settings['room'] in keys else 0)
 		for c, (scale, value) in self.scales.items():
 			scale.set_value(self.settings['gains'][c] * 100)
 			value.set_text(f'{scale.get_value():.0f} %')
@@ -273,6 +284,12 @@ class SurroundPage(Gtk.Box):
 	def _on_default(self, on):
 		if not self.loading:
 			self.settings['make_default'] = on
+			self._save_soon()
+
+	def _on_room(self, *_):
+		i = self.room_dd.get_selected()
+		if not self.loading and i < len(surround.ROOMS):
+			self.settings['room'] = surround.ROOMS[i][0]
 			self._save_soon()
 
 	def _on_gain(self, channel, scale, value):

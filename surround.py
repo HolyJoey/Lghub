@@ -21,6 +21,10 @@ CHANNELS = ('FL', 'FR', 'FC', 'LFE', 'RL', 'RR', 'SL', 'SR')
 CHANNEL_NAMES = {'FL': 'Front left', 'FR': 'Front right', 'FC': 'Centre', 'LFE': 'Subwoofer',
                  'RL': 'Rear left', 'RR': 'Rear right', 'SL': 'Side left', 'SR': 'Side right'}
 DEFAULT_GAIN = 1.1          # G HUB's default volume for every channel (its SurroundSound settings)
+# G HUB's headset rooms (logi.protocol.audio.DTSSettings.HeadsetRoomPreset: HX2E_ENTERTAINMENT = 11,
+# HX2E_GAMING = 12, HX2E_SPORTS = 13); the DLL numbers them from 0 in the same order.
+ROOMS = (('gaming', 'Gaming', 1), ('entertainment', 'Entertainment', 0), ('sports', 'Sports', 2))
+DEFAULT_ROOM = 'gaming'     # G HUB's default (headsetRoom HX2E_GAMING)
 CHECK_EVERY = 5.0
 IDLE_GRACE = 5.0            # keep the headset linked this long after the last app stops playing
 
@@ -30,7 +34,7 @@ TUNINGS = (('g733', 'G733'), ('g735', 'G735'), ('g935', 'G935'), ('g635', 'G635'
 
 
 def default_settings():
-	return {'enabled': False, 'make_default': True, 'gains': dict.fromkeys(CHANNELS, DEFAULT_GAIN)}
+	return {'enabled': False, 'make_default': True, 'room': DEFAULT_ROOM, 'gains': dict.fromkeys(CHANNELS, DEFAULT_GAIN)}
 
 
 def load():
@@ -38,6 +42,8 @@ def load():
 	saved = store._read_json(SURROUND_FILE, {})
 	settings['enabled'] = bool(saved.get('enabled', False))
 	settings['make_default'] = bool(saved.get('make_default', True))
+	if saved.get('room') in {key for key, _name, _id in ROOMS}:
+		settings['room'] = saved['room']
 	for c, g in (saved.get('gains') or {}).items():
 		if c in CHANNELS and isinstance(g, (int, float)):
 			settings['gains'][c] = max(0.0, min(2.0, float(g)))
@@ -56,7 +62,8 @@ def tuning(sink):
 def params_text(settings, equalizer=None):
 	"""The bridge's settings file; with the equalizer on, its gains go along so surround sound
 	gets the same EQ (it can't go through the equalizer's own output, see _link)."""
-	lines = ['state 1', 'room 0'] + [f'gain_{c} {settings["gains"][c]:.3f}' for c in CHANNELS]
+	room = next(dll_id for key, _name, dll_id in ROOMS if key == settings.get('room', DEFAULT_ROOM))
+	lines = ['state 1', f'room {room}'] + [f'gain_{c} {settings["gains"][c]:.3f}' for c in CHANNELS]
 	if equalizer and equalizer.get('enabled'):
 		lines += ['eq 1'] + [f'eq_{i + 1} {g:.2f}' for i, g in enumerate(equalizer['gains'])]
 	return '\n'.join(lines) + '\n'

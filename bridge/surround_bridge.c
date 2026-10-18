@@ -208,7 +208,7 @@ static void on_process(void *data, struct spa_io_position *position)
 		b->current = p;
 		b->applied_serial = -1;       /* apply the settings to the new instance */
 		b->live.state = 1;
-		b->live.room = 0;
+		b->live.room = 0;                 /* the DLL's own start value; apply_settings sets ours */
 		if (old && !atomic_compare_exchange_strong(&b->retired, &expect, old)) hx2e_close(old);
 	}
 	apply_settings(b);
@@ -253,7 +253,7 @@ static const struct pw_filter_events filter_events = {
 
 static void read_settings(struct bridge *b)
 {
-	struct settings s = {.state = 1, .room = 0};
+	struct settings s = {.state = 1, .room = 1};   /* G HUB's default room: Gaming */
 	for (int ch = 0; ch < CHANNELS; ch++) s.gain[ch] = DEFAULT_GAIN;
 	FILE *f = fopen(b->settings_path, "r");
 	if (f) {

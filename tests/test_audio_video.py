@@ -89,6 +89,9 @@ class SurroundTest(unittest.TestCase):
 		settings['gains']['LFE'] = 0.5
 		text = surround.params_text(settings)
 		self.assertIn('gain_LFE 0.500', text)
+		self.assertIn('room 1', text)          # G HUB's default, HX2E_GAMING
+		settings['room'] = 'entertainment'
+		self.assertIn('room 0', surround.params_text(settings))
 		self.assertIn('gain_FL 1.100', text)
 		self.assertNotIn('eq ', text)
 		with_eq = surround.params_text(settings, {'enabled': True, 'gains': [3.0] * 10})

@@ -22,7 +22,7 @@ Q = 1.41                 # about one octave per band
 CHECK_EVERY = 5.0        # seconds between full checks (headset plugged in or out)
 
 FLAT = (0,) * len(BANDS)
-# G HUB's own 10-band presets (fetched by the installer from Logitech's update server).
+# G HUB's own 10-band headset presets (LGHUB/data/eq_presets.json, fetched by the installer).
 PRESETS_FILE = os.path.join(store.DATA_DIR, 'presets', 'equalizer_presets.json')
 PRESET_NAMES = {'EQUALIZER_FLAT': 'Flat', 'EQUALIZER_FPS': 'FPS', 'EQUALIZER_MOBA': 'MOBA',
                 'EQUALIZER_BASS_BOOST': 'Bass Boost', 'EQUALIZER_CINEMATIC': 'Cinematic',
@@ -37,10 +37,11 @@ def load_presets(path=PRESETS_FILE):
 			data = json.load(f)
 	except (OSError, ValueError):
 		return found
-	for p in data.get('presets', []):
+	for p in data.get('cards', data.get('presets', [])):
 		eq = p.get('equalizer') or {}
 		gains = eq.get('advanced')
-		if p.get('attribute') == 'EQUALIZER' and eq.get('type') == 'ADVANCED' and len(gains or []) == len(BANDS):
+		if p.get('attribute') == 'EQUALIZER' and eq.get('type') == 'ADVANCED' and len(gains or []) == len(BANDS) \
+				and eq.get('deviceType', 'HEADSET') == 'HEADSET':
 			name = PRESET_NAMES.get(p.get('name'), p.get('name', '').replace('EQUALIZER_', '').title())
 			found[name] = tuple(float(g) for g in gains)
 	return found

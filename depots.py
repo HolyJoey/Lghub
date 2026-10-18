@@ -19,6 +19,7 @@ import urllib.request
 import store
 
 SERVER = 'https://updates.ghub.logitechg.com/depots/'
+CORE_DEPOT = 'e4566bcc-25b0-4d8f-b4ad-170264654488/core.depot'   # G HUB's own files
 MAGIC = 0x20170110
 RETRY_AFTER = 7 * 24 * 3600     # after a failed fetch, wait a week before asking again
 TIMEOUT = 20
@@ -211,15 +212,23 @@ def fetch_picture(model):
 PRESET_FILES = {'g733': ('device_presets.json', 'g733')}
 
 
+# G HUB's headset equalizer presets (LGHUB/data/eq_presets.json in the core depot): the file the
+# headsets' LegacyEqualizer settings point into. Offset and hash pinned: one range request.
+EQ_PRESETS_OFFSET = 314434397
+EQ_PRESETS_SIZE = 4185
+EQ_PRESETS_SHA256 = '4dfe1b79a0e62a5f9b1bba57cd2ce1a70d46652b2b476ef28240aaeceb67556c'
+
+
 def fetch_eq_presets(path):
-	"""G HUB's 10-band equalizer presets (the G560 package carries the set). True on success."""
-	url = SERVER + DEPOTS['g560']
+	"""G HUB's headset 10-band equalizer presets. True on success."""
+	import hashlib
 	try:
-		files = _files(url)
-		data = _get(url, *files['device_presets.json'])
-		json.loads(data)
-	except (OSError, ValueError, KeyError, struct.error) as e:
+		data = _get(SERVER + CORE_DEPOT, EQ_PRESETS_OFFSET, EQ_PRESETS_SIZE)
+	except (OSError, ValueError) as e:
 		print(f'lghub: no equalizer presets: {e}', flush=True)
+		return False
+	if hashlib.sha256(data).hexdigest() != EQ_PRESETS_SHA256:
+		print('lghub: the equalizer presets are not the expected file', flush=True)
 		return False
 	os.makedirs(os.path.dirname(path), exist_ok=True)
 	with open(path + '.tmp', 'wb') as f:
@@ -252,7 +261,6 @@ def fetch_presets(model):
 # --- the G HUB app icon ------------------------------------------------------------------------
 # The 256 px icon in G HUB's software manager (core depot, G HUB 2026.6): the executable's place
 # in the depot and the icon's hash are pinned, so this is six small range requests, checked.
-CORE_DEPOT = 'e4566bcc-25b0-4d8f-b4ad-170264654488/core.depot'
 ICON_EXE_OFFSET = 26003104
 ICON_SHA256 = '743180184d0ebcc498f112c36845909496a1048793ba392294ef4660acfa9a08'
 RT_ICON, RT_GROUP_ICON = 3, 14
