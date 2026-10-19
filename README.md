@@ -75,6 +75,8 @@ recorded sequences (once, while held, or on/off), put on any button but the left
 run in the background service, the same way G HUB does it (HID++ 0x8110: only buttons with a
 macro stop clicking by themselves). DPI and profile macros switch the mouse's own DPI and
 profiles.
+When the mouse's own buttons switch DPI or profile, a short desktop notice shows the new value,
+as G HUB's on-screen display does.
 Like G HUB's on-board memory mode, everything is saved *in the mouse*, so it keeps working on
 any computer and nothing has to run in the background. Before the first change, the mouse's
 memory is backed up to `~/.local/share/lghub-bluevoice/backups/`.

@@ -19,18 +19,19 @@ def level(percent):
 	return next((name for limit, name in LEVELS if percent <= limit), None)
 
 
-def notify(title, body):
-	"""A desktop notification over org.freedesktop.Notifications; False if there's no server."""
+def notify(title, body, icon='battery-caution', replaces=0, timeout=-1):
+	"""A desktop notification over org.freedesktop.Notifications: its id (to replace it with the
+	next one), or 0 if there's no notification server."""
 	from gi.repository import Gio, GLib
 	try:
 		bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
-		bus.call_sync('org.freedesktop.Notifications', '/org/freedesktop/Notifications',
-		              'org.freedesktop.Notifications', 'Notify',
-		              GLib.Variant('(susssasa{sv}i)', ('Lghub', 0, 'battery-caution', title, body, [], {}, -1)),
-		              None, Gio.DBusCallFlags.NONE, 2000, None)
-		return True
+		r = bus.call_sync('org.freedesktop.Notifications', '/org/freedesktop/Notifications',
+		                  'org.freedesktop.Notifications', 'Notify',
+		                  GLib.Variant('(susssasa{sv}i)', ('Lghub', replaces, icon, title, body, [], {}, timeout)),
+		                  GLib.VariantType('(u)'), Gio.DBusCallFlags.NONE, 2000, None)
+		return r.unpack()[0]
 	except GLib.Error:
-		return False
+		return 0
 
 
 class Watch:

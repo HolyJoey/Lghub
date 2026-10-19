@@ -19,6 +19,7 @@ import hotplug
 import presets
 import battery_watch
 import lightsync
+import osd
 import profiles
 import restore
 import pw
@@ -64,6 +65,7 @@ class Engine:
 		self.restorer = restore.Restorer()
 		self.lightsync = lightsync.Runner()
 		self.battery = battery_watch.Watch()
+		self.osd = osd.Watch()
 		self.game = None
 		self.mic_gain = None         # (mic, gain) last set for Blue VO!CE 2
 
@@ -307,6 +309,8 @@ class Engine:
 			self.lightsync.check(now)
 		if self.battery.due(now):
 			self.battery.check(now)
+		if self.osd.due(now):
+			self.osd.check(now)
 
 	def run(self):
 		signal.signal(signal.SIGTERM, lambda *_: self.stop.set())
@@ -322,6 +326,7 @@ class Engine:
 		self.stop_bridge()
 		self.inputs.stop()
 		self.lightsync.stop()
+		self.osd.stop()
 		self.surround.stop()
 		self.eq.stop()
 		store.write_status({'state': 'stopped', 'error': '', 'updated': time.time()})

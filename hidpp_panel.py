@@ -83,19 +83,26 @@ def power_card(timers, do, dev, card=card, row=row):
 	return c
 
 
-def battery_warnings_card(card=card, row=row):
-	"""The switch for low-battery notifications (all devices, as G HUB's setting)."""
-	c = card('Notifications', 'A desktop notification when a wireless device’s battery gets low (30 %) '
-	         'and again when it’s nearly empty (15 %).')
-	sw = Gtk.Switch(active=store.load_config().get('battery_warnings', True), valign=Gtk.Align.CENTER)
+def _config_switch(key):
+	sw = Gtk.Switch(active=store.load_config().get(key, True), valign=Gtk.Align.CENTER)
 
 	def changed(w, _p):
 		cfg = store.load_config()
-		cfg['battery_warnings'] = w.get_active()
+		cfg[key] = w.get_active()
 		store.save_config(cfg)
 
 	sw.connect(NOTIFY_ACTIVE, changed)
-	c.append(row('Warn when the battery is low', sw))
+	return sw
+
+
+def battery_warnings_card(card=card, row=row, battery=True, osd=False):
+	"""Switches for G HUB's desktop notifications (all devices, as G HUB's settings): low battery
+	(30 % and 15 %), and a mouse's DPI and profile changes."""
+	c = card('Notifications', 'Desktop notifications from the background service.')
+	if battery:
+		c.append(row('Warn when the battery is low (30 %, 15 %)', _config_switch('battery_warnings')))
+	if osd:
+		c.append(row('Show DPI and profile changes', _config_switch('osd_notifications')))
 	return c
 
 
