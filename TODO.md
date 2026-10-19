@@ -109,6 +109,11 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
     per-device prefix (CenturionTransport::write 0x14200d030), split into fragments
     (CenturionPacketLayer 0x14200f3c0).
   - Left: the per-device settings from their constructors (`re/notes/decompiled/centurion.c`).
+  - G HUB's layers: CenturionTransport on the HID collection G HUB calls "Avnera Centurion
+    collection", a CenturionPacketLayer per pid, and Centurion0003SubdevicePlain for devices
+    behind the 0x0003 bridge (it refuses packets larger than the adapter's size). G HUB's feature
+    routes: 0601 mic mute, 0604 sidetone, 0605 ANC mode / button, mixer_mic, onboard_equalizer
+    (+ save), onboard_noise_reduction, volume, bt_equalizer. Not built: nothing here can test it.
 - **Others**:
   - 0x8320 jack detection done (headphone bit ours); 0x8305 bass tone done
   - 0x0200 / 0x0201 / 0x020D volume and EQ sets, 0x020E mic test
