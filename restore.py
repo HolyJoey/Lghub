@@ -1,9 +1,9 @@
 """Puts devices' saved settings back when they appear, as G HUB re-applies them when a device
 connects or wakes up (its 0x1D4B reconnection handling): per-key colours and game-mode keys.
 
-A device counts as appearing when it is plugged in, or when its receiver finds it switched on
-again (receivers are asked every CHECK_EVERY seconds while something is saved); that we look
-rather than keep every wireless device open to hear 0x1D4B is ours.
+A device counts as appearing when it is plugged in, or when its receiver says it switched on
+(receiver_watch.py), with a look every CHECK_EVERY seconds as a fallback while something is
+saved; listening to the receiver rather than to 0x1D4B on each device is ours.
 """
 import time
 
@@ -39,12 +39,14 @@ class Restorer:
 	"""Used by the engine."""
 
 	def __init__(self):
+		import receiver_watch
 		self.usb = hotplug.Watch(hotplug.USB)
+		self.wireless = receiver_watch.Watch()
 		self.present = set()       # device ids seen last time
 		self.last = 0.0
 
 	def due(self, now):
-		return self.usb.changed() or now - self.last >= CHECK_EVERY
+		return self.usb.changed() or self.wireless.changed() or now - self.last >= CHECK_EVERY
 
 	def check(self, now=None):
 		import devices
@@ -53,7 +55,9 @@ class Restorer:
 			self.present = set()
 			return
 		found = {}
-		for d in devices.discover():
+		present = devices.discover()
+		self.wireless.follow([d for d in present if d.model.type == 'receiver'])
+		for d in present:
 			if d.model.type != 'receiver':
 				found[d.id] = d
 				continue

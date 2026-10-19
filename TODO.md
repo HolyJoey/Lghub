@@ -131,8 +131,9 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   battery.xml curves (downloaded at first use). 0x1F20's charging bit is ours; check on a G533 /
   G933.
 - 0x0108 AutoSleep (Centurion headsets). 0x1010 charging control done.
-- Reconnection: Lghub checks every 60 s instead of listening for 0x1D4B (fine for settings;
-  not instant).
+- Reconnection: done for devices behind a receiver (the receiver's connection notification wakes
+  the restorer at once). Corded devices come through USB hotplug; 0x1D4B (wireless status on
+  the device itself) not used.
 
 ### Lighting
 - **LIGHTSYNC screen sampler**: works on wlroots compositors (grim). GNOME and KDE need Wayland's
