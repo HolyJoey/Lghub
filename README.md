@@ -92,7 +92,7 @@ per-key lighting page drawn from G HUB's own key layout, sent over HID++ 0x8081 
 key-to-LED table (0x8080 on older keyboards), with G HUB's LIGHTSYNC audio visualizer and screen sampler (the screen sampler reads the screen with grim:
 Hyprland, Sway and other wlroots compositors). Lighting zones and effects, brightness, report
 rate, Fn keys, game mode, Easy-Switch, angle snapping, sidetone, on-board memory and battery. Devices with a USB sound card (headsets,
-speakers, Yeti mics) also get its controls. Yetis also get their own mute and gain over HID++,
+speakers, Yeti mics) also get its controls. Yetis also get their own mute, gain and headphone level over HID++,
 as G HUB sets them.
 
 | Settings | Per-key lighting |
@@ -201,7 +201,7 @@ simulator. The webcam screenshot is a real camera.
   issue with `journalctl --user -u lghub-bluevoice` and what the device's page says.
 - Still open, compared with G HUB: the 5-band PRO equalizer, the G735 / PRO X 2 protocol,
   receiver pairing, keyboard onboard-profile editing, the screen sampler on GNOME and KDE, the
-  Yeti's mic monitoring and headphone mix over HID++, and a few newer-mouse features. The full list is in [TODO.md](TODO.md).
+  the Yeti's mic monitoring over HID++, and a few newer-mouse features. The full list is in [TODO.md](TODO.md).
 
 ## If something's off
 

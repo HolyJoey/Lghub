@@ -420,17 +420,20 @@ class FakeRgbMouse(FakeMouse):
 class FakeYeti(FakeMouse):
 	"""A Yeti X-like microphone: polar pattern (0x8330), all four patterns."""
 	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, features.POLAR_PATTERN,
-	            features.MIC_GAIN_ADJUST]
+	            features.MIC_GAIN_ADJUST, features.HEADPHONE_ADJUST]
 	KIND = 8
 
 	def __init__(self):
 		super().__init__('Yeti X')
 		self.pattern = 2
 		self.mic = {0: 1, 2: 60}          # type -> value: mic on, gain 60
+		self.phones = {0: 1, 2: 40}       # headphones on, level 40
 
 	def handle(self, feature, fn, p):
 		if feature == features.MIC_GAIN_ADJUST:
-			return self._gain_adjust(fn, p)
+			return self._gain_adjust(fn, p, self.mic)
+		if feature == features.HEADPHONE_ADJUST:
+			return self._gain_adjust(fn, p, self.phones)
 		if feature == features.POLAR_PATTERN:
 			if fn == 0:
 				return bytes([0x0F])
@@ -441,15 +444,16 @@ class FakeYeti(FakeMouse):
 		return super().handle(feature, fn, p)
 
 
-	def _gain_adjust(self, fn, p):
+	@staticmethod
+	def _gain_adjust(fn, p, controls):
 		if fn == 0:
 			return bytes([1])
 		if fn == 1:
 			return bytes([0, 2])
 		if fn == 2:
 			kind = (0, 2)[p[1]]
-			return bytes([0, p[1], kind, self.mic[kind]])
-		self.mic[p[1]] = p[2]
+			return bytes([0, p[1], kind, controls[kind]])
+		controls[p[1]] = p[2]
 		return bytes(p[:3])
 
 

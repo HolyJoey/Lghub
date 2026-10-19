@@ -26,6 +26,7 @@ BUTTON_SWAP, HYBRID_TRACKING, CHARGING_CONTROL = 0x2005, 0x2400, 0x1010
 BASS_TONE = 0x8305
 BUNNY_HOPPING = 0x80E0
 MIC_GAIN_ADJUST = 0x8370
+HEADPHONE_ADJUST = 0x8360
 MUTE_INVERTED = ('046d:0ad1', '046d:0ad2')   # G HUB: on these 1 = muted, elsewhere 1 = mic on
 BHOP_MIN, BHOP_MAX, BHOP_STEP = 100, 1000, 100     # G HUB's slider, ms
 
@@ -278,17 +279,22 @@ def set_bunny_hopping(dev, ms):
 # 0 mute, 1 / 2 gain (value = G HUB's 0-1 gain x 100), 5 a switch G HUB keeps but doesn't show.
 # G HUB writes channel 0, gain with the type the mic reported (2 if none).
 
+def _adjust_controls(dev, feature):
+	"""(type, value) of every control on every channel, as G HUB walks them (0x8360 / 0x8370)."""
+	for channel in range(dev.call(feature, 0)[0]):
+		for control in range(dev.call(feature, 1, bytes([channel]))[1]):
+			r = dev.call(feature, 2, bytes([channel, control]))
+			yield r[2], r[3]
+
+
 def mic_gain_adjust(dev, usb_id=''):
 	"""{'muted': bool, 'gain': 0-100, 'gain_type': 1 or 2}, with what the mic has."""
 	out = {}
-	for channel in range(dev.call(MIC_GAIN_ADJUST, 0)[0]):
-		for control in range(dev.call(MIC_GAIN_ADJUST, 1, bytes([channel]))[1]):
-			r = dev.call(MIC_GAIN_ADJUST, 2, bytes([channel, control]))
-			kind, value = r[2], r[3]
-			if kind == 0:
-				out['muted'] = (value == 1) if usb_id in MUTE_INVERTED else (value == 0)
-			elif kind in (1, 2):
-				out['gain'], out['gain_type'] = value, kind
+	for kind, value in _adjust_controls(dev, MIC_GAIN_ADJUST):
+		if kind == 0:
+			out['muted'] = (value == 1) if usb_id in MUTE_INVERTED else (value == 0)
+		elif kind in (1, 2):
+			out['gain'], out['gain_type'] = value, kind
 	return out
 
 
@@ -299,6 +305,17 @@ def set_mic_muted(dev, muted, usb_id=''):
 
 def set_mic_gain(dev, percent, gain_type=2):
 	dev.call(MIC_GAIN_ADJUST, 3, bytes([0, gain_type, max(0, min(100, int(percent)))]))
+
+
+# Headphone level (0x8360 MicrophoneHeadphoneAdjust, Yetis): the same functions as 0x8370; type 2
+# is the level (G HUB's 0-1 x 100), the only one G HUB writes (channel 0).
+
+def headphone_level(dev):
+	return next((value for kind, value in _adjust_controls(dev, HEADPHONE_ADJUST) if kind == 2), None)
+
+
+def set_headphone_level(dev, percent):
+	dev.call(HEADPHONE_ADJUST, 3, bytes([0, 2, max(0, min(100, int(percent)))]))
 
 
 # Easy-Switch (0x1814 ChangeHost): fn 0 = host count, current host; fn 1 = switch to a host. The
