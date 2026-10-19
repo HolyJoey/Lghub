@@ -37,14 +37,14 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 - **HID++ lighting (0x8070)**: effect parameter bytes and the persist flag; the current effect
   isn't read back (the page starts at the first effect).
 
-## Progress on the open work (overall about 72%)
+## Progress on the open work (overall about 73%)
 
 | Item | Done | What's left |
 | --- | --- | --- |
 | DTS room choice | 100% | — |
 | Headsets' own EQ presets | 100% | — |
 | Background service idle cost | 90% | 0.2% of a core now; the engine loop and the link monitor remain |
-| Macros on buttons and G-keys | 85% | DPI/profile macro actions; 0x1B04 divert for newer mice; hardware check |
+| Macros on buttons and G-keys | 90% | DPI/profile actions done; G-Shift; 0x1B04 divert for newer mice; hardware check |
 | Per-key lighting | 95% | 0x8081 and 0x8080 done; hardware check |
 | Blue VO!CE 2 (Yetis, G735) | 90% | presets, every setting, voice effects done; inputGain, Wine check, hardware check |
 | Yeti controls | 50% | polar pattern (0x8330) done; mic monitoring 0x8350, headphone 0x8360, gain/mute 0x8370 over HID++ (gain and headphone volume work through the sound card) |
@@ -55,7 +55,12 @@ Details:
 
 - **Macros**: `macros.py` (G HUB's macro format), `uinput.py`, `inputd.py` (0x8110 for mice and
   0x8010 for G-keys, exactly as G HUB's agent drives them: remap entry 0 = handled in software,
-  big-endian button mask), Macros page with recorder and "On buttons". **Check on the G502**:
+  big-endian button mask), Macros page with recorder and "On buttons". DPI up/down/cycle/default/
+  shift and profile next/previous/cycle macros run on the mouse (inputd.DeviceActions; how is
+  ours: onboard DPI slots and profiles over 0x8100, or 0x2201 in host mode). 0x1B04 (newer
+  mice without 0x8110): G HUB's functions found (fn3 SetCtrlIdReporting cid/flags/remap,
+  event 0 = up to four pressed control ids) but not its divert flag bits nor its button ->
+  control-id map; not done. **Check on the G502**:
   that 0x8110 is there and buttons behave; G-key bit order (G1 = bit 0 of the first byte) on a
   keyboard.
 - **Per-key lighting** (0x8081): `perkey_ui.py` draws G HUB's key layout (metadata.json);

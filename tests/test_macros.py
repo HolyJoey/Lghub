@@ -33,7 +33,7 @@ class MacroTest(unittest.TestCase):
 	def setUp(self):
 		self.out = FakeOut()
 		self.device = []
-		self.run_ = macros.Runner(self.out, lambda kind, action: self.device.append((kind, action)))
+		self.run_ = macros.Runner(self.out, lambda kind, action, down: self.device.append((kind, action, down)))
 
 	def test_keystroke_follows_the_button(self):
 		m = macros.keystroke(0x06, [macros.CTRL])
@@ -77,7 +77,7 @@ class MacroTest(unittest.TestCase):
 		self.run_.release(1, m)
 		self.assertEqual(self.out.events, [('media', 0xe9, True), ('media', 0xe9, False)])
 		self.run_.press(2, {'type': 'MOUSE', 'mouse': {'action': 'DPI_CYCLE'}})
-		self.assertEqual(self.device, [('MOUSE', 'DPI_CYCLE')])
+		self.assertEqual(self.device, [('MOUSE', 'DPI_CYCLE', True)])
 
 	def test_mouse_button(self):
 		m = {'type': 'MOUSE', 'mouse': {'action': 'BUTTON', 'hid_usage': 4}}

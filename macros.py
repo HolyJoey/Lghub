@@ -1,8 +1,8 @@
 """Macros, stored and run the way G HUB defines them (logi.protocol.macros.Macro in G HUB's own
 schema), kept as JSON with the same field names. Supported types: KEYSTROKE, TEXT_BLOCK, MOUSE,
 MEDIA, SYSTEM, APP, OPEN_WEB_PAGE, AUDIO and SEQUENCE (simple, press/held/release and toggle
-sequences of keys, mouse events and delays). DEVICE actions (DPI, profiles, G-Shift) go back to
-the device's own handler.
+sequences of keys, mouse events and delays). DPI and profile actions go to the mouse (inputd.
+DeviceActions); G-Shift isn't done yet.
 
 A Runner presses and releases macros as their button goes down and up; long sequences run on
 their own thread so a button press never blocks.
@@ -57,6 +57,11 @@ def char_usage(ch):
 	return None
 
 
+def is_device_action(macro):
+	t = macro.get('type')
+	return t == 'DEVICE' or t == 'MOUSE' and ('MOUSE', macro['mouse'].get('action')) in DEVICE_ACTIONS
+
+
 def keystroke(code, modifiers=()):
 	return {'type': 'KEYSTROKE', 'keystroke': {'code': code, 'modifiers': list(modifiers)}}
 
@@ -104,12 +109,13 @@ def key_name(usage):
 
 
 class Runner:
-	"""Plays macros on a virtual input device. device_action(kind, action) handles DPI/profile
-	actions for the device the button belongs to."""
+	"""Plays macros on a virtual input device. device_action(kind, action, down) handles DPI and
+	profile actions for the device the button belongs to (called on press, and on release too
+	for the MOUSE ones, so DPI shift can end)."""
 
 	def __init__(self, out=None, device_action=None):
 		self.out = out
-		self.device_action = device_action or (lambda _kind, _action: None)
+		self.device_action = device_action or (lambda _kind, _action, _down: None)
 		self.toggles = {}          # button -> stop event of a running toggle sequence
 		self.held = {}             # button -> stop event of a running held sequence
 
@@ -166,7 +172,7 @@ class Runner:
 			if cmd:
 				_spawn(cmd)
 		elif t == 'DEVICE':
-			self.device_action('DEVICE', macro['device'].get('action'))
+			self.device_action('DEVICE', macro['device'].get('action'), True)
 
 	def _system(self, action):
 		if action in SYSTEM_KEYS:
@@ -193,8 +199,8 @@ class Runner:
 		elif action in WHEEL and down:
 			clicks, horizontal = WHEEL[action]
 			self._out().wheel(clicks, horizontal)
-		elif down and ('MOUSE', action) in DEVICE_ACTIONS:
-			self.device_action('MOUSE', action)
+		elif ('MOUSE', action) in DEVICE_ACTIONS:
+			self.device_action('MOUSE', action, down)
 
 	def combo(self, usages):
 		out = self._out()

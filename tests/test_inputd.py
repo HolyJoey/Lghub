@@ -58,3 +58,50 @@ class SpyTest(unittest.TestCase):
 
 if __name__ == '__main__':
 	unittest.main()
+
+
+class DeviceActionTest(unittest.TestCase):
+	"""G HUB's DPI and profile macro actions on a simulated G502 (factory profile 1: 400-6400 DPI)."""
+
+	def setUp(self):
+		self.fake = simulate.FakeMouse()
+		self.actions = inputd.DeviceActions(hidpp.Device(self.fake))
+
+	def test_dpi_steps_onboard(self):
+		self.fake.mode, self.fake.dpi_slot = 1, 1
+		self.actions('MOUSE', 'DPI_UP')
+		self.assertEqual(self.fake.dpi_slot, 2)
+		self.actions('MOUSE', 'DPI_DOWN')
+		self.actions('MOUSE', 'DPI_DOWN')
+		self.actions('MOUSE', 'DPI_DOWN')
+		self.assertEqual(self.fake.dpi_slot, 0)            # stops at the lowest
+		self.fake.dpi_slot = 4
+		self.actions('MOUSE', 'DPI_CYCLE')
+		self.assertEqual(self.fake.dpi_slot, 0)            # cycles round
+
+	def test_dpi_shift_host_mode(self):
+		self.fake.mode, self.fake.dpi = 2, 1600
+		self.actions('MOUSE', 'DPI_SHIFT', True)
+		shifted = self.fake.dpi
+		self.actions('MOUSE', 'DPI_SHIFT', False)
+		self.assertEqual(self.fake.dpi, 1600)              # back after release
+		self.assertIn(shifted, (400, 800, 1600, 3200, 6400))
+
+	def test_profiles(self):
+		self.fake.mode, self.fake.profile = 1, 1
+		self.actions('DEVICE', 'PROFILE_NEXT')
+		self.assertEqual(self.fake.profile, 2)
+		self.actions('DEVICE', 'PROFILE_CYCLE')
+		self.actions('DEVICE', 'PROFILE_CYCLE')
+		self.assertEqual(self.fake.profile, 1)
+		self.actions('DEVICE', 'PROFILE_PREV')
+		self.assertEqual(self.fake.profile, 1)             # no wrap backwards from the first
+
+	def test_runner_passes_release(self):
+		calls = []
+		runner = macros.Runner(out=Recorder(), device_action=lambda *a: calls.append(a))
+		m = {'type': 'MOUSE', 'mouse': {'action': 'DPI_SHIFT'}}
+		runner.press('button:6', m)
+		runner.release('button:6', m)
+		self.assertEqual(calls, [('MOUSE', 'DPI_SHIFT', True), ('MOUSE', 'DPI_SHIFT', False)])
+		self.assertTrue(macros.is_device_action(m))

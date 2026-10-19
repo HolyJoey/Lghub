@@ -98,6 +98,90 @@ class DeviceInput:
 			bit += 1
 
 
+class DeviceActions:
+	"""G HUB's DPI and profile macro actions on the mouse whose button ran them (ours: how they
+	are carried out). With onboard memory on, DPI steps through the active profile's DPI slots
+	and profile actions switch onboard profiles (0x8100); in host mode the DPI is set directly
+	(0x2201) from the active profile's levels. DPI shift holds the profile's shift DPI while
+	the button is down."""
+
+	def __init__(self, dev):
+		import mouse
+		self.mouse = mouse.Mouse(dev, 'actions')
+		self.onboard = self.mouse.onboard
+		self.levels = []
+		self.default = self.shift = 0
+		self.before_shift = None
+		self.lock = threading.Lock()
+
+	def _profile(self):
+		"""The active profile's DPI levels, default and shift slots (read when first needed)."""
+		if self.onboard and not self.levels:
+			number = self.mouse.current_profile()
+			profiles = self.mouse.load_profiles()
+			profile = next((p for p in profiles if p.number == number), profiles[0] if profiles else None)
+			if profile:
+				self.levels = [v for v in profile.dpi_levels if v]
+				self.default, self.shift = profile.default_dpi, profile.shift_dpi
+		return self.levels
+
+	def __call__(self, kind, action, down=True):
+		with self.lock:
+			try:
+				self._do(action, down)
+			except (OSError, hidpp.HidppError) as e:
+				print(f'engine: {action} failed: {e}', flush=True)
+
+	def _do(self, action, down):
+		if action.startswith('PROFILE_'):
+			if down and self.onboard:
+				self._profile_step(action)
+			return
+		levels = self._profile()
+		if not levels:
+			return
+		if action == 'DPI_SHIFT':
+			self._shift(levels, down)
+			return
+		if not down:
+			return
+		slot = self._current_slot(levels)
+		target = {'DPI_UP': min(slot + 1, len(levels) - 1), 'DPI_DOWN': max(slot - 1, 0),
+		          'DPI_CYCLE': (slot + 1) % len(levels), 'DPI_DEFAULT': min(self.default, len(levels) - 1)}.get(action)
+		if target is not None:
+			self._set_slot(levels, target)
+
+	def _current_slot(self, levels):
+		if self.onboard and self.mouse.mode() == 1:
+			return min(self.mouse.current_dpi_slot(), len(levels) - 1)
+		dpi = self.mouse.current_dpi()
+		return min(range(len(levels)), key=lambda i: abs(levels[i] - dpi))
+
+	def _set_slot(self, levels, slot):
+		if self.onboard and self.mouse.mode() == 1:
+			self.mouse.set_current_dpi_slot(slot)
+		else:
+			self.mouse.set_dpi(levels[slot])
+
+	def _shift(self, levels, down):
+		if down and self.before_shift is None:
+			self.before_shift = self._current_slot(levels)
+			self._set_slot(levels, min(self.shift, len(levels) - 1))
+		elif not down and self.before_shift is not None:
+			self._set_slot(levels, self.before_shift)
+			self.before_shift = None
+
+	def _profile_step(self, action):
+		profiles = [p.number for p in self.mouse.load_profiles() if p.enabled] or [1]
+		current = self.mouse.current_profile()
+		i = profiles.index(current) if current in profiles else 0
+		step = -1 if action == 'PROFILE_PREV' else 1
+		if action == 'PROFILE_NEXT' and i == len(profiles) - 1 or action == 'PROFILE_PREV' and i == 0:
+			return
+		self.mouse.set_current_profile(profiles[(i + step) % len(profiles)])
+		self.levels = []        # the new profile's DPI levels next time
+
+
 def resolve(device_assignments, library):
 	"""{"button:N": macro} from {"button:N": macro id}, skipping macros that no longer exist."""
 	return {k: library[v] for k, v in device_assignments.items() if v in library}
@@ -157,14 +241,19 @@ class Manager:
 			if not wanted or dev_id in self.running:
 				continue
 			try:
-				di = DeviceInput(devices.open_hidpp(d), wanted, self._runner())
+				dev = devices.open_hidpp(d)
+				di = DeviceInput(dev, wanted, self._runner(dev, wanted))
 				if di.start():
 					self.running[dev_id] = (di, wanted)
 					print(f'engine: software buttons on {d.name} ({len(wanted)} assigned)', flush=True)
 			except (OSError, hidpp.HidppError) as e:
 				print(f'engine: no software buttons on {d.name}: {e}', flush=True)
 
-	def _runner(self):
+	def _runner(self, dev, wanted):
+		"""The shared runner, or one of its own when the device has DPI/profile actions on it."""
+		if any(macros.is_device_action(m) for m in wanted.values()):
+			out = self.runner.out if self.runner else None
+			return macros.Runner(out, DeviceActions(dev))
 		if self.runner is None:
 			self.runner = macros.Runner()
 		return self.runner
