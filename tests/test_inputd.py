@@ -131,3 +131,23 @@ class MKeyTest(unittest.TestCase):
 		self.assertEqual(kb.m_led, 2)
 		self.assertEqual(calls, [('press', 'm2:gkey:1', 'two'), ('release', 'm2:gkey:1', 'two')])
 		self.assertFalse(kb.gkeys_software)
+
+
+class GShiftTest(unittest.TestCase):
+	def test_shift_layer(self):
+		calls = []
+		runner = macros.Runner(out=Recorder())
+		runner.press = lambda key, macro: calls.append(key)
+		runner.release = lambda key, macro: None
+		shift = {'type': 'DEVICE', 'device': {'action': 'G_SHIFT'}}
+		a = {'type': 'TEXT_BLOCK', 'text_block': {'text': 'a'}}
+		b = {'type': 'TEXT_BLOCK', 'text_block': {'text': 'b'}}
+		di = inputd.DeviceInput(None, {'button:6': shift, 'button:7': a, 'shift:button:7': b}, runner)
+		di._changed('button', 1 << 6)                  # button 7 alone
+		di._changed('button', 0)
+		di._changed('button', 1 << 5)                  # G-Shift held ...
+		di._changed('button', 1 << 5 | 1 << 6)         # ... and button 7
+		di._changed('button', 1 << 5)
+		di._changed('button', 0)
+		di._changed('button', 1 << 6)                  # released: normal again
+		self.assertEqual(calls, ['button:7', 'shift:button:7', 'button:7'])

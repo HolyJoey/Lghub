@@ -2,7 +2,7 @@
 schema), kept as JSON with the same field names. Supported types: KEYSTROKE, TEXT_BLOCK, MOUSE,
 MEDIA, SYSTEM, APP, OPEN_WEB_PAGE, AUDIO and SEQUENCE (simple, press/held/release and toggle
 sequences of keys, mouse events and delays). DPI and profile actions go to the mouse (inputd.
-DeviceActions); G-Shift isn't done yet.
+DeviceActions); a G-Shift button switches the other buttons to their G-Shift layer (inputd).
 
 A Runner presses and releases macros as their button goes down and up; long sequences run on
 their own thread so a button press never blocks.
@@ -61,7 +61,7 @@ def char_usage(ch):
 
 def is_device_action(macro):
 	t = macro.get('type')
-	return t == 'DEVICE' or t == 'MOUSE' and ('MOUSE', macro['mouse'].get('action')) in DEVICE_ACTIONS
+	return t == 'DEVICE' or t == 'MOUSE' and ('MOUSE', macro.get('mouse', {}).get('action')) in DEVICE_ACTIONS
 
 
 def keystroke(code, modifiers=()):

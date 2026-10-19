@@ -9,7 +9,9 @@ from ui import box, button_widget, label, page_header
 
 TYPES = (('SEQUENCE', 'Recorded sequence'), ('KEYSTROKE', 'Keystroke'), ('TEXT_BLOCK', 'Text'),
          ('MEDIA', 'Media key'), ('SYSTEM', 'System action'), ('APP', 'Launch an app'),
-         ('OPEN_WEB_PAGE', 'Open a web page'), ('AUDIO', 'Audio'))
+         ('OPEN_WEB_PAGE', 'Open a web page'), ('AUDIO', 'Audio'), ('DEVICE', 'Mouse / device action'))
+# G HUB keeps DPI actions as MOUSE macros and profile / G-Shift ones as DEVICE macros
+DEVICE_ACTIONS = tuple(action for _kind, action in sorted(macros.DEVICE_ACTIONS))
 MODES = (('once', 'Play once'), ('held', 'Repeat while held'), ('toggle', 'Start / stop on each press'))
 MEDIA = tuple(macros.MEDIA)
 SYSTEM = tuple(sorted(set(macros.SYSTEM_KEYS) | set(macros.SYSTEM_CONSUMER) | set(macros.SYSTEM_COMMANDS)))
@@ -51,6 +53,7 @@ class MacrosPage(Gtk.Box):
 		self.device = device
 		self.buttons = list(buttons)
 		self.bank = 1           # M-key set shown for G-keys (G HUB's M1-M3)
+		self.layer = ''         # '' or 'shift:' (G HUB's G-Shift layer)
 		self.append(page_header('Macros', 'Keystrokes, recorded sequences, text, apps and more, ready to put on a '
 		                        'button.', button_widget('New macro', ['apply'], lambda: self._edit(None))))
 		self.list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
@@ -102,9 +105,17 @@ class MacrosPage(Gtk.Box):
 			r.append(label('G-key set (switched with the M-keys)', ['muted'], hexpand=True, valign=Gtk.Align.CENTER))
 			r.append(sets)
 			self.assign_card.append(r)
+		layers = Gtk.DropDown.new_from_strings(['Normal', 'G-Shift (while a G-Shift button is held)'])
+		layers.set_selected(1 if self.layer else 0)
+		layers.connect(NOTIFY_SELECTED, lambda w, _p: self._show_layer('shift:' if w.get_selected() else '', lib))
+		r = box(Gtk.Orientation.HORIZONTAL, 16)
+		r.append(label('Layer', ['muted'], hexpand=True, valign=Gtk.Align.CENTER))
+		r.append(layers)
+		self.assign_card.append(r)
 		for key, text in self.buttons:
 			if key.startswith('gkey:'):
 				key = inputd.gkey_name(self.bank, int(key.split(':')[1]))
+			key = self.layer + key
 			dd = Gtk.DropDown.new_from_strings(names)
 			dd.set_selected(ids.index(current.get(key)) if current.get(key) in ids else 0)
 			dd.connect(NOTIFY_SELECTED, lambda w, _p, k=key: self._assign(k, ids[w.get_selected()]))
@@ -112,6 +123,10 @@ class MacrosPage(Gtk.Box):
 			r.append(label(text, ['muted'], hexpand=True, valign=Gtk.Align.CENTER))
 			r.append(dd)
 			self.assign_card.append(r)
+
+	def _show_layer(self, layer, lib):
+		self.layer = layer
+		GLib.idle_add(lambda: self._assignments(lib) and False)
 
 	def _show_bank(self, bank, lib):
 		self.bank = bank
@@ -156,7 +171,10 @@ class MacroEditor(Gtk.Window):
 		content = box(spacing=14, css=['page'])
 		self.name = Gtk.Entry(text=self.macro.get('name', ''), placeholder_text='Name')
 		content.append(self.name)
-		self.type_dd, self.type_keys = dropdown(TYPES, self.macro.get('type'))
+		shown = self.macro.get('type')
+		if shown and macros.is_device_action(self.macro):
+			shown = 'DEVICE'
+		self.type_dd, self.type_keys = dropdown(TYPES, shown)
 		self.type_dd.connect(NOTIFY_SELECTED, lambda *_: self._show_fields())
 		content.append(self.type_dd)
 		self.fields = box(spacing=10, vexpand=True)
@@ -189,7 +207,8 @@ class MacroEditor(Gtk.Window):
 		           'OPEN_WEB_PAGE': lambda: self._entry_field('open_web_page', 'url', 'https://…'),
 		           'MEDIA': lambda: self._choice_field('media', 'usage', MEDIA),
 		           'SYSTEM': lambda: self._choice_field('system', 'action', SYSTEM),
-		           'AUDIO': lambda: self._choice_field('audio', 'action', AUDIO)}
+		           'AUDIO': lambda: self._choice_field('audio', 'action', AUDIO),
+		           'DEVICE': self._device_field}
 		builder[self.kind]()
 
 	def _entry_field(self, part, key, hint):
@@ -260,6 +279,11 @@ class MacroEditor(Gtk.Window):
 		self.events.append((usage, down, time.monotonic()))
 		return True
 
+	def _device_field(self):
+		current = (self.macro.get('mouse') or self.macro.get('device') or {}).get('action')
+		self.choice, self.choice_keys = dropdown([(a, nice(a)) for a in DEVICE_ACTIONS], current)
+		self.fields.append(self.choice)
+
 	def _save(self):
 		kind = self.kind
 		name = self.name.get_text().strip() or dict(TYPES)[kind]
@@ -280,6 +304,10 @@ class MacroEditor(Gtk.Window):
 			part, key = {'TEXT_BLOCK': ('text_block', 'text'), 'APP': ('app', 'executable_path'),
 			             'OPEN_WEB_PAGE': ('open_web_page', 'url')}[kind]
 			m = {'type': kind, part: {key: self.entry.get_text()}}
+		elif kind == 'DEVICE':
+			action = self.choice_keys[self.choice.get_selected()]
+			part = 'mouse' if ('MOUSE', action) in macros.DEVICE_ACTIONS else 'device'
+			m = {'type': part.upper(), part: {'action': action}}
 		else:
 			part, key = {'MEDIA': ('media', 'usage'), 'SYSTEM': ('system', 'action'), 'AUDIO': ('audio', 'action')}[kind]
 			m = {'type': kind, part: {key: self.choice_keys[self.choice.get_selected()]}}

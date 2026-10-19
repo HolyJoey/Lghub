@@ -10,8 +10,11 @@ mask (G1 = bit 0 of the first byte), off again when done. With M-keys (0x8020) t
 three sets, M1 to M3, as in G HUB: an M-key press (event 0) picks the set and lights its key
 (function 1: M1 = 1, M2 = 2, M3 = 4).
 
-assignments.json: {device ident: {"button:N", "gkey:N" (M1), "m2:gkey:N" or "m3:gkey:N": macro
-id}}, N counted from 1.
+G-Shift (G HUB's DEVICE G_SHIFT action on a button): while that button is held, the other buttons
+run their G-Shift layer, "shift:button:N" / "shift:gkey:N", where one is set.
+
+assignments.json: {device ident: {"button:N", "gkey:N" (M1), "m2:gkey:N" or "m3:gkey:N",
+"shift:..." for the G-Shift layer: macro id}}, N counted from 1.
 """
 import threading
 
@@ -20,6 +23,10 @@ import macros
 
 SPY, GKEY, MKEYS = 0x8110, 0x8010, 0x8020
 M_LEDS = {1: 1, 2: 2, 3: 4}          # M-key -> its bit, in 0x8020's LED setting and its events
+
+
+def is_g_shift(macro):
+	return macro.get('type') == 'DEVICE' and macro.get('device', {}).get('action') == 'G_SHIFT'
 
 
 def gkey_name(bank, n):
@@ -46,17 +53,19 @@ class DeviceInput:
 		self.bank = 1                     # M-key set for G-keys
 		self.mkeys = None                 # 0x8020's feature index, when the keyboard has M-keys
 		self.pressed = {}                 # bit -> (key, macro) while down: releases what was pressed
+		self.shifted = 0                  # G-Shift buttons held
 
 	def start(self):
-		if self.dev.has(SPY) and any(k.startswith('button:') for k in self.assigned):
+		if self.dev.has(SPY) and any('button:' in k for k in self.assigned):
 			self.kind = SPY
 			self.original_remap = self.dev.call(SPY, 3)[:16]
 			self.dev.call(SPY, 1)
 			remap = bytearray(self.original_remap)
 			for key in self.assigned:
-				n = int(key.split(':')[1])
-				if key.startswith('button:') and 1 <= n <= 16:
-					remap[n - 1] = 0          # handled here, not by the mouse
+				n = int(key.rsplit(':', 1)[1])
+				if 'button:' in key and 1 <= n <= 16:
+					remap[n - 1] = 0          # handled here, not by the mouse (with only a G-Shift
+					                          # macro it does nothing unshifted: ours)
 			self.dev.call(SPY, 4, bytes(remap))
 		elif self.dev.has(GKEY) and any('gkey:' in k for k in self.assigned):
 			self.kind = GKEY
@@ -124,12 +133,19 @@ class DeviceInput:
 	def _edge(self, prefix, bit, down):
 		if not down:
 			key, macro = self.pressed.pop(bit, (None, None))
-			if macro:
+			if macro and is_g_shift(macro):
+				self.shifted = max(0, self.shifted - 1)
+			elif macro:
 				self.runner.release(key, macro)
 			return
 		key = gkey_name(self.bank, bit + 1) if prefix == 'gkey' else f'{prefix}:{bit + 1}'
+		if self.shifted and self.assigned.get(f'shift:{key}'):
+			key = f'shift:{key}'
 		macro = self.assigned.get(key)
-		if macro:
+		if macro and is_g_shift(macro):
+			self.shifted += 1
+			self.pressed[bit] = (key, macro)
+		elif macro:
 			self.pressed[bit] = (key, macro)
 			self.runner.press(key, macro)
 

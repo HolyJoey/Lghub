@@ -44,7 +44,7 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 | DTS room choice | 100% | — |
 | Headsets' own EQ presets | 100% | — |
 | Background service idle cost | 90% | 0.2% of a core now; the engine loop and the link monitor remain |
-| Macros on buttons and G-keys | 90% | DPI/profile actions done; G-Shift; 0x1B04 divert for newer mice; hardware check |
+| Macros on buttons and G-keys | 95% | DPI/profile actions and G-Shift layer done; 0x1B04 divert for newer mice; hardware check |
 | Per-key lighting | 95% | 0x8081 and 0x8080 done; hardware check |
 | Blue VO!CE 2 (Yetis, G735) | 95% | presets, every setting, voice effects, mic gain done; Wine check, hardware check |
 | Yeti controls | 50% | polar pattern (0x8330) done; mic monitoring 0x8350, headphone 0x8360, gain/mute 0x8370 over HID++ (gain and headphone volume work through the sound card) |
