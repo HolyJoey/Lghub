@@ -18,6 +18,7 @@ import inputd
 import hotplug
 import presets
 import profiles
+import restore
 import pw
 import store
 import surround
@@ -58,6 +59,7 @@ class Engine:
 		self.sound_cards = hotplug.Watch(hotplug.SOUND)
 		self.inputs = inputd.Manager()
 		self.games = profiles.Switcher()
+		self.restorer = restore.Restorer()
 		self.game = None
 		self.mic_gain = None         # (mic, gain) last set for Blue VO!CE 2
 
@@ -295,6 +297,8 @@ class Engine:
 			self.inputs.check()
 		if self.games.due(now):
 			self.game = self.games.check(now)
+		if self.restorer.due(now):
+			self.restorer.check(now)
 
 	def run(self):
 		signal.signal(signal.SIGTERM, lambda *_: self.stop.set())

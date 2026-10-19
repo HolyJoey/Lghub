@@ -9,7 +9,6 @@ import headset
 import mouse
 import perkey
 import perkey_ui
-import store
 from ui import box, label
 from worker import Worker
 
@@ -38,20 +37,6 @@ SIMPLE_READS = ((features.SIDETONE, 'sidetone', headset.sidetone),
                 (features.POLAR_PATTERN, 'patterns', features.polar_patterns),
                 (features.DEVICE_EQ, 'device_eq', features.device_eq),
                 (features.ANGLE_SNAPPING, 'angle_snapping', features.angle_snapping))
-
-GAME_MODE_FILE = 'game_mode.json'      # in store.CONFIG_DIR: {model key: [HID usages]}
-
-
-def game_mode_keys(device):
-	return store._read_json(f'{store.CONFIG_DIR}/{GAME_MODE_FILE}', {}).get(device.model.key, [])
-
-
-def save_game_mode_keys(device, keys):
-	path = f'{store.CONFIG_DIR}/{GAME_MODE_FILE}'
-	data = store._read_json(path, {})
-	data[device.model.key] = keys
-	store._write_json(path, data)
-
 
 def report_rates(dev):
 	"""(rates the device offers in Hz, highest first; the current one) from 0x8060."""
@@ -180,7 +165,7 @@ class SettingsPanel(Gtk.Box):
 			info['fn_inversion'] = features.fn_inversion(dev, host)
 			self.host = host
 		if features.DISABLE_KEYS in have:
-			info['game_mode'] = (features.max_disabled_keys(dev), game_mode_keys(self.device))
+			info['game_mode'] = (features.max_disabled_keys(dev), features.game_mode_keys(self.device.model.key))
 			features.set_disabled_keys(dev, info['game_mode'][1])   # ours: the chosen keys stay off
 
 	def _do(self, job, done=None):
@@ -335,8 +320,8 @@ class SettingsPanel(Gtk.Box):
 		return c
 
 	def _game_key(self, usage, off):
-		keys = [k for k in game_mode_keys(self.device) if k != usage] + ([usage] if off else [])
-		save_game_mode_keys(self.device, keys)
+		keys = [k for k in features.game_mode_keys(self.device.model.key) if k != usage] + ([usage] if off else [])
+		features.save_game_mode_keys(self.device.model.key, keys)
 		self._do(lambda: features.set_disabled_keys(self.dev, keys))
 
 	def _mode_card(self, info):

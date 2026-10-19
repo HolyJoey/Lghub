@@ -7,10 +7,10 @@ import math
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
 
 import depots
+import perkey
 import store
 from ui import box, button_widget, label, page_header
 
-COLORS_FILE = 'perkey.json'      # in store.CONFIG_DIR: {model: {"<group>:<id>": [r, g, b]}}
 SHORTCUTS = (('WASD', ('PERKEY_KEYBOARD', (0x1a, 0x04, 0x16, 0x07))),
              ('Arrows', ('PERKEY_KEYBOARD', (0x4f, 0x50, 0x51, 0x52))),
              ('F-keys', ('PERKEY_KEYBOARD', tuple(range(0x3a, 0x46)))),
@@ -45,14 +45,11 @@ def gkey_count(model):
 
 
 def load_colors(model):
-	return store._read_json(f'{store.CONFIG_DIR}/{COLORS_FILE}', {}).get(model, {})
+	return perkey.load_colors(model)
 
 
 def save_colors(model, colors):
-	path = f'{store.CONFIG_DIR}/{COLORS_FILE}'
-	data = store._read_json(path, {})
-	data[model] = colors
-	store._write_json(path, data)
+	perkey.save_colors(model, colors)
 
 
 class PerKeyPage(Gtk.Box):

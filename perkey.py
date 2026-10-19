@@ -10,6 +10,20 @@ below; a device's light_map resource can override it, but none of the depots we 
 import struct
 
 import hidpp
+import store
+
+COLORS_FILE = 'perkey.json'      # in store.CONFIG_DIR: {model: {"<group>:<id>": [r, g, b]}}
+
+
+def load_colors(model):
+	return store._read_json(f'{store.CONFIG_DIR}/{COLORS_FILE}', {}).get(model, {})
+
+
+def save_colors(model, colors):
+	path = f'{store.CONFIG_DIR}/{COLORS_FILE}'
+	data = store._read_json(path, {})
+	data[model] = colors
+	store._write_json(path, data)
 
 PERKEY = 0x8081
 PERKEY_V1 = 0x8080

@@ -4,6 +4,7 @@ import struct
 from dataclasses import dataclass, field
 
 import hidpp
+import store
 
 BATTERY_STATUS = 0x1000      # level and charging state
 BATTERY_VOLTAGE = 0x1001
@@ -241,6 +242,20 @@ def set_host(dev, host):
 # Game mode (0x4522 DisableKeysByUsage): fn 0 = how many keys can be off, fn 1 = turn these HID
 # usages off, fn 2 = back on, fn 3 = all back on. The keyboard doesn't report which are off.
 GAME_MODE_KEYS = ((0xE3, 'Left Windows'), (0xE7, 'Right Windows'), (0x65, 'Menu'), (0x39, 'Caps Lock'))
+
+
+GAME_MODE_FILE = 'game_mode.json'      # in store.CONFIG_DIR: {model key: [HID usages]}
+
+
+def game_mode_keys(model):
+	return store._read_json(f'{store.CONFIG_DIR}/{GAME_MODE_FILE}', {}).get(model, [])
+
+
+def save_game_mode_keys(model, keys):
+	path = f'{store.CONFIG_DIR}/{GAME_MODE_FILE}'
+	data = store._read_json(path, {})
+	data[model] = keys
+	store._write_json(path, data)
 
 
 def max_disabled_keys(dev):
