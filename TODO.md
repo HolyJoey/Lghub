@@ -120,8 +120,11 @@ app features. Lghub handles 0x0000-0x0005, battery (0x1000/0x1001/0x1004), 0x220
   0x4522 game mode done (the chosen keys stay off: ours, the keyboard can't report them),
   0x1B08 analog keys / 0x80A4 actuation curves (analog keyboards).
 - [ ] Headsets: 0x8305 bass tone (functions found, range not), 0x8310 device EQ done (simulator-tested), 0x8320 jack detection, 0x1F20 battery for
-  older wireless headsets; the newer "Centurion" protocol (0x06xx: mic mute 0x0601, sidetone
-  0x0604, ANC 0x0605, mic gain 0x0611, onboard EQ 0x0636) for G735 / PRO X 2.
+  older wireless headsets; the newer "Centurion" protocol for G735 / PRO X 2: features 0x06xx
+  (mic mute 0x0601, sidetone 0x0604, ANC 0x0605, mic gain 0x0611, onboard EQ 0x0636, ...) over
+  G HUB's CenturionTransport (HID++-like messages without the device index, optional length
+  byte and per-device prefix: 0x14200d030) and CenturionPacketLayer (fragments: 0x14200f3c0);
+  the per-device settings come from their constructors (re/notes/decompiled/centurion.c).
 - [ ] Mics: 0x8350/0x8360/0x8370 (Yeti, see above); 0x8330 done.
 - [ ] Wireless: receiver pairing. Settings back on after a reconnect done (restore.py: per-key
   colours and game-mode keys when a device appears; G HUB listens for 0x1D4B, we look every 60 s). 0x1815 host names done (which reply
