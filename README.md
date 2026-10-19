@@ -67,7 +67,7 @@ that have them.
 DPI levels (and the default and DPI-shift level), report rate, what every button does
 (including keystrokes and a G-Shift layer), lighting, and the profiles stored in the mouse.
 Mice that have them also get the scroll wheel (ratchet or free spin, SmartShift, ratchet
-force), bunny hopping, angle snapping, left-handed buttons and hybrid tracking; newer mice get
+force), bunny hopping, surface tuning, angle snapping, left-handed buttons and hybrid tracking; newer mice get
 their 2-8 kHz report rates and extended DPI range.
 **Macros** like G HUB's: keystrokes, text, media and system actions, apps, web pages and
 recorded sequences (once, while held, or on/off), put on any button but the left one. They

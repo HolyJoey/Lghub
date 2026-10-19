@@ -168,7 +168,7 @@ class FakeWheelMouse(FakeMouse):
 	"""A mouse with SmartShift and ratchet force (0x2111), button swap (0x2005) and hybrid
 	tracking (0x2400), like the G502 X."""
 	FEATURES = ([f for f in FakeMouse.FEATURES if f not in (mouse.REPORT_RATE, mouse.DPI)]
-	            + [0x2111, 0x2005, 0x2400, 0x8061, 0x2202, 0x80E0])
+	            + [0x2111, 0x2005, 0x2400, 0x8061, 0x2202, 0x80E0, 0x2240])
 
 	def __init__(self):
 		super().__init__('G502 X')
@@ -177,12 +177,16 @@ class FakeWheelMouse(FakeMouse):
 		self.rate_n = 3
 		self.ext_dpi = (1600, 1600, 2)
 		self.bhop = 0
+		self.surface = None
+		self.tuning = []                        # surface tuning functions called, in order
 
 	def handle(self, feature, fn, p):
 		if feature == 0x2202:
 			return self._ext_dpi(fn, p)
 		if feature == 0x80E0:
 			return self._bunny_hop(fn, p)
+		if feature == 0x2240:
+			return self._surface_tuning(fn, p)
 		if feature == 0x8061:
 			return self._rates(fn, p)
 		if feature == 0x2005:
@@ -201,6 +205,17 @@ class FakeWheelMouse(FakeMouse):
 			return bytes(self.wheel)
 		self.wheel = list(p[:3])
 		return bytes(self.wheel)
+
+	def _surface_tuning(self, fn, p):
+		self.tuning.append(fn)
+		idx = self.FEATURES.index(0x2240)
+		if fn == 1:
+			self.surface = list(p[:3])
+		elif fn == 3:                           # shutter calibrated: done, LED drive 42
+			self.outbox.append(bytes([hidpp.LONG, 0xFF, idx, 0x00, 0, 42]).ljust(20, b'\0'))
+		elif fn == 5:                           # squal calibrated: done, threshold 7, min squal 30
+			self.outbox.append(bytes([hidpp.LONG, 0xFF, idx, 0x10, 0, 7, 30]).ljust(20, b'\0'))
+		return b''
 
 	def _bunny_hop(self, fn, p):
 		if fn == 2:

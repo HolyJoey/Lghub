@@ -10,6 +10,8 @@ import features
 import hidpp_panel
 import macros_ui
 import mouse
+import surface_tuning
+import surface_ui
 from ui import box, button_widget, device_icon, device_sidebar, label, nav_button, page_header, scrolled
 from worker import Worker
 
@@ -258,6 +260,7 @@ class MouseView(Gtk.Box):
 			self._live_sensitivity(page)
 			self._wheel_card(page)
 			self._bhop_card(page)
+			self._surface_card(page)
 			self._tracking_card(page)
 			return
 		self._profile_picker(page)
@@ -309,6 +312,7 @@ class MouseView(Gtk.Box):
 		page.append(c)
 		self._wheel_card(page)
 		self._bhop_card(page)
+		self._surface_card(page)
 		self._tracking_card(page)
 
 	def _edit(self, change):
@@ -380,6 +384,10 @@ class MouseView(Gtk.Box):
 				lambda mode=modes[w.get_selected()][0]: features.set_hybrid_mode(self.mouse.dev, mode)))
 			c.append(row('Hybrid tracking', dd))
 		page.append(c)
+
+	def _surface_card(self, page):
+		if surface_tuning.SURFACE_TUNING in self.mouse.features:
+			page.append(surface_ui.surface_card(card, row, self.win, self.device, self.mouse.dev, self._live))
 
 	def _bhop_card(self, page):
 		if 'bhop' not in self.state:

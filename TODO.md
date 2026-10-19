@@ -15,7 +15,7 @@ measurements.
 | Blue VO!CE 2 (Yetis, G735) | 95% | check against Logitech's APO under Wine; check on a mic |
 | Surround, equalizer | 100% | check on the G Pro X |
 | PRO 5-band equalizer | 20% | runs on the headset's Conexant chip (see below); needs the G Pro X |
-| Mice | 85% | see "Mice" below |
+| Mice | 90% | see "Mice" below |
 | Keyboards | 75% | see "Keyboards" below |
 | Headsets (other than the voice chain) | 50% | see "Headsets" below |
 | Yeti controls | 100% | check on a Yeti |
@@ -62,11 +62,13 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 ### Mice
 - **0x1B04 buttons on newer mice** (those without 0x8110): functions found; the divert flag bits
   and G HUB's button -> control-id map not.
-- **0x2240 surface tuning**: G HUB's calibration routine on the mouse pad (presets factory / hard /
-  soft, custom surfaces, a speed hint while tuning); not started.
+- **0x2240 surface tuning**: done as G HUB's routine (fn 2 / 3, shutter event, fn 4, squal, fn 5,
+  event, fn 6; fn 1 sets the three values). Left: G HUB's factory / hard / soft presets (fn 0's
+  9 bytes, not confirmed) and a check on a mouse that has it. Lghub reads the movement from the
+  mouse's own reports instead of the pointer (ours).
 - **Not started**: 0x8111 latency monitoring, 0x8120 gaming attachments.
 - Done: 0x2005 left-handed, 0x2400 hybrid tracking, 0x2202 extended DPI, 0x8061 extended report
-  rates, 0x80E0 bunny hopping.
+  rates, 0x80E0 bunny hopping, 0x2240 surface tuning.
 - Left out on purpose: 0x2006 pointer orientation, 0x2205 motion scaling and 0x2150 thumbwheel;
   G HUB's agent knows them but its app has no setting for them.
 - **Per-key lighting on mice** (if any have it) and 0x8071 inside onboard profiles.
