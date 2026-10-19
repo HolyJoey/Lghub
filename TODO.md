@@ -107,7 +107,9 @@ app features. Lghub handles 0x0000-0x0005, battery (0x1000/0x1001/0x1004), 0x220
 0x2110/0x2111, 0x8020,
 0x8071, 0x8310 and 0x1815. Not yet:
 
-- [ ] Mice: 0x2202 extended DPI and 0x8061 extended report rate (newer mice, 2-8 kHz), 0x1B04
+- [ ] Mice: 0x2202 extended DPI and 0x8061 extended report rate (newer mice, 2-8 kHz: G HUB's
+  functions GetDeviceCapabilities / GetActualReportRateList / GetReportRate / SetReportRate
+  found, its rate number -> Hz mapping not), 0x1B04
   special keys / divert (newer mice' buttons), 0x2121 hi-res wheel, 0x2130 ratchet wheel,
   0x2240 surface tuning. 0x2230 angle snapping and 0x2110/0x2111 SmartShift done (G HUB's mode
   bytes 1 free spin / 2 ratchet, 0xFF always ratchet, torque; G HUB's speed slider maps to the
