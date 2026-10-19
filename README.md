@@ -61,10 +61,13 @@ battery on headsets that have them.
 
 DPI levels (and the default and DPI-shift level), report rate, what every button does
 (including keystrokes and a G-Shift layer), lighting, and the profiles stored in the mouse.
+Mice that have them also get the scroll wheel (ratchet or free spin, SmartShift, ratchet
+force) and angle snapping.
 **Macros** like G HUB's: keystrokes, text, media and system actions, apps, web pages and
 recorded sequences (once, while held, or on/off), put on any button but the left one. They
 run in the background service, the same way G HUB does it (HID++ 0x8110: only buttons with a
-macro stop clicking by themselves).
+macro stop clicking by themselves). DPI and profile macros switch the mouse's own DPI and
+profiles.
 Like G HUB's on-board memory mode, everything is saved *in the mouse*, so it keeps working on
 any computer and nothing has to run in the background. Before the first change, the mouse's
 memory is backed up to `~/.local/share/lghub-bluevoice/backups/`.
