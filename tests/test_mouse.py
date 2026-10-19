@@ -101,6 +101,15 @@ class WheelTest(unittest.TestCase):
 		self.assertEqual(fake.wheel[0], 1)
 		self.assertIsNone(mouse.Mouse(hidpp.Device(simulate.FakeMouse()), 'g502').wheel())
 
+	def test_extended_report_rate(self):
+		fake = simulate.FakeWheelMouse()
+		m = mouse.Mouse(hidpp.Device(fake), 'test')
+		self.assertEqual(m.rates, [8000, 4000, 2000, 1000, 500, 250, 125])
+		self.assertEqual(m.current_rate(), 1000)
+		m.set_rate(8000)
+		self.assertEqual(fake.rate_n, 6)
+		self.assertEqual(m.current_rate(), 8000)
+
 	def test_swap_and_hybrid(self):
 		import features
 		fake = simulate.FakeWheelMouse()

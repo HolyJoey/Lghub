@@ -62,7 +62,6 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 ### Mice
 - **0x1B04 buttons on newer mice** (those without 0x8110): functions found; the divert flag bits
   and G HUB's button -> control-id map not.
-- **0x8061 report rates (2-8 kHz)**: functions found; G HUB's rate number -> Hz mapping not.
 - **0x2202 extended DPI.**
 - **Not started**:
   - 0x2240 surface tuning (a calibration routine on the mouse pad)

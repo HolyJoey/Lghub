@@ -16,6 +16,9 @@ import store
 
 DPI = 0x2201
 REPORT_RATE = 0x8060
+EXTENDED_RATE = 0x8061
+# 0x8061's rate numbers, as G HUB maps them (Feature8061AdjustableReportRate): n -> Hz
+EXTENDED_RATES = (125, 250, 500, 1000, 2000, 4000, 8000)
 ONBOARD = 0x8100
 SMARTSHIFT, SMARTSHIFT_TORQUE = 0x2110, 0x2111
 FREE_SPIN, RATCHET, ALWAYS_RATCHET = 1, 2, 0xFF
@@ -330,7 +333,7 @@ class Mouse:
 		self.name = dev.name()
 		self.firmware = dev.firmware()
 		self.sensor = self._read_sensor() if DPI in self.features else None
-		self.rates = self._read_rates() if REPORT_RATE in self.features else []
+		self.rates = self._read_rates() if REPORT_RATE in self.features or EXTENDED_RATE in self.features else []
 		self.onboard = ONBOARD in self.features
 		self.profiles = []
 		self.sector_size = 0
@@ -376,15 +379,27 @@ class Mouse:
 		else:
 			self.dev.call(SMARTSHIFT, 1, bytes([mode, auto]))
 
+	# 0x8061 (newer mice, up to 8 kHz): fn 1 GetActualReportRateList (byte 1: bit n = rate n),
+	# fn 2 GetReportRate (byte 0: rate number; the request byte, 0 here, is ours), fn 3 SetReportRate.
+
 	def _read_rates(self):
+		if EXTENDED_RATE in self.features:
+			mask = self.dev.call(EXTENDED_RATE, 1)[1]
+			return sorted((hz for n, hz in enumerate(EXTENDED_RATES) if mask >> n & 1), reverse=True)
 		mask = self.dev.call(REPORT_RATE, 0)[0]
 		return sorted((1000 // (bit + 1) for bit in range(8) if mask >> bit & 1), reverse=True)
 
 	def current_rate(self):
+		if EXTENDED_RATE in self.features:
+			n = self.dev.call(EXTENDED_RATE, 2, b'\0')[0]
+			return EXTENDED_RATES[n] if n < len(EXTENDED_RATES) else 0
 		ms = self.dev.call(REPORT_RATE, 1)[0]
 		return 1000 // ms if ms else 0
 
 	def set_rate(self, hz):
+		if EXTENDED_RATE in self.features:
+			self.dev.call(EXTENDED_RATE, 3, bytes([EXTENDED_RATES.index(hz)]))
+			return
 		self.dev.call(REPORT_RATE, 2, bytes([round(1000 / hz)]))
 
 	# --- onboard memory -------------------------------------------------------------------
