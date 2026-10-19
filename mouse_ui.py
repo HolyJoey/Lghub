@@ -147,7 +147,7 @@ class MouseView(Gtk.Box):
 
 	def _connect(self):
 		m = mouse.Mouse(devices.open_hidpp(self.device), self.device.serial or self.device.id)
-		state = {'battery': features.battery(m.dev)}
+		state = {'battery': features.battery(m.dev), 'wheel': m.wheel()}
 		if m.onboard:
 			m.load_profiles()
 			state['mode'] = m.mode()
@@ -244,6 +244,7 @@ class MouseView(Gtk.Box):
 		page.append(page_header('Sensitivity', 'DPI levels and how often the mouse reports to the computer.'))
 		if not self.mouse.onboard:
 			self._live_sensitivity(page)
+			self._wheel_card(page)
 			return
 		self._profile_picker(page)
 		p = self.profile
@@ -292,6 +293,7 @@ class MouseView(Gtk.Box):
 		dd.connect(NOTIFY_SELECTED, lambda w, _p: self._edit(lambda: setattr(p, 'report_rate', rates[w.get_selected()])))
 		c.append(row('Reports per second', dd))
 		page.append(c)
+		self._wheel_card(page)
 
 	def _edit(self, change):
 		if self.loading:
@@ -344,6 +346,49 @@ class MouseView(Gtk.Box):
 			dd.connect(NOTIFY_SELECTED, lambda w, _p: self._live(lambda: self.mouse.set_rate(rates[w.get_selected()])))
 			c.append(row('Reports per second', dd))
 			page.append(c)
+
+	def _wheel_card(self, page):
+		w = self.state.get('wheel')
+		if not w:
+			return
+		c = card('Scroll wheel', 'Ratchet clicks, or free spin. SmartShift lets a ratcheting wheel spin free when you '
+		         'flick it; the threshold is the speed for that (the mouse’s own scale).')
+		mode = Gtk.DropDown.new_from_strings(['Ratchet', 'Free spin'])
+		mode.set_selected(1 if w['mode'] == mouse.FREE_SPIN else 0)
+		smart = Gtk.Switch(active=w['auto'] not in (0, mouse.ALWAYS_RATCHET), valign=Gtk.Align.CENTER)
+		auto = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 4, 50, 1)   # range ours; 4 = G HUB's lowest
+		auto.set_value(w['auto'] if 4 <= w['auto'] < mouse.ALWAYS_RATCHET else 10)
+		auto.set_size_request(280, -1)
+		torque = None
+		if w['max_torque']:
+			torque = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 1, w['max_torque'], 1)
+			torque.set_value(w['torque'] or 1)
+			torque.set_size_request(280, -1)
+
+		def apply(*_):
+			free = mode.get_selected() == 1
+			auto.set_sensitive(not free and smart.get_active())
+			smart.set_sensitive(not free)
+			if free:
+				args = (mouse.FREE_SPIN, 0)
+			else:
+				args = (mouse.RATCHET, int(auto.get_value()) if smart.get_active() else mouse.ALWAYS_RATCHET)
+			self._live(lambda: self.mouse.set_wheel(*args, int(torque.get_value()) if torque else None))
+
+		mode.connect(NOTIFY_SELECTED, apply)
+		smart.connect('notify::active', apply)
+		auto.connect('value-changed', apply)
+		c.append(row('Wheel', mode))
+		c.append(row('SmartShift', smart))
+		c.append(row('Threshold', auto))
+		if torque:
+			torque.connect('value-changed', apply)
+			c.append(row('Ratchet force', torque))
+		self.loading = True
+		auto.set_sensitive(w['mode'] != mouse.FREE_SPIN and smart.get_active())
+		smart.set_sensitive(w['mode'] != mouse.FREE_SPIN)
+		self.loading = False
+		page.append(c)
 
 	def _live(self, job):
 		if not self.loading:

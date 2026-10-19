@@ -17,6 +17,8 @@ import store
 DPI = 0x2201
 REPORT_RATE = 0x8060
 ONBOARD = 0x8100
+SMARTSHIFT, SMARTSHIFT_TORQUE = 0x2110, 0x2111
+FREE_SPIN, RATCHET, ALWAYS_RATCHET = 1, 2, 0xFF
 
 MODE_ONBOARD, MODE_HOST = 1, 2
 DIRECTORY = 0x0000
@@ -345,6 +347,29 @@ class Mouse:
 
 	def set_dpi(self, value):
 		self.dev.call(DPI, 3, b'\0' + struct.pack('>H', value))
+
+	# --- scroll wheel (SmartShift, 0x2110 / 0x2111), as G HUB's Feature2111SmartShiftAndTorque
+	# drives it: mode 1 = free spin, 2 = ratchet; auto-disengage 0xFF = always ratchet (SmartShift
+	# off), otherwise the speed at which it lets go (G HUB maps its slider to 4 + (speed - min) /
+	# step with per-model numbers we don't have, so the device's own value is shown); torque on
+	# 0x2111 only, 1 (G HUB's default) up to the device's maximum.
+
+	def wheel(self):
+		"""{'mode', 'auto', 'torque', 'max_torque'}, or None without SmartShift."""
+		if SMARTSHIFT_TORQUE in self.features:
+			caps = self.dev.call(SMARTSHIFT_TORQUE, 0)
+			r = self.dev.call(SMARTSHIFT_TORQUE, 1)
+			return {'mode': r[0], 'auto': r[1], 'torque': r[2], 'max_torque': caps[3] or 100}
+		if SMARTSHIFT in self.features:
+			r = self.dev.call(SMARTSHIFT, 0)
+			return {'mode': r[0], 'auto': r[1], 'torque': None, 'max_torque': None}
+		return None
+
+	def set_wheel(self, mode, auto, torque=None):
+		if SMARTSHIFT_TORQUE in self.features:
+			self.dev.call(SMARTSHIFT_TORQUE, 2, bytes([mode, auto, max(1, torque or 1)]))
+		else:
+			self.dev.call(SMARTSHIFT, 1, bytes([mode, auto]))
 
 	def _read_rates(self):
 		mask = self.dev.call(REPORT_RATE, 0)[0]

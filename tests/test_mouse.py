@@ -88,3 +88,15 @@ class DescriptorTest(unittest.TestCase):
 
 if __name__ == '__main__':
 	unittest.main()
+
+
+class WheelTest(unittest.TestCase):
+	def test_smartshift(self):
+		fake = simulate.FakeWheelMouse()
+		m = mouse.Mouse(hidpp.Device(fake), 'test')
+		self.assertEqual(m.wheel(), {'mode': mouse.RATCHET, 'auto': 10, 'torque': 50, 'max_torque': 100})
+		m.set_wheel(mouse.RATCHET, mouse.ALWAYS_RATCHET, 30)
+		self.assertEqual(fake.wheel, [2, 0xFF, 30])
+		m.set_wheel(mouse.FREE_SPIN, 0, 30)
+		self.assertEqual(fake.wheel[0], 1)
+		self.assertIsNone(mouse.Mouse(hidpp.Device(simulate.FakeMouse()), 'g502').wheel())

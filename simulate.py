@@ -164,6 +164,25 @@ class FakeMouse:
 		return b''
 
 
+class FakeWheelMouse(FakeMouse):
+	"""A mouse with SmartShift and ratchet force (0x2111), like the G502 X."""
+	FEATURES = FakeMouse.FEATURES + [0x2111]
+
+	def __init__(self):
+		super().__init__('G502 X')
+		self.wheel = [2, 10, 50]
+
+	def handle(self, feature, fn, p):
+		if feature != 0x2111:
+			return super().handle(feature, fn, p)
+		if fn == 0:
+			return bytes([1, 10, 50, 100])
+		if fn == 1:
+			return bytes(self.wheel)
+		self.wheel = list(p[:3])
+		return bytes(self.wheel)
+
+
 class FakeKeyboard(FakeMouse):
 	"""A corded G815-like keyboard: two lighting zones, brightness, report rate, onboard mode."""
 	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, features.COLOR_LED_EFFECTS,

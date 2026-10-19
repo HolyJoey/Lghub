@@ -103,12 +103,14 @@ Details:
 Checked against the device features G HUB's agent knows (its `Feature####` classes) and its
 app features. Lghub handles 0x0000-0x0005, battery (0x1000/0x1001/0x1004), 0x2201 DPI, 0x8040,
 0x8060, 0x8070, 0x8080, 0x8081, 0x8100, 0x8110, 0x8010, 0x8300, 0x8330, 0x2230, 0x40A3,
-0x4522 and 0x1814. Not yet:
+0x4522, 0x1814 and
+0x2110/0x2111. Not yet:
 
 - [ ] Mice: 0x2202 extended DPI and 0x8061 extended report rate (newer mice, 2-8 kHz), 0x1B04
   special keys / divert (newer mice' buttons), 0x2121 hi-res wheel, 0x2130 ratchet wheel,
-  0x2110/0x2111 SmartShift (functions found; the wheel-mode byte not pinned down), 0x2240
-  surface tuning. 0x2230 angle snapping done.
+  0x2240 surface tuning. 0x2230 angle snapping and 0x2110/0x2111 SmartShift done (G HUB's mode
+  bytes 1 free spin / 2 ratchet, 0xFF always ratchet, torque; G HUB's speed slider maps to the
+  device value with per-model numbers we don't have, so ours shows the device's value 4-50).
 - [ ] Keyboards: 0x8071 RGB effects (newer lighting), 0x8020 M-keys and
   0x8030 MR (macro record) keys,
   0x4522 game mode done (the chosen keys stay off: ours, the keyboard can't report them),
