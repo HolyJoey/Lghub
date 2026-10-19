@@ -125,7 +125,11 @@ def key_region(x, y, width, height):
 	"""The region a key at (x, y) takes: by its third of the keyboard, sides by height, the middle
 	from the bottom centre."""
 	fx, fy = x / max(1, width), y / max(1, height)
-	row = 'TOP' if fy < 1 / 3 else 'MID' if fy < 2 / 3 else 'BOTTOM'
+	row = 'BOTTOM'
+	if fy < 1 / 3:
+		row = 'TOP'
+	elif fy < 2 / 3:
+		row = 'MID'
 	if fx < 1 / 3:
 		return f'{row}_LEFT'
 	if fx >= 2 / 3:

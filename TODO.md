@@ -4,7 +4,7 @@ Only what is still open. What works is in the README; how things were found is i
 comments. Checked against the device features G HUB's agent knows (its 212 `Feature####`
 classes, G HUB 2026.6) and its app features.
 
-## Progress (overall about 70%)
+## Progress (overall about 75%)
 
 The percentages are rough estimates of how much of each area's G HUB features Lghub has, not
 measurements.
@@ -15,7 +15,7 @@ measurements.
 | Blue VO!CE 2 (Yetis, G735) | 95% | check against Logitech's APO under Wine; check on a mic |
 | Surround, equalizer | 100% | check on the G Pro X |
 | PRO 5-band equalizer | 20% | runs on the headset's Conexant chip (see below); needs the G Pro X |
-| Mice | 80% | see "Mice" below |
+| Mice | 85% | see "Mice" below |
 | Keyboards | 75% | see "Keyboards" below |
 | Headsets (other than the voice chain) | 50% | see "Headsets" below |
 | Yeti controls | 65% | see "Mics" below |
@@ -77,10 +77,12 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 - **0x8030 MR key** (record a macro on the keyboard): needs the keystrokes, which Lghub can't
   read without input-device access.
 - **Analog keyboards**: 0x1B08 / 0x1B0C analog keys, 0x80A3 / 0x80A4 actuation curves.
-- **Not started**:
-  - 0x1B05 full key customization, 0x4540 layout, 0x4530 / 0x4531 multi-platform
-  - 0x4220 lock-key state, 0x4521 / 0x4523 disable keys / controls (older)
-  - 0x8051 Logi modifiers, 0x8088 multi-lightbar
+- **0x1B05 full key customization** (G HUB's "FKC": remap any key, per layer, with presets):
+  large; needs a keyboard that has it. Not started.
+- **Not started**: 0x4521 / 0x4523 disable keys / controls (older), 0x8051 Logi modifiers,
+  0x8088 multi-lightbar.
+- Left out on purpose: 0x4540 layout, 0x4530 / 0x4531 multi-platform, 0x4220 lock-key state;
+  G HUB's app has no setting for them.
 
 ### Headsets
 - **Centurion (G735, PRO X 2)**: features 0x06xx (mic mute 0x0601, sidetone 0x0604, ANC 0x0605,

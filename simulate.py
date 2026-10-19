@@ -182,18 +182,9 @@ class FakeWheelMouse(FakeMouse):
 		if feature == 0x2202:
 			return self._ext_dpi(fn, p)
 		if feature == 0x80E0:
-			if fn == 2:
-				self.bhop = p[0]
-			return bytes([self.bhop])
+			return self._bunny_hop(fn, p)
 		if feature == 0x8061:
-			if fn == 1:
-				return bytes([0, 0x7F])                 # 125 Hz to 8 kHz
-			if fn == 2:
-				return bytes([self.rate_n])
-			if fn == 3:
-				self.rate_n = p[0]
-			return b''
-
+			return self._rates(fn, p)
 		if feature == 0x2005:
 			if fn == 1:
 				self.swap = p[0]
@@ -211,6 +202,19 @@ class FakeWheelMouse(FakeMouse):
 		self.wheel = list(p[:3])
 		return bytes(self.wheel)
 
+	def _bunny_hop(self, fn, p):
+		if fn == 2:
+			self.bhop = p[0]
+		return bytes([self.bhop])
+
+	def _rates(self, fn, p):
+		if fn == 1:
+			return bytes([0, 0x7F])                 # 125 Hz to 8 kHz
+		if fn == 2:
+			return bytes([self.rate_n])
+		if fn == 3:
+			self.rate_n = p[0]
+		return b''
 
 	def _ext_dpi(self, fn, p):
 		if fn == 1:

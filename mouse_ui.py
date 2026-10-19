@@ -21,6 +21,7 @@ PAGES = (('sensitivity', 'Sensitivity', 'input-mouse-symbolic'),
 BUTTON_NAMES = ('Left button', 'Right button', 'Middle button (wheel click)', 'Back', 'Forward')
 ZONE_NAMES = {'primary': 'DPI indicator / main', 'branding': 'Logo'}
 NOTIFY_SELECTED = 'notify::selected'
+NOTIFY_ACTIVE = 'notify::active'
 
 # GDK key names -> HID keyboard usage names in mouse.KEY_NAMES.
 GDK_KEYS = {'Return': 'Enter', 'Escape': 'Esc', 'BackSpace': 'Backspace', 'Tab': 'Tab', 'space': 'Space',
@@ -281,7 +282,7 @@ class MouseView(Gtk.Box):
 			                  draw_value=False, sensitive=bool(levels[slot]))
 			spin = Gtk.SpinButton(adjustment=adj, numeric=True, width_chars=6, sensitive=bool(levels[slot]))
 			adj.connect('value-changed', lambda a, s=slot, sw=on: self._set_dpi(s, a, sw))
-			on.connect('notify::active', lambda w, _p, s=slot, a=adj, sc=scale, sp=spin: self._toggle_dpi(s, w, a, sc, sp))
+			on.connect(NOTIFY_ACTIVE, lambda w, _p, s=slot, a=adj, sc=scale, sp=spin: self._toggle_dpi(s, w, a, sc, sp))
 			check.set_sensitive(bool(levels[slot]))
 			r.append(scale)
 			r.append(spin)
@@ -368,7 +369,7 @@ class MouseView(Gtk.Box):
 		c = card('Buttons and tracking')
 		if 'swap' in self.state:
 			sw = Gtk.Switch(active=self.state['swap'], valign=Gtk.Align.CENTER)
-			sw.connect('notify::active', lambda w, _p: self._live(
+			sw.connect(NOTIFY_ACTIVE, lambda w, _p: self._live(
 				lambda on=w.get_active(): features.set_button_swap(self.mouse.dev, on)))
 			c.append(row('Left-handed (swap the main buttons)', sw))
 		if self.state.get('hybrid') is not None:
@@ -399,7 +400,7 @@ class MouseView(Gtk.Box):
 			value = round(scale.get_value() / 100) * 100 if sw.get_active() else 0
 			self._live(lambda: features.set_bunny_hopping(self.mouse.dev, value))
 
-		sw.connect('notify::active', apply)
+		sw.connect(NOTIFY_ACTIVE, apply)
 		scale.connect('value-changed', apply)
 		c.append(row('Bunny hopping', sw))
 		c.append(row('Timeout', scale))
@@ -427,7 +428,7 @@ class MouseView(Gtk.Box):
 			self._apply_wheel(mode, smart, auto, torque)
 
 		mode.connect(NOTIFY_SELECTED, apply)
-		smart.connect('notify::active', apply)
+		smart.connect(NOTIFY_ACTIVE, apply)
 		auto.connect('value-changed', apply)
 		c.append(row('Wheel', mode))
 		c.append(row('SmartShift', smart))
