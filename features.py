@@ -22,6 +22,7 @@ DISABLE_KEYS = 0x4522
 CHANGE_HOST = 0x1814
 HOSTS_INFO = 0x1815
 DEVICE_EQ = 0x8310
+BUTTON_SWAP, HYBRID_TRACKING, CHARGING = 0x2005, 0x2400, 0x1010
 
 NAMES = {
 	0x0000: 'Root', 0x0001: 'Feature set', 0x0002: 'Feature info', 0x0003: 'Firmware info',
@@ -205,6 +206,41 @@ def set_device_eq(dev, gains):
 
 def set_device_eq_on(dev, on):
 	dev.call(DEVICE_EQ, 5, bytes([1 if on else 0]))
+
+
+# Left-handed (0x2005 ButtonSwapCancel: fn 0 read, fn 1 SetSwapMode), hybrid tracking (0x2400:
+# fn 0 IsHybridEngineEnabled, fn 2 / fn 3 Get / SetHybridReportingMode, 0 = low latency,
+# 1 = power save as G HUB's ModeStatus.HybridType), charging control (0x1010: fn 0 / fn 1, on/off
+# as G HUB's ChargeControl). Function names from G HUB's log strings.
+HYBRID_MODES = ((0, 'Low latency'), (1, 'Power saving'))
+
+
+def button_swap(dev):
+	return bool(dev.call(BUTTON_SWAP, 0)[0])
+
+
+def set_button_swap(dev, on):
+	dev.call(BUTTON_SWAP, 1, bytes([1 if on else 0]))
+
+
+def hybrid_mode(dev):
+	"""The hybrid reporting mode, or None when the hybrid engine is off."""
+	if dev.call(HYBRID_TRACKING, 0)[0] != 1:
+		return None
+	mode = dev.call(HYBRID_TRACKING, 2)[0]
+	return mode if mode in (0, 1) else None
+
+
+def set_hybrid_mode(dev, mode):
+	dev.call(HYBRID_TRACKING, 3, bytes([mode]))
+
+
+def charging(dev):
+	return bool(dev.call(CHARGING, 0)[0])
+
+
+def set_charging(dev, on):
+	dev.call(CHARGING, 1, bytes([1 if on else 0]))
 
 
 # Easy-Switch (0x1814 ChangeHost): fn 0 = host count, current host; fn 1 = switch to a host. The

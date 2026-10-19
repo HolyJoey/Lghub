@@ -65,9 +65,12 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 - **0x8061 report rates (2-8 kHz)**: functions found; G HUB's rate number -> Hz mapping not.
 - **0x2202 extended DPI.**
 - **Not started**:
-  - 0x2240 surface tuning, 0x2005 left-handed button swap
-  - 0x2006 / 0x2205 pointer orientation and motion scaling, 0x2150 thumbwheel
-  - 0x2400 hybrid tracking, 0x80E0 bunny hopping, 0x8111 latency monitoring
+  - 0x2240 surface tuning (a calibration routine on the mouse pad)
+  - 0x2006 / 0x2205 pointer orientation and motion scaling (functions found, value ranges not),
+    0x2150 thumbwheel (the Linux driver already handles it)
+  - 0x80E0 bunny hopping (functions found; whether the byte is the switch or the timeout not),
+    0x8111 latency monitoring
+  - Done: 0x2005 left-handed, 0x2400 hybrid tracking.
   - 0x8120 gaming attachments
 - **Per-key lighting on mice** (if any have it) and 0x8071 inside onboard profiles.
 
@@ -107,8 +110,14 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 - **Pairing a device to a receiver**: newer LIGHTSPEED receivers pair through 0x1894
   (LightspeedDevicePairing, async in G HUB: function numbers not read yet); older ones through
   receiver registers.
-- **Not started**: sleep / power-off timers (0x8103 PowerOffTimeout / PowerSavingTimeout,
-  0x0108 AutoSleep), 0x1010 charging control.
+- **Sleep / power-off timers**: 0x8103 GlobalDeviceSettings is G HUB's tag protocol, shared with
+  the 0x8102 onboard profiles (FeatureTagManager):
+  - Functions mapped: fn 0 capabilities, fn 1 supported tag list, fn 2 tag capability,
+    fn 3 / fn 4 read a tag and its fragments, fn 5 sessions, fn 6 / fn 7 write a tag and its
+    fragments, fn 8 commit with a 32-bit check.
+  - Tags 1-3 and 16-19 cover power-off / power-saving timeouts and the screen settings.
+  - Left: each tag's byte format.
+- 0x0108 AutoSleep (Centurion headsets). 0x1010 charging control done.
 - Reconnection: Lghub checks every 60 s instead of listening for 0x1D4B (fine for settings;
   not instant).
 

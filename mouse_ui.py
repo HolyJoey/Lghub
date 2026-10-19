@@ -149,6 +149,10 @@ class MouseView(Gtk.Box):
 	def _connect(self):
 		m = mouse.Mouse(devices.open_hidpp(self.device), self.device.serial or self.device.id)
 		state = {'battery': features.battery(m.dev), 'wheel': m.wheel()}
+		if features.BUTTON_SWAP in m.features:
+			state['swap'] = features.button_swap(m.dev)
+		if features.HYBRID_TRACKING in m.features:
+			state['hybrid'] = features.hybrid_mode(m.dev)
 		if m.onboard:
 			m.load_profiles()
 			state['mode'] = m.mode()
@@ -250,6 +254,7 @@ class MouseView(Gtk.Box):
 		if not self.mouse.onboard:
 			self._live_sensitivity(page)
 			self._wheel_card(page)
+			self._tracking_card(page)
 			return
 		self._profile_picker(page)
 		p = self.profile
@@ -299,6 +304,7 @@ class MouseView(Gtk.Box):
 		c.append(row('Reports per second', dd))
 		page.append(c)
 		self._wheel_card(page)
+		self._tracking_card(page)
 
 	def _edit(self, change):
 		if self.loading:
@@ -351,6 +357,24 @@ class MouseView(Gtk.Box):
 			dd.connect(NOTIFY_SELECTED, lambda w, _p: self._live(lambda: self.mouse.set_rate(rates[w.get_selected()])))
 			c.append(row('Reports per second', dd))
 			page.append(c)
+
+	def _tracking_card(self, page):
+		if 'swap' not in self.state and self.state.get('hybrid') is None:
+			return
+		c = card('Buttons and tracking')
+		if 'swap' in self.state:
+			sw = Gtk.Switch(active=self.state['swap'], valign=Gtk.Align.CENTER)
+			sw.connect('notify::active', lambda w, _p: self._live(
+				lambda on=w.get_active(): features.set_button_swap(self.mouse.dev, on)))
+			c.append(row('Left-handed (swap the main buttons)', sw))
+		if self.state.get('hybrid') is not None:
+			modes = features.HYBRID_MODES
+			dd = Gtk.DropDown.new_from_strings([name for _v, name in modes])
+			dd.set_selected(next(i for i, (v, _n) in enumerate(modes) if v == self.state['hybrid']))
+			dd.connect(NOTIFY_SELECTED, lambda w, _p: self._live(
+				lambda mode=modes[w.get_selected()][0]: features.set_hybrid_mode(self.mouse.dev, mode)))
+			c.append(row('Hybrid tracking', dd))
+		page.append(c)
 
 	def _wheel_card(self, page):
 		w = self.state.get('wheel')

@@ -36,7 +36,8 @@ def row(title, widget):
 SIMPLE_READS = ((features.SIDETONE, 'sidetone', headset.sidetone),
                 (features.POLAR_PATTERN, 'patterns', features.polar_patterns),
                 (features.DEVICE_EQ, 'device_eq', features.device_eq),
-                (features.ANGLE_SNAPPING, 'angle_snapping', features.angle_snapping))
+                (features.ANGLE_SNAPPING, 'angle_snapping', features.angle_snapping),
+                (features.CHARGING, 'charging', features.charging))
 
 def report_rates(dev):
 	"""(rates the device offers in Hz, highest first; the current one) from 0x8060."""
@@ -201,9 +202,9 @@ class SettingsPanel(Gtk.Box):
 		                   ('sidetone', self._sidetone_card), ('patterns', self._pattern_card),
 		                   ('angle_snapping', self._angle_card), ('fn_inversion', self._fn_card),
 		                   ('game_mode', self._game_mode_card), ('hosts', self._hosts_card),
-		                   ('device_eq', self._device_eq_card),
+		                   ('device_eq', self._device_eq_card), ('charging', self._charging_card),
 		                   ('mode', self._mode_card)):
-			if info.get(key) not in (None, []):
+			if info.get(key) not in (None, []) or key == 'charging' and key in info:
 				cards.append(build(info))
 		if not cards and not self.quiet:
 			self.body.append(label('This device has no settings Lghub can change yet.', ['muted'], wrap=True))
@@ -283,6 +284,14 @@ class SettingsPanel(Gtk.Box):
 			sw = Gtk.Switch(active=usage in chosen, valign=Gtk.Align.CENTER)
 			sw.connect(NOTIFY_ACTIVE, lambda w, _p, u=usage: self.loading or self._game_key(u, w.get_active()))
 			c.append(row(f'Turn off {name}', sw))
+		return c
+
+	def _charging_card(self, info):
+		c = card('Charging', 'Let the device charge from this computer.')
+		sw = Gtk.Switch(active=info['charging'], valign=Gtk.Align.CENTER)
+		sw.connect(NOTIFY_ACTIVE, lambda w, _p: self.loading or self._do(
+			lambda on=w.get_active(): features.set_charging(self.dev, on)))
+		c.append(row('Charge', sw))
 		return c
 
 	def _device_eq_card(self, info):

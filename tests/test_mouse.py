@@ -100,3 +100,14 @@ class WheelTest(unittest.TestCase):
 		m.set_wheel(mouse.FREE_SPIN, 0, 30)
 		self.assertEqual(fake.wheel[0], 1)
 		self.assertIsNone(mouse.Mouse(hidpp.Device(simulate.FakeMouse()), 'g502').wheel())
+
+	def test_swap_and_hybrid(self):
+		import features
+		fake = simulate.FakeWheelMouse()
+		dev = hidpp.Device(fake)
+		self.assertFalse(features.button_swap(dev))
+		features.set_button_swap(dev, True)
+		self.assertEqual(fake.swap, 1)
+		self.assertEqual(features.hybrid_mode(dev), 0)
+		features.set_hybrid_mode(dev, 1)
+		self.assertEqual(features.hybrid_mode(dev), 1)
