@@ -90,7 +90,7 @@ class SettingsPanel(Gtk.Box):
 		if features.ONBOARD in have:
 			info['mode'] = dev.call(features.ONBOARD, 2)[0]
 		saved = perkey_ui.load_colors(self.device.model.key)
-		if perkey.PERKEY in have and saved:
+		if (perkey.PERKEY in have or perkey.PERKEY_V1 in have) and saved:
 			perkey.apply(dev, saved)   # ours: the saved colours go back on when the keyboard connects
 		self.dev = dev
 		return info

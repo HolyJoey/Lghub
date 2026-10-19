@@ -219,6 +219,32 @@ class FakeKeyboard(FakeMouse):
 		return b''
 
 
+class FakeKeyboardV1(FakeKeyboard):
+	"""A G810-like keyboard: per-key lighting over 0x8080 (keyboard keys, media keys, logo)."""
+	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, 0x8080]
+
+	def __init__(self):
+		super().__init__()
+		self.keys, self.pending, self.persisted = {}, {}, None
+
+	def handle(self, feature, fn, p):
+		if feature != 0x8080:
+			return super().handle(feature, fn, p)
+		if fn == 0:
+			return struct.pack('>H', 0x13)         # keyboard, consumer, logo
+		if fn == 3:
+			kind, count = struct.unpack('>HH', p[:4])
+			for i in range(count):
+				key, r, g, b = p[4 + 4 * i:8 + 4 * i]
+				self.pending[(kind, key)] = (r, g, b)
+			return b''
+		if fn == 5:
+			self.keys.update(self.pending)
+			self.pending = {}
+			self.persisted = bool(p[0])
+		return b''
+
+
 class FakeYeti(FakeMouse):
 	"""A Yeti X-like microphone: polar pattern (0x8330), all four patterns."""
 	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, features.POLAR_PATTERN]

@@ -15,8 +15,8 @@ import struct
 import threading
 import time
 
-SHORT, LONG = 0x10, 0x11
-SIZES = {SHORT: 7, LONG: 20}
+SHORT, LONG, VERY_LONG = 0x10, 0x11, 0x12
+SIZES = {SHORT: 7, LONG: 20, VERY_LONG: 64}
 CORDED = 0xFF
 SW_ID = 0x0A           # ours; notifications from the device carry 0
 TIMEOUT = 1.0
@@ -97,6 +97,8 @@ class Device:
 		"""Send one request and return the 16 parameter bytes of the answer."""
 		func_sw = (function << 4) | SW_ID
 		report = SHORT if SHORT in self.reports and len(params) <= SIZES[SHORT] - 4 else LONG
+		if len(params) > SIZES[LONG] - 4 and VERY_LONG in self.reports:
+			report = VERY_LONG
 		msg = bytes([report, self.index, feature_index, func_sw]) + bytes(params)
 		msg = msg.ljust(SIZES[report], b'\0')[:SIZES[report]]
 		with self.transport.lock:
@@ -237,7 +239,7 @@ def hidraw_for(usb_port):
 		except OSError:
 			continue
 		if vendor and (LONG in ids or SHORT in ids):
-			found.append((f'/dev/{name}', ids & {SHORT, LONG}))
+			found.append((f'/dev/{name}', ids & {SHORT, LONG, VERY_LONG}))
 	return found
 
 

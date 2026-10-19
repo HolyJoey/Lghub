@@ -102,3 +102,24 @@ class PerKeyTest(unittest.TestCase):
 		self.assertEqual(kb.keys[0xB4], (1, 2, 3))
 		self.assertEqual(len(kb.keys), 11)
 		self.assertTrue(kb.persisted)
+
+
+class PerKeyV1Test(unittest.TestCase):
+	def test_apply_8080(self):
+		kb = simulate.FakeKeyboardV1()
+		dev = hidpp.Device(kb, reports={hidpp.LONG, hidpp.VERY_LONG})
+		colors = {f'PERKEY_KEYBOARD:{k}': [k, 1, 2] for k in range(4, 34)}   # 30 keys: 3 requests of <= 14
+		colors['PERKEY_BRANDING:1'] = [9, 9, 9]
+		colors['PERKEY_GKEY:1'] = [7, 7, 7]          # the keyboard has no G-keys: left out
+		self.assertEqual(perkey.apply(dev, colors), 31)
+		self.assertEqual(kb.keys[(0x01, 4)], (4, 1, 2))
+		self.assertEqual(kb.keys[(0x01, 33)], (33, 1, 2))
+		self.assertEqual(kb.keys[(0x10, 1)], (9, 9, 9))
+		self.assertNotIn((0x04, 1), kb.keys)
+		self.assertTrue(kb.persisted)
+
+	def test_long_reports_only(self):
+		kb = simulate.FakeKeyboardV1()
+		dev = hidpp.Device(kb, reports={hidpp.LONG})
+		self.assertEqual(perkey.apply(dev, {f'PERKEY_KEYBOARD:{k}': [1, 2, 3] for k in range(4, 11)}), 7)
+		self.assertEqual(len(kb.keys), 7)

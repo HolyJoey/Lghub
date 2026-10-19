@@ -37,7 +37,7 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 - **HID++ lighting (0x8070)**: effect parameter bytes and the persist flag; the current effect
   isn't read back (the page starts at the first effect).
 
-## Progress on the open work (overall about 70%)
+## Progress on the open work (overall about 72%)
 
 | Item | Done | What's left |
 | --- | --- | --- |
@@ -45,7 +45,7 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 | Headsets' own EQ presets | 100% | — |
 | Background service idle cost | 90% | 0.2% of a core now; the engine loop and the link monitor remain |
 | Macros on buttons and G-keys | 85% | DPI/profile macro actions; 0x1B04 divert for newer mice; hardware check |
-| Per-key lighting | 90% | 0x8081 done (G HUB's zone table, colours back on at connect); 0x8080 for older keyboards; hardware check |
+| Per-key lighting | 95% | 0x8081 and 0x8080 done; hardware check |
 | Blue VO!CE 2 (Yetis, G735) | 90% | presets, every setting, voice effects done; inputGain, Wine check, hardware check |
 | Yeti controls | 50% | polar pattern (0x8330) done; mic monitoring 0x8350, headphone 0x8360, gain/mute 0x8370 over HID++ (gain and headphone volume work through the sound card) |
 | Keyboard onboard profiles | 5% | format from G HUB's agent |
@@ -63,8 +63,11 @@ Details:
   then FrameEnd (fn 7: persistence, 0, 0). Key -> zone is G HUB's built-in table (keyboard usage
   -3/-0x24/-0x78, G-keys +0xB3, logo +0xD1, indicators +0x98/+0x93, media keys); a device's
   `light_map` resource could override it, none of our depots ships one. Restoring the colours
-  when the keyboard connects is ours. **Check on a G815/G915**: keys light where drawn; 0x8080
-  (G910/G810) still to do.
+  when the keyboard connects is ours. 0x8080 (G910/G810/G410) as G HUB drives it: SetKeyColors
+  (fn 3: key type bit, count, key/r/g/b x up to 14 in a 64-byte report), Flush (fn 5); key type
+  bits from G HUB's firmware_lighting PerKey.Type; which layout group gets which type is per
+  device in G HUB's config, ours goes by the names. **Check on a G815/G915 and a G810**: keys
+  light where drawn.
 - **Blue VO!CE 2** (`logi_audio_dts_clearvoice_2_capture_apo.dll`, fetched at install):
   `bridge/bv2.c` runs the DSP natively, `bluevoice-bridge --engine bv2` around it. G HUB's
   setting names (BlueVoice2.Settings) -> pids from the agent's APO <-> settings code, checked
@@ -93,12 +96,12 @@ Details:
 
 Checked against the device features G HUB's agent knows (its `Feature####` classes) and its
 app features. Lghub handles 0x0000-0x0005, battery (0x1000/0x1001/0x1004), 0x2201 DPI, 0x8040,
-0x8060, 0x8070, 0x8081, 0x8100, 0x8110, 0x8010, 0x8300 and 0x8330. Not yet:
+0x8060, 0x8070, 0x8080, 0x8081, 0x8100, 0x8110, 0x8010, 0x8300 and 0x8330. Not yet:
 
 - [ ] Mice: 0x2202 extended DPI and 0x8061 extended report rate (newer mice, 2-8 kHz), 0x1B04
   special keys / divert (newer mice' buttons), 0x2121 hi-res wheel, 0x2130 ratchet wheel,
   0x2110/0x2111 SmartShift, 0x2230 angle snapping, 0x2240 surface tuning.
-- [ ] Keyboards: 0x8071 RGB effects (newer lighting), 0x8080 per-key (older), 0x8020 M-keys and
+- [ ] Keyboards: 0x8071 RGB effects (newer lighting), 0x8020 M-keys and
   0x8030 MR (macro record) keys, 0x4522 game mode (disable keys), 0x40A3 Fn inversion,
   0x1B08 analog keys / 0x80A4 actuation curves (analog keyboards).
 - [ ] Headsets: 0x8305 bass tone, 0x8310 device EQ, 0x8320 jack detection, 0x1F20 battery for
