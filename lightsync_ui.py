@@ -36,7 +36,15 @@ def card(model, restore, per_key=True):
 	echo = _color_button(settings.get('echo', [255, 255, 255]))
 	rest = _color_button(settings.get('rest', [0, 0, 0]))
 	echo_speed = _slider(*softlight.STAR_SPEED, settings.get('speed', 1000), ' ms')
-	rows = {'audio': [('Colour', color)], 'screen': [('Colour boost', boost), ('Smoothing', smoothing)],
+	regions = Gtk.Button(label='Edit regions')
+
+	def edit_regions(_b):
+		import region_editor
+		region_editor.RegionEditor(regions.get_root(), model, per_key).present()
+
+	regions.connect('clicked', edit_regions)
+	rows = {'audio': [('Colour', color)],
+	        'screen': [('Colour boost', boost), ('Smoothing', smoothing), ('Screen regions', regions)],
 	        'starlight': [('Star colour', star), ('Sky colour', sky), ('Stars', count), ('Speed', speed)],
 	        'cycle': [('Speed', cycle_speed)],
 	        'echo': [('Echo colour', echo), ('Rest colour', rest), ('Fade', echo_speed)]}
@@ -58,7 +66,8 @@ def card(model, restore, per_key=True):
 		kind = show()
 		data = lightsync.load()
 		values = {'audio': lambda: {'color': _rgb(color)},
-		          'screen': lambda: {'color_boost': round(boost.get_value()), 'smoothing': smoothing.get_active()},
+		          'screen': lambda: {'color_boost': round(boost.get_value()), 'smoothing': smoothing.get_active(),
+		                             'regions': data.get(model, {}).get('regions', {})},
 		          'starlight': lambda: {'star': _rgb(star), 'sky': _rgb(sky), 'count': round(count.get_value()),
 		                                'speed': round(speed.get_value())},
 		          'cycle': lambda: {'speed': round(cycle_speed.get_value())},

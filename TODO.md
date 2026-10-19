@@ -139,8 +139,8 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 ### Lighting
 - **LIGHTSYNC screen sampler**: works on wlroots compositors (grim). GNOME and KDE need Wayland's
   screen-sharing portal and GStreamer's pipewiresrc (permission prompt, PipeWire video stream).
-  Keyboards now use G HUB's own regions and key map (screen_sampler-kb.json). Its region editor
-  isn't built.
+  Keyboards now use G HUB's own regions and key map (screen_sampler-kb.json); its region editor
+  is built too (move / resize G HUB's regions; adding new regions isn't).
 - **Software effects done**: G HUB's own animations (Verticool, Contrastic, Ocean Wave, Lightning,
   Red White and Blue: its keyframe files, downloaded at first use), Starlight, Colour cycle
   and Echo press (key presses read from the keyboard's own reports: ours) with G HUB's settings.

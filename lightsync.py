@@ -153,6 +153,22 @@ def ghub_sampler(data):
 	return regions, keys
 
 
+def sampler_regions(per_key):
+	"""{region id: (G HUB's name, (left, top, right, bottom))} from G HUB's sampler file for
+	keyboards or zonal devices; {} if it isn't downloaded. Blocks the first time."""
+	import json
+	import softlight
+	path = softlight.fetch(softlight.EFFECTS_DIR + ('screen_sampler-kb.json' if per_key else 'screen_sampler.json'))
+	try:
+		with open(path) as f:
+			data = json.load(f)
+	except (OSError, TypeError, ValueError):
+		return {}
+	regions, _keys = ghub_sampler(data)
+	names = {rid: r.get('name', rid) for rid, r in data.get('screen_sampler_info', {}).get('region_map', {}).items()}
+	return {rid: (names.get(rid, rid), rect) for rid, rect in regions.items()}
+
+
 def ghub_zones(path):
 	"""{G HUB zone name: region} from its zonal screen sampler file."""
 	import json
@@ -296,6 +312,7 @@ class ScreenSampler(Visualizer):
 		super().__init__(dev, model, None)
 		self.boost = max(0, min(100, settings.get('color_boost', 0))) * 3 / 100
 		self.smoothing = settings.get('smoothing', False)
+		self.custom = settings.get('regions', {})      # region id -> [left, top, right, bottom] (editor)
 
 	def start(self):
 		if not self.target:
@@ -315,6 +332,7 @@ class ScreenSampler(Visualizer):
 				regions, keys = ghub_sampler(json.load(f))
 		except (OSError, TypeError, ValueError):
 			return None, None
+		regions.update({rid: tuple(r) for rid, r in self.custom.items() if rid in regions})
 		if self.target.zonal:
 			by_name = ghub_zones(path)
 			keys = {k: by_name[z[3]] for k, z in self.target.fixed.items() if z[3] in by_name}
