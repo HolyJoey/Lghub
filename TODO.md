@@ -4,7 +4,7 @@ Only what is still open. What works is in the README; how things were found is i
 comments. Checked against the device features G HUB's agent knows (its 212 `Feature####`
 classes, G HUB 2026.6) and its app features.
 
-## Progress (overall about 80%)
+## Progress (overall about 82%)
 
 The percentages are rough estimates of how much of each area's G HUB features Lghub has, not
 measurements.
@@ -15,13 +15,13 @@ measurements.
 | Blue VO!CE 2 (Yetis, G735) | 95% | check against Logitech's APO under Wine; check on a mic |
 | Surround, equalizer | 100% | check on the G Pro X |
 | PRO 5-band equalizer | 20% | runs on the headset's Conexant chip (see below); needs the G Pro X |
-| Mice | 90% | see "Mice" below |
+| Mice | 92% | see "Mice" below |
 | Keyboards | 78% | see "Keyboards" below |
 | Headsets (other than the voice chain) | 55% | see "Headsets" below |
 | Yeti controls | 100% | check on a Yeti |
 | Webcams | 90% | check on the C920 |
 | Wireless (receivers, power) | 75% | see "Wireless and power" below |
-| Lighting | 92% | screen sampler on GNOME / KDE; per-key on mice |
+| Lighting | 95% | screen sampler on GNOME / KDE; per-key on mice |
 | App features | 75% | see "App" below |
 | Background service | 90% | re-measure CPU and memory with the current version installed |
 
@@ -146,7 +146,9 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   and Echo press (key presses read from the keyboard's own reports: ours) with G HUB's settings.
   Not yet: Smooth star / wave and G HUB's
   other "signature" effects, the keyframe editor (Freestyle). Effects on zonal devices done
-  (starlight, colour cycle, audio, screen sampler with G HUB's zone regions).
+  (starlight, colour cycle, audio, screen sampler with G HUB's zone regions). Per-key frames use
+  G HUB's single-value call for shared colours; its delta-compressed calls (0x8081 fn 3 / 4) aren't
+  used yet: check animation smoothness on a real keyboard first.
 
 ### App
 - Low-battery notifications done (G HUB's LOW 30 % / CRITICAL 15 %; checking every 5 minutes is

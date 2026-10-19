@@ -179,6 +179,18 @@ class GameModeV1Test(unittest.TestCase):
 		self.assertEqual(fake.disabled, 0x11)
 
 
+class SingleValueTest(unittest.TestCase):
+	def test_shared_colour_in_one_go(self):
+		fake = simulate.FakeKeyboard()
+		dev = hidpp.Device(fake)
+		colors = {f'PERKEY_KEYBOARD:{k}': [10, 20, 30] for k in range(4, 30)}
+		colors['PERKEY_KEYBOARD:30'] = [1, 2, 3]
+		perkey.apply(dev, colors, persist=False)
+		self.assertEqual(fake.calls, 2)                               # 26 keys, 13 per message
+		self.assertEqual(len(fake.keys), 27)
+		self.assertIn((1, 2, 3), fake.keys.values())
+
+
 class PerKeyV1Test(unittest.TestCase):
 	def test_apply_8080(self):
 		kb = simulate.FakeKeyboardV1()

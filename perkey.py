@@ -48,8 +48,11 @@ def save_colors(model, colors):
 
 PERKEY = 0x8081
 PERKEY_V1 = 0x8080
-SET_INDIVIDUAL, FRAME_END = 1, 7
+SET_INDIVIDUAL, SET_SINGLE_VALUE, FRAME_END = 1, 6, 7
 PER_REPORT = 4
+# G HUB's SetRgbZonesSingleValue (fn 6): [r, g, b, zone ids...], one colour for up to 13 zones; a
+# colour shared by this many keys or more goes that way (ours)
+SINGLE_MAX, SINGLE_FROM = 13, 4
 
 # G HUB's PerKey.Type values (lighting_support.proto)
 KEYBOARD, CONSUMER, GKEY, BRANDING, INDICATOR = 1, 2, 4, 16, 32
@@ -131,7 +134,17 @@ def apply(dev, colors, persist=True):
 	"""Send the colours and end the frame. persist is G HUB's FrameEnd persistence flag."""
 	if not dev.has(PERKEY) and dev.has(PERKEY_V1):
 		return apply_v1(dev, colors, persist)
-	entries = zones(colors)
+	by_color = {}
+	for e in zones(colors):
+		by_color.setdefault(tuple(e[1:]), []).append(e)
+	entries = []
+	for rgb, group in by_color.items():
+		if len(group) < SINGLE_FROM:
+			entries += group
+			continue
+		ids = [e[0] for e in group]
+		for i in range(0, len(ids), SINGLE_MAX):
+			dev.call(PERKEY, SET_SINGLE_VALUE, bytes(rgb) + bytes(ids[i:i + SINGLE_MAX]))
 	for i in range(0, len(entries), PER_REPORT):
 		batch = entries[i:i + PER_REPORT]
 		reply = dev.call(PERKEY, SET_INDIVIDUAL, b''.join(bytes(e) for e in batch))

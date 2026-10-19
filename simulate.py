@@ -353,6 +353,12 @@ class FakeKeyboard(FakeMouse):
 				if p[i]:
 					self.pending[p[i]] = tuple(p[i + 1:i + 4])
 			return bytes(p[:16])
+		if fn == 6:   # SetRgbZonesSingleValue: r, g, b, then zone ids
+			for zone in p[3:16]:
+				if zone:
+					self.pending[zone] = tuple(p[:3])
+			self.calls = getattr(self, 'calls', 0) + 1
+			return b''
 		if fn == 7:   # FrameEnd
 			self.keys.update(self.pending)
 			self.pending = {}
