@@ -99,6 +99,8 @@ class SettingsPanel(Gtk.Box):
 		have = info['features']
 		if features.COLOR_LED_EFFECTS in have:
 			info['zones'] = features.zones(dev)
+		elif features.RGB_EFFECTS in have:
+			info['zones'] = features.zones_v2(dev)
 		if features.BRIGHTNESS in have:
 			info['brightness'] = features.brightness(dev)
 		if features.REPORT_RATE in have:
@@ -340,7 +342,7 @@ class SettingsPanel(Gtk.Box):
 			rgb = color.get_rgba()
 			params = features.effect_params(eid, tuple(round(v * 255) for v in (rgb.red, rgb.green, rgb.blue)),
 			                                speed.get_value() * 1000, bright.get_value())
-			self._do(lambda: features.set_effect(self.dev, zone.index, index, params))
+			self._do(lambda: features.set_effect(self.dev, zone.index, index, params, feature=zone.feature))
 		effect_dd.connect(NOTIFY_SELECTED, apply)
 		color.connect('notify::rgba', apply)
 		speed.connect('value-changed', apply)

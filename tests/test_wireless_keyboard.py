@@ -95,6 +95,18 @@ class HeadsetEqTest(unittest.TestCase):
 		self.assertFalse(features.device_eq(dev)['on'])
 
 
+class RgbEffectsTest(unittest.TestCase):
+	def test_8071(self):
+		m = simulate.FakeRgbMouse()
+		dev = hidpp.Device(m)
+		zones = features.zones_v2(dev)
+		self.assertEqual([(z.name, z.feature) for z in zones], [('Main', 0x8071), ('Logo', 0x8071)])
+		self.assertIn((1, features.BREATHING), zones[0].effects)
+		params = features.effect_params(features.FIXED, (1, 2, 3))
+		features.set_effect(dev, 1, 0, params, feature=zones[1].feature)
+		self.assertEqual(m.set[1], (0, params, 1))
+
+
 class YetiTest(unittest.TestCase):
 	def test_polar_pattern(self):
 		yeti = simulate.FakeYeti()

@@ -342,6 +342,28 @@ class FakeEqHeadset(FakeMouse):
 		return b''
 
 
+class FakeRgbMouse(FakeMouse):
+	"""A newer mouse with 0x8071 RGB effects: two clusters (primary, logo), three effects each."""
+	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, 0x8071]
+	EFFECTS = (features.FIXED, features.BREATHING, features.CYCLE)
+
+	def __init__(self):
+		super().__init__('G502 X PLUS')
+		self.set = {}
+
+	def handle(self, feature, fn, p):
+		if feature != 0x8071:
+			return super().handle(feature, fn, p)
+		if fn == 0:
+			if p[0] == 0xFF:
+				return bytes([0xFF, 0xFF, 2])
+			if p[1] == 0xFF:
+				return bytes([p[0], 0xFF]) + struct.pack('>H', 1 if p[0] == 0 else 2) + bytes([3])
+			return bytes([p[0], p[1]]) + struct.pack('>H', self.EFFECTS[p[1]])
+		self.set[p[0]] = (p[1], bytes(p[2:12]), p[12])
+		return b''
+
+
 class FakeYeti(FakeMouse):
 	"""A Yeti X-like microphone: polar pattern (0x8330), all four patterns."""
 	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, features.POLAR_PATTERN]

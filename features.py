@@ -79,6 +79,7 @@ class Zone:
 	index: int
 	location: int
 	effects: list = field(default_factory=list)   # [(effect index, effect id)]
+	feature: int = COLOR_LED_EFFECTS              # 0x8070, or 0x8071 on newer devices
 
 	@property
 	def name(self):
@@ -99,6 +100,22 @@ def zones(dev):
 	return found
 
 
+def zones_v2(dev):
+	"""The same from 0x8071 RGB effects, as G HUB's Feature8071RGBEffects asks: fn 0 with (0xFF,
+	0xFF) = device info (byte 2 = cluster count), (cluster, 0xFF) = cluster info (location,
+	effect count), (cluster, effect) = effect info (its id)."""
+	count = dev.call(RGB_EFFECTS, 0, bytes([0xFF, 0xFF, 0]))[2]
+	found = []
+	for c in range(count):
+		r = dev.call(RGB_EFFECTS, 0, bytes([c, 0xFF, 0]))
+		zone = Zone(c, struct.unpack('>H', r[2:4])[0], feature=RGB_EFFECTS)
+		for e in range(r[4]):
+			info = dev.call(RGB_EFFECTS, 0, bytes([c, e, 0]))
+			zone.effects.append((e, struct.unpack('>H', info[2:4])[0]))
+		found.append(zone)
+	return found
+
+
 def effect_params(effect_id, color=(255, 255, 255), period=3000, brightness=100):
 	"""The 10 parameter bytes of an effect; same layouts as onboard profile lighting."""
 	r, g, b = color
@@ -115,8 +132,11 @@ def effect_params(effect_id, color=(255, 255, 255), period=3000, brightness=100)
 	return data.ljust(10, b'\0')
 
 
-def set_effect(dev, zone, effect_index, params, persist=True):
-	dev.call(COLOR_LED_EFFECTS, 3, bytes([zone, effect_index]) + params + bytes([1 if persist else 0]))
+def set_effect(dev, zone, effect_index, params, persist=True, feature=COLOR_LED_EFFECTS):
+	"""0x8070 fn 3, or 0x8071 fn 1 (SetEffectByIndex: cluster, effect, then the parameters; that
+	they take 0x8070's parameter bytes and persist flag is ours)."""
+	fn = 1 if feature == RGB_EFFECTS else 3
+	dev.call(feature, fn, bytes([zone, effect_index]) + params + bytes([1 if persist else 0]))
 
 
 # --- polar pattern (0x8330, Yeti mics) -----------------------------------------------------
