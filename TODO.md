@@ -21,7 +21,7 @@ measurements.
 | Yeti controls | 100% | check on a Yeti |
 | Webcams | 90% | check on the C920 |
 | Wireless (receivers, power) | 75% | see "Wireless and power" below |
-| Lighting | 90% | screen sampler on GNOME / KDE; per-key on mice |
+| Lighting | 92% | screen sampler on GNOME / KDE; per-key on mice |
 | App features | 75% | see "App" below |
 | Background service | 90% | re-measure CPU and memory with the current version installed |
 
@@ -139,8 +139,12 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 ### Lighting
 - **LIGHTSYNC screen sampler**: works on wlroots compositors (grim). GNOME and KDE need Wayland's
   screen-sharing portal and GStreamer's pipewiresrc (permission prompt, PipeWire video stream).
-  G HUB's default region rectangles and its region editor: not found / not built (ours are
-  thirds of the screen).
+  Keyboards now use G HUB's own regions and key map (screen_sampler-kb.json). Its region editor
+  isn't built.
+- **Software effects done**: G HUB's own animations (Verticool, Contrastic, Ocean Wave, Lightning,
+  Red White and Blue: its keyframe files, downloaded at first use), Starlight and Colour cycle
+  with G HUB's settings. Not yet: Echo press (needs key presses), Smooth star / wave and G HUB's
+  other "signature" effects, the keyframe editor (Freestyle), effects on zonal devices.
 
 ### App
 - Low-battery notifications done (G HUB's LOW 30 % / CRITICAL 15 %; checking every 5 minutes is

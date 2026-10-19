@@ -97,11 +97,11 @@ def parse_ppm(data):
 	return int(parts[1]), int(parts[2]), parts[4]
 
 
-def region_colors(width, height, pixels, step=SAMPLE_STEP):
+def region_colors(width, height, pixels, step=SAMPLE_STEP, regions=None):
 	"""{region: [r, g, b]}: the average of every step-th pixel in each region."""
 	out = {}
 	stride = width * 3
-	for name, (left, top, right, bottom) in REGIONS.items():
+	for name, (left, top, right, bottom) in (regions or REGIONS).items():
 		x0, x1 = int(left * width), max(int(left * width) + 1, int(right * width))
 		y0, y1 = int(top * height), max(int(top * height) + 1, int(bottom * height))
 		sums, count = [0, 0, 0], 0
@@ -135,6 +135,21 @@ def key_region(x, y, width, height):
 	if fx >= 2 / 3:
 		return f'{row}_RIGHT'
 	return 'BOTTOM_CENTER'
+
+
+def ghub_sampler(data):
+	"""(regions, {key: region}) from G HUB's screen_sampler-kb.json: its regions are insets from
+	each edge of the screen, and each key names the region it takes."""
+	info = data.get('screen_sampler_info', {})
+	regions = {}
+	for rid, r in info.get('region_map', {}).items():
+		regions[rid] = (r.get('left', 0), r.get('top', 0), 1 - r.get('right', 0), 1 - r.get('bottom', 0))
+	keys = {}
+	for group, slot in info.get('lighting_slots', {}).get('info_map', {}).items():
+		for kid, c in slot.get('perKeyMap', {}).get('colorCodeMap', {}).items():
+			if c.get('tag') in regions:
+				keys[f'{group}:{kid}'] = c['tag']
+	return regions, keys
 
 
 def sampler_frame(layout, colors):
@@ -203,12 +218,32 @@ class ScreenSampler(Visualizer):
 		self.thread.start()
 		return True
 
+	def _ghub_regions(self):
+		"""G HUB's regions and key map for keyboards, or (None, None) to use ours."""
+		import json
+		import softlight
+		path = softlight.fetch(softlight.EFFECTS_DIR + 'screen_sampler-kb.json')
+		try:
+			with open(path) as f:
+				regions, keys = ghub_sampler(json.load(f))
+		except (OSError, TypeError, ValueError):
+			return None, None
+		present = {f'{g}:{k}' for g, k, *_r in self.layout[2]}
+		keys = {k: r for k, r in keys.items() if k in present}
+		return (regions, keys) if regions and keys else (None, None)
+
+	def _frame(self, colors, keys):
+		if keys:
+			return {k: colors[r] for k, r in keys.items() if r in colors}
+		return sampler_frame(self.layout, colors)
+
 	def _run(self):
 		shown = None
+		regions, keys = self._ghub_regions()
 		while not self.stop_event.wait(1 / SCREEN_FPS):
 			try:
 				shot = subprocess.run(['grim', '-t', 'ppm', '-'], capture_output=True, timeout=5, check=True).stdout
-				colors = region_colors(*parse_ppm(shot))
+				colors = region_colors(*parse_ppm(shot), regions=regions)
 			except (OSError, subprocess.SubprocessError, ValueError):
 				print('lightsync: screen sampler needs grim (wlroots compositors)', flush=True)
 				return
@@ -219,9 +254,65 @@ class ScreenSampler(Visualizer):
 				continue
 			shown = colors
 			try:
-				perkey.apply(self.dev, sampler_frame(self.layout, colors), persist=False)
+				perkey.apply(self.dev, self._frame(colors, keys), persist=False)
 			except OSError:
 				return
+
+
+class Animated(Visualizer):
+	"""Streams one of softlight's effects (G HUB's keyframe effects, Starlight, Color cycle)."""
+
+	def __init__(self, dev, model, settings):
+		super().__init__(dev, model, None)
+		self.settings = settings
+
+	def make(self):
+		import json
+		import softlight
+		s = self.settings
+		keys = softlight.layout_keys(self.layout)
+		if s['effect'] == 'starlight':
+			return softlight.Starlight(keys, s.get('star', (255, 255, 255)), s.get('sky', (0, 0, 40)),
+			                           s.get('count', 50), s.get('speed', 2000))
+		if s['effect'] == 'cycle':
+			return softlight.ColorCycle(keys, s.get('colors') or softlight.CYCLE_COLORS, s.get('speed', 5000))
+		path = softlight.fetch(softlight.EFFECTS_DIR + s.get('file', ''))
+		with open(path) as f:
+			frames, speed, direction = softlight.parse_keyframes(json.load(f))
+		present = set(keys)
+		frames = [(n, c, {k: v for k, v in colors.items() if k in present}) for n, c, colors in frames]
+		return softlight.Keyframes(frames, speed, direction) if frames else None
+
+	def start(self):
+		if not self.layout:
+			return False
+		self.thread = threading.Thread(target=self._run, daemon=True)
+		self.thread.start()
+		return True
+
+	def _run(self):
+		try:
+			effect = self.make()
+		except (OSError, TypeError, ValueError, KeyError):
+			effect = None
+		if effect is None:
+			print('lightsync: effect not available', flush=True)
+			return
+		start = time.monotonic()
+		shown = None
+		while not self.stop_event.wait(1 / FPS):
+			colors = effect.frame(time.monotonic() - start)
+			changed = {k: c for k, c in colors.items() if not shown or shown.get(k) != c}
+			shown = colors
+			if not changed:
+				continue
+			try:
+				perkey.apply(self.dev, changed, persist=False)
+			except OSError:
+				return
+
+
+ANIMATED = ('keyframe', 'starlight', 'cycle')
 
 
 def devices_open(device):
@@ -249,7 +340,7 @@ class Runner:
 	def check(self, now):
 		import devices
 		self.last = now
-		wanted = {m: s for m, s in load().items() if s.get('effect') in ('audio', 'screen')}
+		wanted = {m: s for m, s in load().items() if s.get('effect') in ('audio', 'screen') + ANIMATED}
 		if not wanted and not self.running:
 			return
 		present = {d.id: d for d in devices.discover()}
@@ -278,6 +369,8 @@ class Runner:
 			return
 		if settings['effect'] == 'screen':
 			visualizer = ScreenSampler(dev, device.model.key, settings)
+		elif settings['effect'] in ANIMATED:
+			visualizer = Animated(dev, device.model.key, settings)
 		else:
 			visualizer = Visualizer(dev, device.model.key, settings.get('color', [0, 140, 255]))
 		if visualizer.start():

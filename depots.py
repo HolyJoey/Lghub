@@ -142,6 +142,31 @@ def _files(url):
 	return files
 
 
+def files_cached(url):
+	"""_files(url), kept in the image folder after the first time: listing a large depot takes a
+	request per file (over a minute for G HUB's core depot). The header's own bytes tell whether
+	the depot changed."""
+	import hashlib
+	magic, header_len = struct.unpack('<II', _get(url, 0, 8))
+	if magic != MAGIC:
+		raise ValueError('not a G HUB depot')
+	stamp = hashlib.sha256(_get(url, 8, header_len)).hexdigest()
+	path = os.path.join(store.IMAGE_DIR, 'depot-' + hashlib.sha256(url.encode()).hexdigest()[:16] + '.json')
+	try:
+		with open(path) as f:
+			cached = json.load(f)
+		if cached.get('stamp') == stamp:
+			return {k: tuple(v) for k, v in cached['files'].items()}
+	except (OSError, ValueError, KeyError, AttributeError):
+		pass
+	files = _files(url)
+	os.makedirs(store.IMAGE_DIR, exist_ok=True)
+	with open(path + '.tmp', 'w') as f:
+		json.dump({'stamp': stamp, 'files': files}, f)
+	os.replace(path + '.tmp', path)
+	return files
+
+
 def _manifest_choice(model, manifest, files):
 	for device in manifest.get('devices', []):
 		if device.get('modelId') != model:
