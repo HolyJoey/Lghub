@@ -221,17 +221,8 @@ class Manager:
 		if not data and not self.running:
 			return
 		lib = macros.library()
-		found = {}
-		for d in devices.discover():
-			if d.model.type == 'receiver':
-				try:
-					for p in devices.scan_receiver(d):
-						found[p.id] = p
-				except OSError:
-					continue
-			else:
-				found[d.id] = d
-		for dev_id in list(self.running):
+		found = self._connected(devices)
+		for dev_id in tuple(self.running):
 			d = found.get(dev_id)
 			wanted = resolve(data.get(ident(d), {}), lib) if d else {}
 			if wanted != self.running[dev_id][1]:
@@ -248,6 +239,20 @@ class Manager:
 					print(f'engine: software buttons on {d.name} ({len(wanted)} assigned)', flush=True)
 			except (OSError, hidpp.HidppError) as e:
 				print(f'engine: no software buttons on {d.name}: {e}', flush=True)
+
+	@staticmethod
+	def _connected(devices):
+		"""{device id: Device} for everything connected, devices behind receivers included."""
+		found = {}
+		for d in devices.discover():
+			if d.model.type != 'receiver':
+				found[d.id] = d
+				continue
+			try:
+				found.update({p.id: p for p in devices.scan_receiver(d)})
+			except OSError:
+				continue
+		return found
 
 	def _runner(self, dev, wanted):
 		"""The shared runner, or one of its own when the device has DPI/profile actions on it."""

@@ -67,6 +67,9 @@ _ENUMS = {
 ENUM_VALUES = {prefix + name: i for prefix, names in _ENUMS.items() for i, name in enumerate(names)}
 
 
+MAX_ATTENUATION = 'Maximum attenuation'
+
+
 # G HUB's Blue VO!CE 2 controls (its app's microphone settings panel): per stage, the switch that
 # turns it on and its sliders as (setting, label, low, high, step, unit), ranges as G HUB has them.
 def _eq_band(band, label, low, high, step):
@@ -84,11 +87,11 @@ STAGES = (
 		('noiseReduction.sensitivity', 'Sensitivity', 0, 40, 1, 'dB'),
 		('noiseReduction.bias', 'Bias', 0, 5, 0.25, 'dB'),
 		('noiseReduction.release', 'Release', 0, 1000, 5, 'ms'),
-		('noiseReduction.maxAttenuation', 'Maximum attenuation', -60, 0, 1, 'dB'))),
+		('noiseReduction.maxAttenuation', MAX_ATTENUATION, -60, 0, 1, 'dB'))),
 	('Noise gate', 'gatingCompressor.noiseGateEnabled', (
 		('gatingCompressor.noiseGateThreshold', 'Threshold', -80, -6, 1, 'dB'),
 		('gatingCompressor.noiseGateAttack', 'Attack', 0, 200, 5, 'ms'),
-		('gatingCompressor.noiseGateMaxAttenuation', 'Maximum attenuation', -60, 0, 1, 'dB'),
+		('gatingCompressor.noiseGateMaxAttenuation', MAX_ATTENUATION, -60, 0, 1, 'dB'),
 		('gatingCompressor.noiseGateHoldTime', 'Hold time', 0, 200, 5, 'ms'),
 		('gatingCompressor.noiseGateRelease', 'Release', 50, 1000, 10, 'ms'))),
 	('Compressor', 'gatingCompressor.compressorEnabled', (
@@ -107,14 +110,14 @@ STAGES = (
 		('dePopper.frequency', 'Frequency', 60, 1000, 10, 'Hz'),
 		('dePopper.release', 'Release', 20, 1000, 10, 'ms'),
 		('dePopper.width', 'Width', 0.25, 20, 0.25, 'Q'),
-		('dePopper.maxAttenuation', 'Maximum attenuation', -60, 0, 1, 'dB'))),
+		('dePopper.maxAttenuation', MAX_ATTENUATION, -60, 0, 1, 'dB'))),
 	('De-esser', 'deEsser.enabled', (
 		('deEsser.threshold', 'Threshold', -50, 0, 1, 'dB'),
 		('deEsser.attack', 'Attack', 0, 200, 1, 'ms'),
 		('deEsser.frequency', 'Frequency', 1000, 10000, 50, 'Hz'),
 		('deEsser.release', 'Release', 20, 1000, 10, 'ms'),
 		('deEsser.width', 'Width', 0.25, 20, 0.25, 'Q'),
-		('deEsser.maxAttenuation', 'Maximum attenuation', -60, 0, 1, 'dB'))),
+		('deEsser.maxAttenuation', MAX_ATTENUATION, -60, 0, 1, 'dB'))),
 	('Limiter', 'hardLimiter.enabled', (
 		('hardLimiter.boost', 'Boost', -20, 20, 1, 'dB'),
 		('hardLimiter.attack', 'Attack', 0, 10, 0.1, 'ms'),

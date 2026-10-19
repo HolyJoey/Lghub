@@ -34,9 +34,15 @@ class SwitcherTest(unittest.TestCase):
 	def test_switch_and_back(self):
 		with tempfile.TemporaryDirectory() as d:
 			state = {'eq': 'desktop'}
+
+			def snapshot():
+				return {'equalizer': state['eq']}
+
+			def restore(settings):
+				state['eq'] = settings.get('equalizer')
+
 			with mock.patch.object(profiles, 'FILE', os.path.join(d, 'g.json')), \
-					mock.patch.object(profiles, 'snapshot', lambda: {'equalizer': state['eq']}), \
-					mock.patch.object(profiles, 'restore', lambda s: state.update(eq=s.get('equalizer'))):
+					mock.patch.object(profiles, 'snapshot', snapshot), mock.patch.object(profiles, 'restore', restore):
 				game = profiles.new_profile('Game', executable='game')
 				game['settings'] = {'equalizer': 'fps'}
 				profiles.save({'profiles': [game]})

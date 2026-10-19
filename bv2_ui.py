@@ -11,6 +11,7 @@ from ui import box, format_value, label, meter_bar, page_header, set_meter
 from worker import Worker
 
 NOTIFY_ACTIVE = 'notify::active'
+TITLE = 'Blue VO!CE'
 SAVE_DELAY_MS = 150
 
 
@@ -36,12 +37,12 @@ class Bv2Page(Gtk.Box):
 		self.controls = {}      # setting -> (kind, widget, value label or choices, unit)
 		self.switches = {}      # switch setting -> (switch, card)
 		self._save_id = 0
-		self.append(page_header('Blue VO!CE', 'Blue VO!CE 2, the voice chain G HUB runs on this microphone. '
+		self.append(page_header(TITLE, 'Blue VO!CE 2, the voice chain G HUB runs on this microphone. '
 		                        'Changes apply live.'))
 
 		hero = box(Gtk.Orientation.HORIZONTAL, 20, ['card', 'hero'])
 		left = box(spacing=6, hexpand=True)
-		left.append(label('Blue VO!CE', ['muted', 'small']))
+		left.append(label(TITLE, ['muted', 'small']))
 		self.state_word = label('', ['big-word'])
 		left.append(self.state_word)
 		self.route = label('', ['muted', 'small'], wrap=True)
@@ -55,7 +56,7 @@ class Bv2Page(Gtk.Box):
 		meters = box(spacing=12, css=['card'])
 		meters.append(label('Levels', ['section-title']))
 		self.bars = {}
-		for key, text in (('in', 'Microphone'), ('out', 'Blue VO!CE')):
+		for key, text in (('in', 'Microphone'), ('out', TITLE)):
 			row = box(Gtk.Orientation.HORIZONTAL, 14)
 			row.append(label(text, ['muted'], width_chars=11))
 			bar = meter_bar()

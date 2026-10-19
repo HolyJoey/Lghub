@@ -23,22 +23,24 @@ TYPES = {'PERKEY_KEYBOARD': KEYBOARD, 'PERKEY_CONSUMER': CONSUMER, 'PERKEY_GKEY'
          'PERKEY_COSMETIC_2': 128, 'PERKEY_COSMETIC_3': 256, 'PERKEY_COSMETIC_4': 512}
 
 
+# G HUB's default key -> zone table (FUN_14219f320): per PerKey type, (ids below, offset) in order;
+# ids past the last limit have no zone.
+ZONE_OFFSETS = {
+	KEYBOARD: ((0x66, -3), (0x8C, -0x24), (0x100, -0x78)),        # HID keyboard usages
+	CONSUMER: ((0xB8, -0x18), (0xCE, -0x32), (0xE3, -0x46)),
+	GKEY: ((0x100, 0xB3),),
+	BRANDING: ((0x100, 0xD1),),
+	INDICATOR: ((3, 0x98), (0x100, 0x93)),
+	64: ((0x100, 0),), 128: ((0x100, 0),), 256: ((0x100, 0),), 512: ((0x100, 0),),   # cosmetic
+}
+
+
 def zone_for(kind, key):
-	"""The 0x8081 zone of a key (its PerKey type and layout id), or None: G HUB's default table."""
-	if kind == KEYBOARD:   # HID keyboard usages
-		zone = key - 3 if key < 0x66 else key - 0x24 if key < 0x8C else key - 0x78
-	elif kind == CONSUMER:
-		zone = key - 0x18 if key < 0xB8 else key - 0x32 if key < 0xCE else key - 0x46 if key < 0xE3 else -1
-	elif kind == GKEY:
-		zone = key + 0xB3
-	elif kind == BRANDING:
-		zone = key + 0xD1
-	elif kind == INDICATOR:
-		zone = key + 0x98 if key <= 2 else key + 0x93
-	elif kind in (64, 128, 256, 512):
-		zone = key
-	else:
-		zone = -1
+	"""The 0x8081 zone of a key (its PerKey type and layout id), or None."""
+	offset = next((off for below, off in ZONE_OFFSETS.get(kind, ()) if key < below), None)
+	if offset is None:
+		return None
+	zone = key + offset
 	return zone if 0 < zone < 0x100 else None
 
 

@@ -366,14 +366,7 @@ class MouseView(Gtk.Box):
 			torque.set_size_request(280, -1)
 
 		def apply(*_):
-			free = mode.get_selected() == 1
-			auto.set_sensitive(not free and smart.get_active())
-			smart.set_sensitive(not free)
-			if free:
-				args = (mouse.FREE_SPIN, 0)
-			else:
-				args = (mouse.RATCHET, int(auto.get_value()) if smart.get_active() else mouse.ALWAYS_RATCHET)
-			self._live(lambda: self.mouse.set_wheel(*args, int(torque.get_value()) if torque else None))
+			self._apply_wheel(mode, smart, auto, torque)
 
 		mode.connect(NOTIFY_SELECTED, apply)
 		smart.connect('notify::active', apply)
@@ -389,6 +382,17 @@ class MouseView(Gtk.Box):
 		smart.set_sensitive(w['mode'] != mouse.FREE_SPIN)
 		self.loading = False
 		page.append(c)
+
+	def _apply_wheel(self, mode, smart, auto, torque):
+		free = mode.get_selected() == 1
+		auto.set_sensitive(not free and smart.get_active())
+		smart.set_sensitive(not free)
+		if free:
+			args = (mouse.FREE_SPIN, 0)
+		else:
+			args = (mouse.RATCHET, int(auto.get_value()) if smart.get_active() else mouse.ALWAYS_RATCHET)
+		force = int(torque.get_value()) if torque else None
+		self._live(lambda: self.mouse.set_wheel(*args, force))
 
 	def _live(self, job):
 		if not self.loading:

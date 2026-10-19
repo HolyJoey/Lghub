@@ -38,6 +38,7 @@ HX2E_SHA256 = 'f6662b76008433d6f6137ca252a9965fbbb9a0aba100d0a6eb2ed8d1ec28dcde'
 BV2_NAME = 'logi_audio_dts_clearvoice_2_capture_apo'   # Blue VO!CE 2 (Yetis, G735, PRO X 2)
 BV2_SHA256 = 'a366cb2499466f7d9f18eb931f64fa13ac4c7d9b3a6d84dae821a3ca8c777160'
 DEPOT_MAGIC = 0x20170110
+APO_EXE = 'ghub_audio_driver_apo.exe'   # in the driver_audio_apo depot: the APO DLLs ride inside it
 
 
 def sha256(data):
@@ -119,19 +120,19 @@ def main():
 	args = ap.parse_args()
 
 	apo_files = depot_files(get_depot('driver_audio_apo', args.depot_dir))
-	dll = embedded_pe(apo_files['ghub_audio_driver_apo.exe'], APO_NAME)
+	dll = embedded_pe(apo_files[APO_EXE], APO_NAME)
 	if sha256(dll) != APO_SHA256:
 		raise SystemExit('The extracted Blue VO!CE DLL is not the expected build; refusing to install it.')
 	os.makedirs(os.path.join(args.dest, 'apo'), exist_ok=True)
 	with open(os.path.join(args.dest, 'apo', APO_NAME + '.dll'), 'wb') as f:
 		f.write(dll)
-	surround = embedded_pe(apo_files['ghub_audio_driver_apo.exe'], HX2E_NAME)
+	surround = embedded_pe(apo_files[APO_EXE], HX2E_NAME)
 	if sha256(surround) == HX2E_SHA256:
 		with open(os.path.join(args.dest, 'apo', HX2E_NAME + '.dll'), 'wb') as f:
 			f.write(surround)
 	else:
 		print('The surround DLL is not the expected build; surround sound stays off.')
-	bv2 = embedded_pe(apo_files['ghub_audio_driver_apo.exe'], BV2_NAME)
+	bv2 = embedded_pe(apo_files[APO_EXE], BV2_NAME)
 	if bv2 and sha256(bv2) == BV2_SHA256:
 		with open(os.path.join(args.dest, 'apo', BV2_NAME + '.dll'), 'wb') as f:
 			f.write(bv2)

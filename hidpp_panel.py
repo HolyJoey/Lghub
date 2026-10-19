@@ -14,6 +14,7 @@ from ui import box, label
 from worker import Worker
 
 NOTIFY_SELECTED = 'notify::selected'
+NOTIFY_ACTIVE = 'notify::active'
 
 
 def card(title, hint=None):
@@ -214,7 +215,7 @@ class SettingsPanel(Gtk.Box):
 	def _angle_card(self, info):
 		c = card('Angle snapping', 'Straightens slightly wobbly lines into horizontal or vertical ones.')
 		sw = Gtk.Switch(active=info['angle_snapping'], valign=Gtk.Align.CENTER)
-		sw.connect('notify::active', lambda w, _p: self.loading or self._do(
+		sw.connect(NOTIFY_ACTIVE, lambda w, _p: self.loading or self._do(
 			lambda on=w.get_active(): features.set_angle_snapping(self.dev, on)))
 		c.append(row('Angle snapping', sw))
 		return c
@@ -224,7 +225,7 @@ class SettingsPanel(Gtk.Box):
 		c = card('Fn keys', 'On: the top row sends F1-F12 only with Fn held'
 		         + (' (the keyboard’s default).' if default else '.'))
 		sw = Gtk.Switch(active=inverted, valign=Gtk.Align.CENTER)
-		sw.connect('notify::active', lambda w, _p: self.loading or self._do(
+		sw.connect(NOTIFY_ACTIVE, lambda w, _p: self.loading or self._do(
 			lambda on=w.get_active(): features.set_fn_inversion(self.dev, on, self.host)))
 		c.append(row('Media keys first', sw))
 		return c
@@ -234,7 +235,7 @@ class SettingsPanel(Gtk.Box):
 		c = card('Game mode', f'Keys to turn off so they can’t interrupt a game (up to {most}).')
 		for usage, name in features.GAME_MODE_KEYS:
 			sw = Gtk.Switch(active=usage in chosen, valign=Gtk.Align.CENTER)
-			sw.connect('notify::active', lambda w, _p, u=usage: self.loading or self._game_key(u, w.get_active()))
+			sw.connect(NOTIFY_ACTIVE, lambda w, _p, u=usage: self.loading or self._game_key(u, w.get_active()))
 			c.append(row(f'Turn off {name}', sw))
 		return c
 
@@ -260,7 +261,7 @@ class SettingsPanel(Gtk.Box):
 		c = card('On-board memory', 'On: the device runs the settings stored in it. Off: it follows software; '
 		         'lighting changes here may need this off on some keyboards.')
 		sw = Gtk.Switch(active=info['mode'] == mouse.MODE_ONBOARD)
-		sw.connect('notify::active', lambda w, _p: self.loading or self._do(
+		sw.connect(NOTIFY_ACTIVE, lambda w, _p: self.loading or self._do(
 			lambda on=w.get_active(): self.dev.call(features.ONBOARD, 1,
 			                                        bytes([mouse.MODE_ONBOARD if on else mouse.MODE_HOST]))))
 		c.append(row('Use on-board memory', sw))

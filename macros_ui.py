@@ -193,7 +193,11 @@ class MacroEditor(Gtk.Window):
 
 	def _sequence_fields(self):
 		seq = self.macro.get('sequence', {})
-		mode = 'toggle' if seq.get('use_toggle_actions') else 'held' if seq.get('use_repeat_actions') else 'once'
+		mode = 'once'
+		if seq.get('use_toggle_actions'):
+			mode = 'toggle'
+		elif seq.get('use_repeat_actions'):
+			mode = 'held'
 		self.mode_dd, self.mode_keys = dropdown(MODES, mode)
 		self.fields.append(self.mode_dd)
 		r = box(Gtk.Orientation.HORIZONTAL, 12)

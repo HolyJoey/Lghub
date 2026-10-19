@@ -29,6 +29,8 @@ SYSTEM_COMMANDS = {'LOCK': ['loginctl', 'lock-session']}
 AUDIO_COMMANDS = {'MUTE_MICROPHONE': ['wpctl', 'set-mute', '@DEFAULT_AUDIO_SOURCE@', 'toggle'],
                   'MUTE_SPEAKERS': ['wpctl', 'set-mute', '@DEFAULT_AUDIO_SINK@', 'toggle']}
 WHEEL = {'WHEEL_UP': (1, False), 'WHEEL_DOWN': (-1, False), 'WHEEL_LEFT': (-1, True), 'WHEEL_RIGHT': (1, True)}
+# Sequence steps that are whole macros of their own
+COMPONENT_MACROS = ('keystroke', 'text_block', 'media', 'system', 'app', 'audio', 'open_web_page', 'device')
 DEVICE_ACTIONS = {('MOUSE', 'DPI_UP'), ('MOUSE', 'DPI_DOWN'), ('MOUSE', 'DPI_SHIFT'), ('MOUSE', 'DPI_CYCLE'),
                   ('MOUSE', 'DPI_DEFAULT'), ('DEVICE', 'PROFILE_CYCLE'), ('DEVICE', 'PROFILE_NEXT'),
                   ('DEVICE', 'PROFILE_PREV'), ('DEVICE', 'G_SHIFT')}
@@ -279,20 +281,22 @@ class Runner:
 		elif 'keyboard' in c:
 			out.usage(c['keyboard'].get('hid_usage', 0), c['keyboard'].get('is_down', True))
 		elif 'mouse' in c:
-			m = c['mouse']
-			if 'button' in m:
-				code = uinput.BUTTONS.get(m['button'].get('hid_usage', 1))
-				if code:
-					out.key(code, m['button'].get('is_down', True))
-			elif 'wheel' in m:
-				out.wheel(1 if m['wheel'].get('is_positive', True) else -1)
+			self._mouse_component(out, c['mouse'])
 		else:
-			for kind in ('keystroke', 'text_block', 'media', 'system', 'app', 'audio', 'open_web_page', 'device'):
-				if kind in c:
-					macro = {'type': kind.upper(), kind: c[kind]}
-					self.press(None, macro)
-					self.release(None, macro)
-					break
+			kind = next((k for k in COMPONENT_MACROS if k in c), None)
+			if kind:
+				macro = {'type': kind.upper(), kind: c[kind]}
+				self.press(None, macro)
+				self.release(None, macro)
+
+	@staticmethod
+	def _mouse_component(out, m):
+		if 'button' in m:
+			code = uinput.BUTTONS.get(m['button'].get('hid_usage', 1))
+			if code:
+				out.key(code, m['button'].get('is_down', True))
+		elif 'wheel' in m:
+			out.wheel(1 if m['wheel'].get('is_positive', True) else -1)
 
 
 def _spawn(cmd):

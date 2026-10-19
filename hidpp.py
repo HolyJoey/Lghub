@@ -96,9 +96,7 @@ class Device:
 	def request(self, feature_index, function, params=b''):
 		"""Send one request and return the 16 parameter bytes of the answer."""
 		func_sw = (function << 4) | SW_ID
-		report = SHORT if SHORT in self.reports and len(params) <= SIZES[SHORT] - 4 else LONG
-		if len(params) > SIZES[LONG] - 4 and VERY_LONG in self.reports:
-			report = VERY_LONG
+		report = self._report_for(len(params))
 		msg = bytes([report, self.index, feature_index, func_sw]) + bytes(params)
 		msg = msg.ljust(SIZES[report], b'\0')[:SIZES[report]]
 		with self.transport.lock:
@@ -113,6 +111,14 @@ class Device:
 				if reply[2] == feature_index and reply[3] == func_sw:
 					return bytes(reply[4:]).ljust(16, b'\0')
 		raise NoReply()
+
+	def _report_for(self, size):
+		"""The smallest report the device takes that fits size parameter bytes."""
+		if SHORT in self.reports and size <= SIZES[SHORT] - 4:
+			return SHORT
+		if size > SIZES[LONG] - 4 and VERY_LONG in self.reports:
+			return VERY_LONG
+		return LONG
 
 	def next_event(self, timeout):
 		"""(feature index, event number, 16 parameter bytes) of the next notification from the

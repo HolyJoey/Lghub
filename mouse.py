@@ -156,7 +156,12 @@ class Led:
 	@property
 	def brightness(self):
 		"""1-100 %. The device stores 0 for full."""
-		value = self.raw[8] if self.effect == LED_CYCLE else self.raw[7] if self.effect == LED_BREATHING else 100
+		if self.effect == LED_CYCLE:
+			value = self.raw[8]
+		elif self.effect == LED_BREATHING:
+			value = self.raw[7]
+		else:
+			value = 100
 		return value if 0 < value <= 100 else 100
 
 	@staticmethod
@@ -214,7 +219,7 @@ class Profile:
 		raw = bytes(self.data[P_NAME:P_NAME + NAME_BYTES])
 		if raw[:2] in (b'\xff\xff', b'\0\0'):
 			return f'Profile {self.number}'
-		text = raw.decode('utf-16-le', 'replace').split('\0')[0].split('￿')[0].strip()
+		text = raw.decode('utf-16-le', 'replace').split('\0')[0].split('\uffff')[0].strip()
 		return text or f'Profile {self.number}'
 
 	@name.setter

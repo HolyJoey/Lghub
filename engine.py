@@ -266,6 +266,36 @@ class Engine:
 			'updated': time.time(),
 		})
 
+	def voice_round(self, now):
+		"""Links and status for Blue VO!CE."""
+		if self.sound_cards.changed():      # a headset or mic came or went: look again now
+			self.last_link_check = 0.0
+			self.eq.last_check = 0.0
+			self.surround.wake = True
+		due = now - self.last_link_check >= LINK_EVERY
+		if self.proc and (due or self.link_event.is_set()):
+			self.link_event.clear()
+			self.last_link_check = now
+			self.check_links()
+		if self.listening or now - self.last_publish >= IDLE_STATUS_EVERY:
+			self.last_publish = now
+			self.publish()
+		if not self.proc:
+			self.link_event.clear()  # nothing to relink until the bridge is back
+
+	def other_rounds(self, now):
+		"""Equalizer, surround, webcams, software buttons and game profiles, each when due."""
+		if self.eq.due() or self.surround.due():
+			objs = pw.dump()
+			self.eq.check(objs)
+			self.surround.check(objs)
+		if self.webcams.due():
+			self.webcams.check()
+		if self.inputs.due():
+			self.inputs.check()
+		if self.games.due(now):
+			self.game = self.games.check(now)
+
 	def run(self):
 		signal.signal(signal.SIGTERM, lambda *_: self.stop.set())
 		signal.signal(signal.SIGINT, lambda *_: self.stop.set())
@@ -274,31 +304,8 @@ class Engine:
 			self.reload_config()
 			self.check_bridge()
 			now = time.monotonic()
-			if self.sound_cards.changed():      # a headset or mic came or went: look again now
-				self.last_link_check = 0.0
-				self.eq.last_check = 0.0
-				self.surround.wake = True
-			due = now - self.last_link_check >= LINK_EVERY
-			if self.proc and (due or self.link_event.is_set()):
-				self.link_event.clear()
-				self.last_link_check = now
-				self.check_links()
-			if self.listening or now - self.last_publish >= IDLE_STATUS_EVERY:
-				self.last_publish = now
-				self.publish()
-			if not self.proc:
-				self.link_event.clear()  # nothing to relink until the bridge is back
-			eq_due, surround_due = self.eq.due(), self.surround.due()
-			if eq_due or surround_due:
-				objs = pw.dump()
-				self.eq.check(objs)
-				self.surround.check(objs)
-			if self.webcams.due():
-				self.webcams.check()
-			if self.inputs.due():
-				self.inputs.check()
-			if self.games.due(now):
-				self.game = self.games.check(now)
+			self.voice_round(now)
+			self.other_rounds(now)
 			self.link_event.wait(POLL if self.listening else IDLE_POLL)
 		self.stop_bridge()
 		self.inputs.stop()
