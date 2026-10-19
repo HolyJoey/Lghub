@@ -227,6 +227,31 @@ class ColorCycle:
 		return dict.fromkeys(self.keys, c)
 
 
+class EchoPress:
+	"""G HUB's Echo press (EchoPressEffect: echo colour, rest colour, speed 100-10000 ms, in / out
+	curves): a pressed key lights in the echo colour and fades back to the rest colour. The fade's
+	shape and the default values are ours."""
+
+	def __init__(self, keys, echo=(255, 255, 255), rest=(0, 0, 0), speed=1000, out_curve='OUTQUAD'):
+		self.keys, self.echo, self.rest = list(keys), list(echo), list(rest)
+		self.speed = max(STAR_SPEED[0], min(STAR_SPEED[1], speed)) / 1000
+		self.curve = easing(out_curve)
+		self.pressed = {}       # key -> time
+		self.now = 0.0
+
+	def press(self, key):
+		self.pressed[key] = self.now
+
+	def frame(self, t):
+		self.now = t
+		out = {k: list(self.rest) for k in self.keys}
+		self.pressed = {k: s for k, s in self.pressed.items() if t - s < self.speed}
+		for k, s in self.pressed.items():
+			if k in out:
+				out[k] = mix(self.echo, self.rest, self.curve((t - s) / self.speed))
+		return out
+
+
 def layout_keys(layout):
 	_w, _h, keys = layout
 	return [f'{g}:{k}' for g, k, *_r in keys if g in KEY_GROUPS]

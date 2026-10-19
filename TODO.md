@@ -142,8 +142,9 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   Keyboards now use G HUB's own regions and key map (screen_sampler-kb.json). Its region editor
   isn't built.
 - **Software effects done**: G HUB's own animations (Verticool, Contrastic, Ocean Wave, Lightning,
-  Red White and Blue: its keyframe files, downloaded at first use), Starlight and Colour cycle
-  with G HUB's settings. Not yet: Echo press (needs key presses), Smooth star / wave and G HUB's
+  Red White and Blue: its keyframe files, downloaded at first use), Starlight, Colour cycle
+  and Echo press (key presses read from the keyboard's own reports: ours) with G HUB's settings.
+  Not yet: Smooth star / wave and G HUB's
   other "signature" effects, the keyframe editor (Freestyle), effects on zonal devices.
 
 ### App

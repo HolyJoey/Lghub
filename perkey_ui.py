@@ -102,7 +102,7 @@ class PerKeyPage(Gtk.Box):
 		                  '(needs grim: Hyprland, Sway). Your colours come back when it is off.',
 		                  ['muted', 'small'], wrap=True))
 		effects = [(None, None, 'Off'), ('audio', None, 'Audio visualizer'), ('screen', None, 'Screen sampler'),
-		           ('starlight', None, 'Starlight'), ('cycle', None, 'Colour cycle')]
+		           ('starlight', None, 'Starlight'), ('cycle', None, 'Colour cycle'), ('echo', None, 'Echo press')]
 		cached = os.path.join(softlight.CACHE, os.path.basename(softlight.PREFABS))
 		try:
 			with open(cached) as f:
@@ -143,9 +143,13 @@ class PerKeyPage(Gtk.Box):
 		count = slider(*softlight.STAR_COUNT, settings.get('count', 50), '')
 		speed = slider(*softlight.STAR_SPEED, settings.get('speed', 2000), ' ms')
 		cycle_speed = slider(*softlight.CYCLE_SPEED, settings.get('speed', 5000), ' ms')
+		echo = color_button(settings.get('echo', [255, 255, 255]))
+		rest = color_button(settings.get('rest', [0, 0, 0]))
+		echo_speed = slider(*softlight.STAR_SPEED, settings.get('speed', 1000), ' ms')
 		rows = {'audio': [('Colour', color)], 'screen': [('Colour boost', boost), ('Smoothing', smoothing)],
 		        'starlight': [('Star colour', star), ('Sky colour', sky), ('Stars', count), ('Speed', speed)],
-		        'cycle': [('Speed', cycle_speed)]}
+		        'cycle': [('Speed', cycle_speed)],
+		        'echo': [('Echo colour', echo), ('Rest colour', rest), ('Fade', echo_speed)]}
 		widgets = {}
 		for kind, items in rows.items():
 			for text, w in items:
@@ -168,6 +172,7 @@ class PerKeyPage(Gtk.Box):
 			          'starlight': lambda: {'star': rgb(star), 'sky': rgb(sky), 'count': round(count.get_value()),
 			                                'speed': round(speed.get_value())},
 			          'cycle': lambda: {'speed': round(cycle_speed.get_value())},
+			          'echo': lambda: {'echo': rgb(echo), 'rest': rgb(rest), 'speed': round(echo_speed.get_value())},
 			          'keyframe': lambda: {'file': effects[effect.get_selected()][1]}}
 			if kind:
 				data[self.model] = {'effect': kind, **values[kind]()}
@@ -178,9 +183,9 @@ class PerKeyPage(Gtk.Box):
 
 		show()
 		effect.connect('notify::selected', changed)
-		for w in (color, star, sky):
+		for w in (color, star, sky, echo, rest):
 			w.connect('notify::rgba', changed)
-		for w in (boost, count, speed, cycle_speed):
+		for w in (boost, count, speed, cycle_speed, echo_speed):
 			w.connect('value-changed', changed)
 		smoothing.connect('notify::active', changed)
 		return card

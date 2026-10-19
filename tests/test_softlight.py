@@ -16,6 +16,23 @@ EFFECT = {'keyframeInfo': {'direction': 'CYCLE', 'speed': 100, 'keyframeMap': {
 		'PERKEY_KEYBOARD': {'perKeyMap': {'colorCodeMap': {'4': {'hex': '#ff0000'}}}}}}}}}}
 
 
+class EchoTest(unittest.TestCase):
+	def test_echo_and_keys(self):
+		import keypress
+		echo = softlight.EchoPress(['PERKEY_KEYBOARD:4'], echo=(200, 0, 0), rest=(0, 0, 0), speed=1000)
+		echo.frame(0.0)
+		echo.press('PERKEY_KEYBOARD:4')
+		self.assertEqual(echo.frame(0.0)['PERKEY_KEYBOARD:4'], [200, 0, 0])
+		self.assertEqual(echo.frame(1.5)['PERKEY_KEYBOARD:4'], [0, 0, 0])
+		# a boot keyboard: modifiers as bits, then 6 usages
+		desc = bytes([0x05, 0x01, 0x09, 0x06, 0xA1, 0x01, 0x05, 0x07, 0x19, 0xE0, 0x29, 0xE7, 0x15, 0x00,
+		              0x25, 0x01, 0x75, 0x01, 0x95, 0x08, 0x81, 0x02, 0x95, 0x01, 0x75, 0x08, 0x81, 0x01,
+		              0x95, 0x06, 0x75, 0x08, 0x15, 0x00, 0x25, 0x65, 0x05, 0x07, 0x19, 0x00, 0x29, 0x65,
+		              0x81, 0x00, 0xC0])
+		fields = keypress.key_fields(desc)
+		self.assertEqual(keypress.keys_down(fields, bytes([0x02, 0, 0x04, 0x1A, 0, 0, 0, 0])), {0xE1, 0x04, 0x1A})
+
+
 class EasingTest(unittest.TestCase):
 	def test_curves(self):
 		for name in ('LINEAR', 'INQUAD', 'OUTCUBIC', 'INOUTSINE', 'OUTINEXPO', 'INCIRC', 'OUTBACK', 'INOUTBOUNCE',

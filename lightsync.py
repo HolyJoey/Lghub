@@ -262,9 +262,11 @@ class ScreenSampler(Visualizer):
 class Animated(Visualizer):
 	"""Streams one of softlight's effects (G HUB's keyframe effects, Starlight, Color cycle)."""
 
-	def __init__(self, dev, model, settings):
+	def __init__(self, dev, model, settings, port=None):
 		super().__init__(dev, model, None)
 		self.settings = settings
+		self.port = port
+		self.keys = None
 
 	def make(self):
 		import json
@@ -274,6 +276,9 @@ class Animated(Visualizer):
 		if s['effect'] == 'starlight':
 			return softlight.Starlight(keys, s.get('star', (255, 255, 255)), s.get('sky', (0, 0, 40)),
 			                           s.get('count', 50), s.get('speed', 2000))
+		if s['effect'] == 'echo':
+			return softlight.EchoPress(keys, s.get('echo', (255, 255, 255)), s.get('rest', (0, 0, 0)),
+			                           s.get('speed', 1000))
 		if s['effect'] == 'cycle':
 			return softlight.ColorCycle(keys, s.get('colors') or softlight.CYCLE_COLORS, s.get('speed', 5000))
 		path = softlight.fetch(softlight.EFFECTS_DIR + s.get('file', ''))
@@ -290,6 +295,11 @@ class Animated(Visualizer):
 		self.thread.start()
 		return True
 
+	def stop(self):
+		super().stop()
+		if self.keys:
+			self.keys.stop()
+
 	def _run(self):
 		try:
 			effect = self.make()
@@ -298,6 +308,15 @@ class Animated(Visualizer):
 		if effect is None:
 			print('lightsync: effect not available', flush=True)
 			return
+		if hasattr(effect, 'press'):
+			import keypress
+			self.keys = keypress.Keys(keypress.key_nodes(self.port or ''),
+			                          lambda usage: effect.press(f'PERKEY_KEYBOARD:{usage}'))
+			try:
+				self.keys.start()
+			except OSError as e:
+				print(f'lightsync: {e}', flush=True)
+				return
 		start = time.monotonic()
 		shown = None
 		while not self.stop_event.wait(1 / FPS):
@@ -312,7 +331,7 @@ class Animated(Visualizer):
 				return
 
 
-ANIMATED = ('keyframe', 'starlight', 'cycle')
+ANIMATED = ('keyframe', 'starlight', 'cycle', 'echo')
 
 
 def devices_open(device):
@@ -370,7 +389,7 @@ class Runner:
 		if settings['effect'] == 'screen':
 			visualizer = ScreenSampler(dev, device.model.key, settings)
 		elif settings['effect'] in ANIMATED:
-			visualizer = Animated(dev, device.model.key, settings)
+			visualizer = Animated(dev, device.model.key, settings, device.port)
 		else:
 			visualizer = Visualizer(dev, device.model.key, settings.get('color', [0, 140, 255]))
 		if visualizer.start():
