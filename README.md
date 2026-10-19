@@ -48,8 +48,9 @@ with your headset's tuning (G Pro X, G Pro X Wireless, G733 and more), on a new 
 *… (Surround 7.1)*. Games set to 7.1 get every speaker placed around you. G HUB's rooms
 (Gaming, Entertainment, Sports) and per-channel volumes. It only runs while something plays, and it works together with the equalizer.
 
-**Headset.** Sidetone, volume and mic level from the headset's sound card, plus lighting and
-battery on headsets that have them.
+**Headset.** Sidetone, volume and mic level from the headset's sound card, plus lighting,
+battery and the equalizer built into the headset (works on any computer or console) on headsets
+that have them.
 
 | Voice | Effects |
 | --- | --- |
