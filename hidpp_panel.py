@@ -53,6 +53,14 @@ def save_game_mode_keys(device, keys):
 	store._write_json(path, data)
 
 
+def report_rates(dev):
+	"""(rates the device offers in Hz, highest first; the current one) from 0x8060."""
+	mask = dev.call(features.REPORT_RATE, 0)[0]
+	rates = sorted((1000 // (bit + 1) for bit in range(8) if mask >> bit & 1), reverse=True)
+	ms = dev.call(features.REPORT_RATE, 1)[0]
+	return rates, 1000 // ms if ms else 0
+
+
 def slider(low, high, value, width=280):
 	s = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, low, high, 1)
 	s.set_value(value)
@@ -104,13 +112,21 @@ class SettingsPanel(Gtk.Box):
 		if features.BRIGHTNESS in have:
 			info['brightness'] = features.brightness(dev)
 		if features.REPORT_RATE in have:
-			mask = dev.call(features.REPORT_RATE, 0)[0]
-			info['rates'] = sorted((1000 // (bit + 1) for bit in range(8) if mask >> bit & 1), reverse=True)
-			ms = dev.call(features.REPORT_RATE, 1)[0]
-			info['rate'] = 1000 // ms if ms else 0
+			info['rates'], info['rate'] = report_rates(dev)
 		for feature, key, read in SIMPLE_READS:
 			if feature in have:
 				info[key] = read(dev)
+		self._read_keyboard(dev, have, info)
+		if features.ONBOARD in have:
+			info['mode'] = dev.call(features.ONBOARD, 2)[0]
+		saved = perkey_ui.load_colors(self.device.model.key)
+		if (perkey.PERKEY in have or perkey.PERKEY_V1 in have) and saved:
+			perkey.apply(dev, saved)   # ours: the saved colours go back on when the keyboard connects
+		self.dev = dev
+		return info
+
+	def _read_keyboard(self, dev, have, info):
+		"""Easy-Switch hosts, Fn keys (per host) and game mode."""
 		host = 0
 		if features.CHANGE_HOST in have:
 			info['hosts'] = features.hosts(dev)
@@ -123,13 +139,6 @@ class SettingsPanel(Gtk.Box):
 		if features.DISABLE_KEYS in have:
 			info['game_mode'] = (features.max_disabled_keys(dev), game_mode_keys(self.device))
 			features.set_disabled_keys(dev, info['game_mode'][1])   # ours: the chosen keys stay off
-		if features.ONBOARD in have:
-			info['mode'] = dev.call(features.ONBOARD, 2)[0]
-		saved = perkey_ui.load_colors(self.device.model.key)
-		if (perkey.PERKEY in have or perkey.PERKEY_V1 in have) and saved:
-			perkey.apply(dev, saved)   # ours: the saved colours go back on when the keyboard connects
-		self.dev = dev
-		return info
 
 	def _do(self, job, done=None):
 		self.worker.submit(job, done, lambda e: self.win.toast(f'The device refused: {e}'))
