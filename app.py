@@ -186,6 +186,8 @@ class MainWindow(Adw.ApplicationWindow):
 
 		self._discover()
 		GLib.timeout_add_seconds(DISCOVER_SECONDS, self._discover)
+		if start_page == 'games':
+			self.show_games()
 		if start_page in bluevoice_ui.PAGES:
 			pro_x = next((d for d in self.home.devices if devices.blue_voice_model(d)), None)
 			self.show_device(pro_x)

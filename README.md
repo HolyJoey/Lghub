@@ -43,6 +43,10 @@ reverb, delay, ring modulator). Untested on a real Yeti.
 its executable (Proton games too) or Steam App ID, and its Blue VO!CE, equalizer and surround
 settings come on when it starts and go back when it closes.
 
+| Blue VO!CE 2 (Yeti X) | Games |
+| --- | --- |
+| ![Blue VO!CE 2](docs/screenshots/yeti-bluevoice.png) | ![Games](docs/screenshots/games.png) |
+
 **Surround.** G HUB's DTS Headphone:X 2.0 virtual 7.1, running Logitech's own DTS processing
 with your headset's tuning (G Pro X, G Pro X Wireless, G733 and more), on a new output
 *… (Surround 7.1)*. Games set to 7.1 get every speaker placed around you. G HUB's rooms
@@ -88,7 +92,9 @@ key-to-LED table (0x8080 on older keyboards). Lighting zones and effects, bright
 rate, Fn keys, game mode, Easy-Switch, angle snapping, sidetone, on-board memory and battery. Devices with a USB sound card (headsets,
 speakers, Yeti mics) also get its controls.
 
-![Keyboard](docs/screenshots/keyboard.png)
+| Settings | Per-key lighting |
+| --- | --- |
+| ![Keyboard](docs/screenshots/keyboard.png) | ![Per-key lighting](docs/screenshots/keyboard-perkey.png) |
 
 ## Webcams
 
