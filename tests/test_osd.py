@@ -24,6 +24,15 @@ class OsdTest(unittest.TestCase):
 		self.assertEqual(sent[0], ('Profile 1', 'G502 HERO', 0))
 		self.assertEqual(sent[1], ('800 DPI', 'G502 HERO', 7))      # replaces the first notice
 
+	def test_report_rate_notice(self):
+		sent = []
+		with tempfile.TemporaryDirectory() as d, mock.patch.object(store, 'CONFIG_DIR', d), \
+				mock.patch.object(store, 'CONFIG_FILE', os.path.join(d, 'config.json')):
+			f = osd.Follower(hidpp.Device(simulate.FakeWheelMouse()), 'G502 X', send=lambda t, b, r: sent.append(t) or 1)
+			f.handle(osd.RATE_CHANGED, 3)
+			f.handle(osd.RATE_CHANGED, 6)
+		self.assertEqual(sent, ['1 kHz', '8 kHz'])
+
 
 if __name__ == '__main__':
 	unittest.main()

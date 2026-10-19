@@ -396,8 +396,9 @@ class MouseView(Gtk.Box):
 		if self.state.get('power'):
 			page.append(hidpp_panel.power_card(self.state['power'], self._live, self.mouse.dev, card, row))
 		battery = (self.state.get('battery') or (None,))[0] is not None
-		if battery or self.mouse.onboard:
-			page.append(hidpp_panel.battery_warnings_card(card, row, battery, self.mouse.onboard))
+		notices = self.mouse.onboard or mouse.EXTENDED_RATE in self.mouse.features
+		if battery or notices:
+			page.append(hidpp_panel.battery_warnings_card(card, row, battery, notices))
 
 	def _surface_card(self, page):
 		if surface_tuning.SURFACE_TUNING in self.mouse.features:

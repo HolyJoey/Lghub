@@ -102,7 +102,7 @@ def battery_warnings_card(card=card, row=row, battery=True, osd=False):
 	if battery:
 		c.append(row('Warn when the battery is low (30 %, 15 %)', _config_switch('battery_warnings')))
 	if osd:
-		c.append(row('Show DPI and profile changes', _config_switch('osd_notifications')))
+		c.append(row('Show DPI, profile and report rate changes', _config_switch('osd_notifications')))
 	return c
 
 

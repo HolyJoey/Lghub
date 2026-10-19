@@ -1,7 +1,9 @@
-"""On-screen notices when a mouse changes profile or DPI level with its own buttons, like G HUB's
-OSD_PROFILE_CHANGED and OSD_DPI_CHANGED. Onboard-memory mice (0x8100) send an event for each:
-event 0 profile activated, event 1 active DPI changed (G HUB's Feature8100OnboardProfiles::Report);
-the notice reads the mouse's current profile and DPI slot back, and the DPI from its profile.
+"""On-screen notices when a mouse changes profile, DPI level or report rate with its own buttons,
+like G HUB's OSD_PROFILE_CHANGED, OSD_DPI_CHANGED and OSD_REPORT_RATE_CHANGED. Onboard-memory
+mice (0x8100) send event 0 profile activated and event 1 active DPI changed (G HUB's
+Feature8100OnboardProfiles::Report); the notice reads the mouse's current profile and DPI slot
+back, and the DPI from its profile. Newer mice (0x8061) send event 0 [connection type, rate
+number] (G HUB's ReportRateInfoEvent).
 
 Each new notice replaces the last one, shown for 1.5 s (ours). config.json "osd_notifications":
 false turns them off.
@@ -13,6 +15,7 @@ import mouse
 import store
 
 PROFILE_ACTIVATED, DPI_CHANGED = 0, 1
+RATE_CHANGED = 'rate'
 SHOW_MS = 1500
 
 
@@ -39,18 +42,29 @@ class Follower:
 
 	def _run(self):
 		index = self.dev.feature_index(mouse.ONBOARD)
+		rates = self.dev.feature_index(mouse.EXTENDED_RATE)
 		try:
 			while not self.stop_event.is_set():
 				event = self.dev.next_event(1.0)
-				if event and event[0] == index and event[1] in (PROFILE_ACTIVATED, DPI_CHANGED):
+				if not event:
+					continue
+				if index and event[0] == index and event[1] in (PROFILE_ACTIVATED, DPI_CHANGED):
 					self.handle(event[1])
+				elif rates and event[0] == rates and event[1] == 0:
+					self.handle(RATE_CHANGED, event[2][1])
 		except (OSError, hidpp.HidppError):
 			pass                       # unplugged
 		finally:
 			self.dev.close()
 
-	def handle(self, kind):
+	def handle(self, kind, value=None):
 		if not store.load_config().get('osd_notifications', True):
+			return
+		if kind == RATE_CHANGED:
+			rates = mouse.EXTENDED_RATES
+			hz = rates[value] if value < len(rates) else value
+			title = f'{hz} Hz' if hz < 1000 else f'{hz / 1000:g} kHz'
+			self.shown = self.send(title, self.name, self.shown)
 			return
 		profile = self.mouse.current_profile()
 		if kind == PROFILE_ACTIVATED:
@@ -85,11 +99,11 @@ class Watch:
 		for dev_id in [i for i, f in self.followers.items() if not f.thread.is_alive()]:
 			del self.followers[dev_id]
 		for d in devices.discover():
-			if d.model.type != 'mouse' or 'onboard' not in d.model.flags or d.id in self.followers:
+			if d.model.type != 'mouse' or d.id in self.followers:
 				continue
 			try:
 				dev = devices.open_hidpp(d)
-				if not dev.has(mouse.ONBOARD):
+				if not (dev.has(mouse.ONBOARD) or dev.has(mouse.EXTENDED_RATE)):
 					dev.close()
 					continue
 				f = Follower(dev, d.name)

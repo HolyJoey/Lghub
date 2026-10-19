@@ -145,7 +145,7 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 - Low-battery notifications done (G HUB's LOW 30 % / CRITICAL 15 %; checking every 5 minutes is
   ours). Game-profile notifications and DPI / profile notices for onboard mice (G HUB's
   OSD_DPI_CHANGED / OSD_PROFILE_CHANGED from 0x8100 events) done. Not yet: G HUB's equalizer /
-  surround notices from a headset button, report-rate notices (0x8061 event).
+  surround notices from a headset button. Report-rate notices (0x8061 event) done.
 - **Firmware updates**: not planned (a mistake can brick a device).
 - **Discord / OBS integrations**: not planned.
 - **Racing wheels and pedals** (0x8123-0x8140): nobody here owns one.
