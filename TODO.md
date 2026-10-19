@@ -37,6 +37,8 @@ Everything below has only met the simulator (`simulate.py`) or the DLLs offline.
   - Then the PRO equalizer (below).
 - **G502**:
   - profile layout offsets, LED effect bytes (cycle 0x03, breathing 0x0a)
+  - LIGHTSYNC on its zones (0x8070 fixed colour, not saved) while it is in onboard mode; the
+    DPI / profile notices; the tray (clicking a switch)
   - report-rate byte = ms, writing a 255-byte sector in 16-byte chunks, button order
   - 0x8110 software buttons, DPI/profile macros, G-Shift layer
   - Backups of every sector written go to `~/.local/share/lghub-bluevoice/backups/`.
