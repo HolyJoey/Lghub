@@ -22,9 +22,11 @@ DISABLE_KEYS = 0x4522
 CHANGE_HOST = 0x1814
 HOSTS_INFO = 0x1815
 DEVICE_EQ = 0x8310
-BUTTON_SWAP, HYBRID_TRACKING, CHARGING = 0x2005, 0x2400, 0x1010
+BUTTON_SWAP, HYBRID_TRACKING, CHARGING_CONTROL = 0x2005, 0x2400, 0x1010
 BASS_TONE = 0x8305
 BUNNY_HOPPING = 0x80E0
+MIC_GAIN_ADJUST = 0x8370
+MUTE_INVERTED = ('046d:0ad1', '046d:0ad2')   # G HUB: on these 1 = muted, elsewhere 1 = mic on
 BHOP_MIN, BHOP_MAX, BHOP_STEP = 100, 1000, 100     # G HUB's slider, ms
 
 NAMES = {
@@ -239,11 +241,11 @@ def set_hybrid_mode(dev, mode):
 
 
 def charging(dev):
-	return bool(dev.call(CHARGING, 0)[0])
+	return bool(dev.call(CHARGING_CONTROL, 0)[0])
 
 
 def set_charging(dev, on):
-	dev.call(CHARGING, 1, bytes([1 if on else 0]))
+	dev.call(CHARGING_CONTROL, 1, bytes([1 if on else 0]))
 
 
 # Bass tone (0x8305): fn 0 get, fn 1 set the level, 0-100; G HUB's subwoofer bass volume (0-1)
@@ -268,6 +270,35 @@ def bunny_hopping(dev):
 
 def set_bunny_hopping(dev, ms):
 	dev.call(BUNNY_HOPPING, 2, bytes([max(0, min(254, int(ms) // 10))]))
+
+
+# Mic gain and mute (0x8370 MicrophoneGainAdjust, Yetis), as G HUB's
+# feature_8370_microphone_gain_adjust: fn 0 = channel count, fn 1 (channel) = [?, control count],
+# fn 2 (channel, control) = [?, ?, type, value], fn 3 (channel, type, value) sets one. Types:
+# 0 mute, 1 / 2 gain (value = G HUB's 0-1 gain x 100), 5 a switch G HUB keeps but doesn't show.
+# G HUB writes channel 0, gain with the type the mic reported (2 if none).
+
+def mic_gain_adjust(dev, usb_id=''):
+	"""{'muted': bool, 'gain': 0-100, 'gain_type': 1 or 2}, with what the mic has."""
+	out = {}
+	for channel in range(dev.call(MIC_GAIN_ADJUST, 0)[0]):
+		for control in range(dev.call(MIC_GAIN_ADJUST, 1, bytes([channel]))[1]):
+			r = dev.call(MIC_GAIN_ADJUST, 2, bytes([channel, control]))
+			kind, value = r[2], r[3]
+			if kind == 0:
+				out['muted'] = (value == 1) if usb_id in MUTE_INVERTED else (value == 0)
+			elif kind in (1, 2):
+				out['gain'], out['gain_type'] = value, kind
+	return out
+
+
+def set_mic_muted(dev, muted, usb_id=''):
+	on = muted if usb_id in MUTE_INVERTED else not muted
+	dev.call(MIC_GAIN_ADJUST, 3, bytes([0, 0, 1 if on else 0]))
+
+
+def set_mic_gain(dev, percent, gain_type=2):
+	dev.call(MIC_GAIN_ADJUST, 3, bytes([0, gain_type, max(0, min(100, int(percent)))]))
 
 
 # Easy-Switch (0x1814 ChangeHost): fn 0 = host count, current host; fn 1 = switch to a host. The

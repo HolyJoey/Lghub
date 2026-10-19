@@ -37,7 +37,7 @@ SIMPLE_READS = ((features.SIDETONE, 'sidetone', headset.sidetone),
                 (features.POLAR_PATTERN, 'patterns', features.polar_patterns),
                 (features.DEVICE_EQ, 'device_eq', features.device_eq),
                 (features.ANGLE_SNAPPING, 'angle_snapping', features.angle_snapping),
-                (features.CHARGING, 'charging', features.charging),
+                (features.CHARGING_CONTROL, 'charging', features.charging),
                 (features.BASS_TONE, 'bass_tone', features.bass_tone))
 
 def report_rates(dev):
@@ -147,6 +147,8 @@ class SettingsPanel(Gtk.Box):
 			if feature in have:
 				info[key] = read(dev)
 		self._read_keyboard(dev, have, info)
+		if features.MIC_GAIN_ADJUST in have:
+			info['mic'] = features.mic_gain_adjust(dev, self.device.usb_id) or None
 		if features.ONBOARD in have:
 			info['mode'] = dev.call(features.ONBOARD, 2)[0]
 			info['profiles'] = (dev.call(features.ONBOARD, 0)[3], dev.call(features.ONBOARD, 4)[1])
@@ -204,7 +206,7 @@ class SettingsPanel(Gtk.Box):
 		                   ('angle_snapping', self._angle_card), ('fn_inversion', self._fn_card),
 		                   ('game_mode', self._game_mode_card), ('hosts', self._hosts_card),
 		                   ('device_eq', self._device_eq_card), ('charging', self._charging_card),
-		                   ('bass_tone', self._bass_card),
+		                   ('bass_tone', self._bass_card), ('mic', self._mic_card),
 		                   ('mode', self._mode_card)):
 			if info.get(key) not in (None, []) or key in ('charging', 'bass_tone') and key in info:
 				cards.append(build(info))
@@ -294,6 +296,21 @@ class SettingsPanel(Gtk.Box):
 		s.connect('value-changed', lambda w: self.loading or self._do(
 			lambda v=int(w.get_value()): features.set_bass_tone(self.dev, v)))
 		c.append(row('Level (%)', s))
+		return c
+
+	def _mic_card(self, info):
+		mic = info['mic']
+		c = card('Microphone', 'The mic\'s own mute and gain (its knob does the same).')
+		if 'muted' in mic:
+			sw = Gtk.Switch(active=mic['muted'], valign=Gtk.Align.CENTER)
+			sw.connect(NOTIFY_ACTIVE, lambda w, _p: self.loading or self._do(
+				lambda on=w.get_active(): features.set_mic_muted(self.dev, on, self.device.usb_id)))
+			c.append(row('Mute', sw))
+		if 'gain' in mic:
+			s = slider(0, 100, mic['gain'])
+			s.connect('value-changed', lambda w: self.loading or self._do(
+				lambda v=int(w.get_value()): features.set_mic_gain(self.dev, v, mic['gain_type'])))
+			c.append(row('Gain (%)', s))
 		return c
 
 	def _charging_card(self, info):

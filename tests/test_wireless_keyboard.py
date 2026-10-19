@@ -120,6 +120,19 @@ class YetiTest(unittest.TestCase):
 		self.assertEqual(features.PATTERNS[4], 'Omnidirectional')
 
 
+	def test_mic_mute_and_gain(self):
+		fake = simulate.FakeYeti()
+		dev = hidpp.Device(fake)
+		self.assertEqual(features.mic_gain_adjust(dev), {'muted': False, 'gain': 60, 'gain_type': 2})
+		features.set_mic_muted(dev, True)
+		self.assertEqual(fake.mic[0], 0)                         # 1 = mic on, so muted is 0
+		features.set_mic_muted(dev, True, '046d:0ad1')
+		self.assertEqual(fake.mic[0], 1)                         # the other way round on these
+		self.assertTrue(features.mic_gain_adjust(dev, '046d:0ad1')['muted'])
+		features.set_mic_gain(dev, 75)
+		self.assertEqual(features.mic_gain_adjust(dev)['gain'], 75)
+
+
 class PerKeyTest(unittest.TestCase):
 	def test_zone_table(self):
 		# G HUB's default table: A, the last usage before the gap, a modifier, media keys, G1, logo

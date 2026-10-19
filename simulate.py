@@ -415,14 +415,18 @@ class FakeRgbMouse(FakeMouse):
 
 class FakeYeti(FakeMouse):
 	"""A Yeti X-like microphone: polar pattern (0x8330), all four patterns."""
-	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, features.POLAR_PATTERN]
+	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, features.POLAR_PATTERN,
+	            features.MIC_GAIN_ADJUST]
 	KIND = 8
 
 	def __init__(self):
 		super().__init__('Yeti X')
 		self.pattern = 2
+		self.mic = {0: 1, 2: 60}          # type -> value: mic on, gain 60
 
 	def handle(self, feature, fn, p):
+		if feature == features.MIC_GAIN_ADJUST:
+			return self._gain_adjust(fn, p)
 		if feature == features.POLAR_PATTERN:
 			if fn == 0:
 				return bytes([0x0F])
@@ -431,6 +435,18 @@ class FakeYeti(FakeMouse):
 			self.pattern = p[0]
 			return bytes([self.pattern])
 		return super().handle(feature, fn, p)
+
+
+	def _gain_adjust(self, fn, p):
+		if fn == 0:
+			return bytes([1])
+		if fn == 1:
+			return bytes([0, 2])
+		if fn == 2:
+			kind = (0, 2)[p[1]]
+			return bytes([0, p[1], kind, self.mic[kind]])
+		self.mic[p[1]] = p[2]
+		return bytes(p[:3])
 
 
 class FakeReceiver:

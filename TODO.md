@@ -18,7 +18,7 @@ measurements.
 | Mice | 80% | see "Mice" below |
 | Keyboards | 75% | see "Keyboards" below |
 | Headsets (other than the voice chain) | 50% | see "Headsets" below |
-| Yeti controls | 50% | see "Mics" below |
+| Yeti controls | 65% | see "Mics" below |
 | Webcams | 90% | check on the C920 |
 | Wireless (receivers, power) | 50% | see "Wireless and power" below |
 | Lighting | 90% | screen sampler on GNOME / KDE; per-key on mice |
@@ -98,9 +98,9 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 - **Blue VO!CE 2 on the PRO X 2**: no G HUB depot known for it.
 
 ### Mics (Yeti)
-- 0x8350 mic monitoring, 0x8360 headphone mix, 0x8370 gain / mute over HID++: function layouts
-  decoded; which channel number G HUB passes isn't. (Gain and headphone volume already work
-  through the mic's sound card.)
+- 0x8370 mic mute and gain done (G HUB: channel 0, gain x 100, mute flipped on 0AD1 / 0AD2).
+- 0x8350 mic monitoring (G HUB runs it from its sidetone code) and 0x8360 headphone mix: the
+  calls are found (channel 0); their value meanings aren't read yet.
 - Yeti LED meter (0x0B01).
 
 ### Wireless and power
