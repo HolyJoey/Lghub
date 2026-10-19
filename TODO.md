@@ -1,145 +1,131 @@
 # TODO
 
-## Status (2026-10-18)
+Only what is still open. What works is in the README; how things were found is in the code's
+comments. Checked against the device features G HUB's agent knows (its 212 `Feature####`
+classes, G HUB 2026.6) and its app features.
 
-Lghub covers headsets, mice, keyboards and the rest, receivers and webcams. Tested on this
-machine: Blue VO!CE (bit-identical to Windows for all 22 G Pro X presets), the equalizer and
-surround (laptop speakers standing in for the headset), webcam settings and preview (laptop
-camera). Mice, keyboards and receivers are tested against `simulate.py` only.
+## Progress (overall about 70%)
 
-| Area | What it is | Logitech's or ours |
+The percentages are rough estimates of how much of each area's G HUB features Lghub has, not
+measurements.
+
+| Area | Done | What's left |
 | --- | --- | --- |
-| Blue VO!CE | DTS MicOpt from G HUB's capture APO, native (`bridge/micopt.c`); G Pro X, G Pro X Wireless, G733 (presets fetched on first sight) | Logitech's DSP and presets |
-| Blue VO!CE 2 | DTS ClearVoice 2 from G HUB's capture APO, native (`bridge/bv2.c`); Yetis, G735 (presets fetched on first sight) | Logitech's DSP and presets |
-| Surround | DTS Headphone:X 2.0 from G HUB's HX2E APO, native (`bridge/hx2e.c`) | Logitech's DSP and tunings |
-| Equalizer | G HUB's 10-band presets on PipeWire biquads | Logitech's presets, our filters |
-| Mice | HID++ 2.0 onboard profiles (0x8100), DPI (0x2201), report rate (0x8060) | the devices' own features |
-| Keyboards, other | HID++ 2.0 lighting (0x8070), per-key (0x8081), brightness (0x8040), sidetone (0x8300), battery | the devices' own features |
-| Webcams | V4L2 controls and MJPEG preview | standard Linux |
-| Pictures, icon | Product photos and the G HUB icon, read from Logitech's depots | Logitech's |
+| Blue VO!CE (G Pro X, G733) | 100% | check on the G Pro X |
+| Blue VO!CE 2 (Yetis, G735) | 95% | check against Logitech's APO under Wine; check on a mic |
+| Surround, equalizer | 100% | check on the G Pro X |
+| PRO 5-band equalizer | 20% | runs on the headset's Conexant chip (see below); needs the G Pro X |
+| Mice | 80% | see "Mice" below |
+| Keyboards | 75% | see "Keyboards" below |
+| Headsets (other than the voice chain) | 50% | see "Headsets" below |
+| Yeti controls | 50% | see "Mics" below |
+| Webcams | 90% | check on the C920 |
+| Wireless (receivers, power) | 50% | see "Wireless and power" below |
+| Lighting | 85% | LIGHTSYNC screen sampler; per-key on mice |
+| App features | 70% | see "App" below |
+| Background service | 90% | re-measure CPU and memory with the current version installed |
 
-## Check on the real hardware
+## 1. Check on the real hardware (G Pro X, G502, C920)
 
-- **G Pro X**: Automatic picks its mic and output (`pw.is_blue_voice_headset` matches "PRO X";
-  confirm the real PipeWire names); its sound card's mixer controls (sidetone?); the PRO_X
-  surround tuning by ear; rooms (Entertainment/Gaming/Sports = DLL 0/1/2, from G HUB's enum order).
-  The adapter's mic may be stereo or mono; `pw.capture_port` takes MONO, else FL.
-- **G502**: profile layout offsets, LED effect bytes (cycle 0x03, breathing 0x0a), report-rate
-  byte = ms, writing a 255-byte sector in 16-byte chunks, button order (after Back/Forward the
-  names are generic). Backups of every sector written: `~/.local/share/lghub-bluevoice/backups/`.
+Everything below has only met the simulator (`simulate.py`) or the DLLs offline.
+
+- **G Pro X**:
+  - Automatic picks its mic and output (`pw.is_blue_voice_headset` matches "PRO X"; confirm
+    the real PipeWire names; the mic may be stereo or mono, `pw.capture_port` takes MONO, else FL).
+  - Its sound card's mixer controls, the PRO_X surround tuning by ear, rooms (Entertainment /
+    Gaming / Sports = DLL 0/1/2 from G HUB's enum order).
+  - Then the PRO equalizer (below).
+- **G502**:
+  - profile layout offsets, LED effect bytes (cycle 0x03, breathing 0x0a)
+  - report-rate byte = ms, writing a 255-byte sector in 16-byte chunks, button order
+  - 0x8110 software buttons, DPI/profile macros, G-Shift layer
+  - Backups of every sector written go to `~/.local/share/lghub-bluevoice/backups/`.
 - **C920**: control names and ranges, preview at 640x360 MJPEG.
-- **Yeti / G735** (not owned, untested): Automatic picks the mic (`pw.is_bv2_mic` matches
-  "yeti", "g735"; confirm the real PipeWire names); Blue VO!CE 2 by ear.
-- **G733** (not owned, untested): its presets download on first sight; Blue VO!CE picks its mic;
-  lighting/battery appear on the Headset page over HID++.
-- **Wireless receivers** (simulated only): slots 1-6 answer to a short-report ping; Bolt pairs
-  differently and may not.
-- **HID++ lighting (0x8070)**: effect parameter bytes and the persist flag; the current effect
-  isn't read back (the page starts at the first effect).
+- **README numbers**: re-measure "Is it heavy?" with the current version installed (new since
+  the last measurement: game profiles, the restorer, LIGHTSYNC, Blue VO!CE 2).
+- **Untestable here (no device)**:
+  - G733, Yetis, G735
+  - keyboards: per-key 0x8081 / 0x8080, M-keys, Fn keys, game mode, Easy-Switch names, LIGHTSYNC
+  - 0x8071 lighting, SmartShift, the headset EQ 0x8310, receivers
+  - Parameter bytes that are ours (not from G HUB) are marked "ours" in the code; those are the
+    first suspects.
 
-## Progress on the open work (overall about 75%)
+## 2. Open work, by area
 
-| Item | Done | What's left |
-| --- | --- | --- |
-| DTS room choice | 100% | — |
-| Headsets' own EQ presets | 100% | — |
-| Background service idle cost | 90% | 0.2% of a core now; the engine loop and the link monitor remain |
-| Macros on buttons and G-keys | 95% | DPI/profile actions and G-Shift layer done; 0x1B04 divert for newer mice; hardware check |
-| Per-key lighting | 95% | 0x8081 and 0x8080 done; hardware check |
-| Blue VO!CE 2 (Yetis, G735) | 95% | presets, every setting, voice effects, mic gain done; Wine check, hardware check |
-| Yeti controls | 50% | polar pattern (0x8330) done; mic monitoring 0x8350, headphone 0x8360, gain/mute 0x8370 over HID++ (gain and headphone volume work through the sound card) |
-| Keyboard onboard profiles | 30% | switching the active stored profile done; editing them needs G HUB's tag format (OnboardTagConfigurations / 0x8102 SimpleProfileTag) decoded, then a keyboard to test on |
-| 5-band "PRO" equalizer | 20% | runs on the headset's Conexant chip: write sequence found; HID report layout; G Pro X check |
+### PRO 5-band equalizer (G Pro X)
+G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
+`logi_audio_conexant.dll` (class CxAudioHidDev2089x).
+- Found: the per-band write sequence and the gain format.
+- Left: the HID report layout from the DLL's per-chip table.
+- Plan: read-only first (read the band records), then writes. Notes: `re/notes/proeq.txt`.
 
-Details:
+### Mice
+- **0x1B04 buttons on newer mice** (those without 0x8110): functions found; the divert flag bits
+  and G HUB's button -> control-id map not.
+- **0x8061 report rates (2-8 kHz)**: functions found; G HUB's rate number -> Hz mapping not.
+- **0x2202 extended DPI.**
+- **Not started**:
+  - 0x2240 surface tuning, 0x2005 left-handed button swap
+  - 0x2006 / 0x2205 pointer orientation and motion scaling, 0x2150 thumbwheel
+  - 0x2400 hybrid tracking, 0x80E0 bunny hopping, 0x8111 latency monitoring
+  - 0x8120 gaming attachments
+- **Per-key lighting on mice** (if any have it) and 0x8071 inside onboard profiles.
 
-- **Macros**: `macros.py` (G HUB's macro format), `uinput.py`, `inputd.py` (0x8110 for mice and
-  0x8010 for G-keys, exactly as G HUB's agent drives them: remap entry 0 = handled in software,
-  big-endian button mask), Macros page with recorder and "On buttons". DPI up/down/cycle/default/
-  shift and profile next/previous/cycle macros run on the mouse (inputd.DeviceActions; how is
-  ours: onboard DPI slots and profiles over 0x8100, or 0x2201 in host mode). 0x1B04 (newer
-  mice without 0x8110): G HUB's functions found (fn3 SetCtrlIdReporting cid/flags/remap,
-  event 0 = up to four pressed control ids) but not its divert flag bits nor its button ->
-  control-id map; not done. **Check on the G502**:
-  that 0x8110 is there and buttons behave; G-key bit order (G1 = bit 0 of the first byte) on a
-  keyboard.
-- **Per-key lighting** (0x8081): `perkey_ui.py` draws G HUB's key layout (metadata.json);
-  `perkey.py` sends it as G HUB's agent does: SetIndividualRgbZones (fn 1, 4 x zone/r/g/b),
-  then FrameEnd (fn 7: persistence, 0, 0). Key -> zone is G HUB's built-in table (keyboard usage
-  -3/-0x24/-0x78, G-keys +0xB3, logo +0xD1, indicators +0x98/+0x93, media keys); a device's
-  `light_map` resource could override it, none of our depots ships one. Restoring the colours
-  when the keyboard connects is ours. 0x8080 (G910/G810/G410) as G HUB drives it: SetKeyColors
-  (fn 3: key type bit, count, key/r/g/b x up to 14 in a 64-byte report), Flush (fn 5); key type
-  bits from G HUB's firmware_lighting PerKey.Type; which layout group gets which type is per
-  device in G HUB's config, ours goes by the names. **Check on a G815/G915 and a G810**: keys
-  light where drawn.
-- **Blue VO!CE 2** (`logi_audio_dts_clearvoice_2_capture_apo.dll`, fetched at install):
-  `bridge/bv2.c` runs the DSP natively, `bluevoice-bridge --engine bv2` around it. G HUB's
-  setting names (BlueVoice2.Settings) -> pids from the agent's APO <-> settings code, checked
-  against its protobuf offset table. Presets: each device's `defaults_override.json`, fetched
-  on first sight (G735, Yeti, Yeti Nano, Yeti X, Yeti X WoW: 11-18 voice presets, 21 effect
-  presets). The engine runs Blue VO!CE 2 when the mic is a Yeti or G735. Page: on/off, presets,
-  every stage with G HUB's controls and ranges (from its app), voice effects (voice changer,
-  chorus, flanger, reverb, delay, ring modulator; enums sent as integers like G HUB). Like G HUB,
-  a preset sets every field (0 where its file has none). `inputGain` (the mic's own gain, 0-1)
-  goes to the mic's PipeWire volume (wpctl scale, like the Windows slider: ours). Not yet: the
-  PRO X 2 (no depot known); a check against the real APO under Wine. Pass-through when off is
-  ours.
-- **Yeti**: polar pattern 0x8330 done as G HUB drives it (fn0 mask, fn1 get, fn2 set; 1 Stereo,
-  2 Cardioid, 3 Bidirectional, 4 Omni). 0x8350 (G HUB's audio::sidetone: mic monitoring level
-  and mode), 0x8360 (headphone level), 0x8370 (gain levels, mute = fn3 type 0) have their
-  function layouts decoded (re/notes) but the channel numbering isn't pinned down; the sound
-  card's own controls cover gain and headphone volume meanwhile. LED meter not done.
-- **Keyboard onboard profiles**: G HUB's onboard_profiles.proto extracted; format from the agent.
-- **5-band "PRO" equalizer** (pro_eq_presets.json: TSM Bjergsen, Hamlinz, ...): G HUB doesn't
-  filter this itself; it sets 5 band gains (+-12 dB) on the headset's own Conexant chip
-  (CX2089x, through logi_audio_conexant.dll over HID): the band frequencies live on the chip.
-  Decoded so far: the per-band write sequence and gain format; the HID report layout comes
-  from a per-chip table still to be read. Needs the G Pro X to check.
-- **Service idle**: checks run when a sound card or USB device comes or goes, 60 s fallbacks.
+### Keyboards
+- **Onboard profiles**: switching the active one works. Editing them needs G HUB's tag format
+  (OnboardTagConfigurations, 0x8101/0x8102 profile management) decoded, then a keyboard to test.
+- **0x8030 MR key** (record a macro on the keyboard): needs the keystrokes, which Lghub can't
+  read without input-device access.
+- **Analog keyboards**: 0x1B08 / 0x1B0C analog keys, 0x80A3 / 0x80A4 actuation curves.
+- **Not started**:
+  - 0x1B05 full key customization, 0x4540 layout, 0x4530 / 0x4531 multi-platform
+  - 0x4220 lock-key state, 0x4521 / 0x4523 disable keys / controls (older)
+  - 0x8051 Logi modifiers, 0x8088 multi-lightbar
 
-## Compared with G HUB: still missing
+### Headsets
+- **Centurion (G735, PRO X 2)**: features 0x06xx (mic mute 0x0601, sidetone 0x0604, ANC 0x0605,
+  mic gain 0x0611, onboard EQ 0x0636, ...) over G HUB's own transport.
+  - Found: messages are HID++ without the device index, with an optional length byte and a
+    per-device prefix (CenturionTransport::write 0x14200d030), split into fragments
+    (CenturionPacketLayer 0x14200f3c0).
+  - Left: the per-device settings from their constructors (`re/notes/decompiled/centurion.c`).
+- **Others**:
+  - 0x8305 bass tone (functions found, range not), 0x8320 jack detection
+  - 0x1F20 battery on older wireless headsets
+  - 0x0200 / 0x0201 / 0x020D volume and EQ sets, 0x020E mic test
+  - 0x0800 / 0x0801 / 0x0809 mixer, 0x0900-0x0909 voice processing on the headset
+  - 0x0920 Bluetooth EQ
+- **Blue VO!CE 2 on the PRO X 2**: no G HUB depot known for it.
 
-Checked against the device features G HUB's agent knows (its `Feature####` classes) and its
-app features. Lghub handles 0x0000-0x0005, battery (0x1000/0x1001/0x1004), 0x2201 DPI, 0x8040,
-0x8060, 0x8070, 0x8080, 0x8081, 0x8100, 0x8110, 0x8010, 0x8300, 0x8330, 0x2230, 0x40A3,
-0x4522, 0x1814,
-0x2110/0x2111, 0x8020,
-0x8071, 0x8310 and 0x1815. Not yet:
+### Mics (Yeti)
+- 0x8350 mic monitoring, 0x8360 headphone mix, 0x8370 gain / mute over HID++: function layouts
+  decoded; which channel number G HUB passes isn't. (Gain and headphone volume already work
+  through the mic's sound card.)
+- Yeti LED meter (0x0B01).
 
-- [ ] Mice: 0x2202 extended DPI and 0x8061 extended report rate (newer mice, 2-8 kHz: G HUB's
-  functions GetDeviceCapabilities / GetActualReportRateList / GetReportRate / SetReportRate
-  found, its rate number -> Hz mapping not), 0x1B04
-  special keys / divert (newer mice' buttons), 0x2121 hi-res wheel, 0x2130 ratchet wheel,
-  0x2240 surface tuning. 0x2230 angle snapping and 0x2110/0x2111 SmartShift done (G HUB's mode
-  bytes 1 free spin / 2 ratchet, 0xFF always ratchet, torque; G HUB's speed slider maps to the
-  device value with per-model numbers we don't have, so ours shows the device's value 4-50).
-- [ ] Keyboards: 0x8030 MR (macro record: needs the
-  keystrokes, which Lghub can't read without input-device access), 0x8020 M-keys done (G-key sets
-  M1-M3 as in G HUB),
-  0x4522 game mode done (the chosen keys stay off: ours, the keyboard can't report them),
-  0x1B08 analog keys / 0x80A4 actuation curves (analog keyboards).
-- [ ] Headsets: 0x8305 bass tone (functions found, range not), 0x8310 device EQ done (simulator-tested), 0x8320 jack detection, 0x1F20 battery for
-  older wireless headsets; the newer "Centurion" protocol for G735 / PRO X 2: features 0x06xx
-  (mic mute 0x0601, sidetone 0x0604, ANC 0x0605, mic gain 0x0611, onboard EQ 0x0636, ...) over
-  G HUB's CenturionTransport (HID++-like messages without the device index, optional length
-  byte and per-device prefix: 0x14200d030) and CenturionPacketLayer (fragments: 0x14200f3c0);
-  the per-device settings come from their constructors (re/notes/decompiled/centurion.c).
-- [ ] Mics: 0x8350/0x8360/0x8370 (Yeti, see above); 0x8330 done.
-- [ ] Wireless: receiver pairing. Settings back on after a reconnect done (restore.py: per-key
-  colours and game-mode keys when a device appears; G HUB listens for 0x1D4B, we look every 60 s). 0x1815 host names done (which reply
-  bytes hold the name is ours; falls back to "Computer N"). 0x1814 Easy-Switch
-  done (G HUB's fn 0 host count/current, fn 1 switch without waiting for an answer).
-- [ ] App features: LIGHTSYNC screen sampler (Wayland's screen-sharing portal; the audio
-  visualizer is done: lightsync.py, per-key keyboards), firmware updates, Discord/OBS
-  integrations. Per-game profiles done (profiles.py, Games page: G HUB's Application fields; the
-  settings are Blue VO!CE / Blue VO!CE 2, equalizer, surround; how a game is recognised is ours:
-  executable name or Steam's AppId=; checked every 5 s while any game is set up).
-- [ ] Racing wheels and pedals (0x8123+): G HUB supports them; nobody here owns one.
-- [ ] Re-check this list against a newer G HUB now and then (agent strings: `Feature####`).
+### Wireless and power
+- **Pairing a device to a receiver**: newer LIGHTSPEED receivers pair through 0x1894
+  (LightspeedDevicePairing, async in G HUB: function numbers not read yet); older ones through
+  receiver registers.
+- **Not started**: sleep / power-off timers (0x8103 PowerOffTimeout / PowerSavingTimeout,
+  0x0108 AutoSleep), 0x1010 charging control.
+- Reconnection: Lghub checks every 60 s instead of listening for 0x1D4B (fine for settings;
+  not instant).
 
-## Depot updates
+### Lighting
+- **LIGHTSYNC screen sampler**: needs Wayland's screen-sharing portal (permission prompt,
+  PipeWire video stream).
 
-`fetch.py` (APO hashes), `depots.py` (depot paths, the icon's offset and hash) and the two DLL
-modules (`micopt.c`, `hx2e.c`: RVAs, checked against the code bytes) are for G HUB 2026.6. A newer
-G HUB moves the depots; the code fails cleanly and keeps working without the new files.
+### App
+- **Firmware updates**: not planned (a mistake can brick a device).
+- **Discord / OBS integrations**: not planned.
+- **Racing wheels and pedals** (0x8123-0x8140): nobody here owns one.
+- **Devices with screens** (0x0A00-0x0A02, 0x8103 Screen..., 0x8130 game data): not started.
+
+## 3. Upkeep
+
+- `fetch.py` (APO hashes), `depots.py` (depot paths, the icon's offset and hash) and the DLL
+  modules (`micopt.c`, `hx2e.c`, `bv2.c`: RVAs and export names) are for G HUB 2026.6. A newer
+  G HUB moves the depots; the code fails cleanly and keeps working without the new files.
+- Re-check this list against a newer G HUB now and then: `Feature####` class names in the
+  agent's strings.
