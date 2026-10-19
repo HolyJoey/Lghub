@@ -85,6 +85,8 @@ class SettingsPanel(Gtk.Box):
 			info['rate'] = 1000 // ms if ms else 0
 		if features.SIDETONE in have:
 			info['sidetone'] = headset.sidetone(dev)
+		if features.POLAR_PATTERN in have:
+			info['patterns'] = features.polar_patterns(dev)
 		if features.ONBOARD in have:
 			info['mode'] = dev.call(features.ONBOARD, 2)[0]
 		saved = perkey_ui.load_colors(self.device.model.key)
@@ -122,7 +124,8 @@ class SettingsPanel(Gtk.Box):
 		self.on_status(info['name'] or self.device.name, self._status_text(info))
 		cards = [self._zone_card(zone) for zone in info.get('zones', [])]
 		for key, build in (('brightness', self._brightness_card), ('rates', self._rate_card),
-		                   ('sidetone', self._sidetone_card), ('mode', self._mode_card)):
+		                   ('sidetone', self._sidetone_card), ('patterns', self._pattern_card),
+		                   ('mode', self._mode_card)):
 			if info.get(key) not in (None, []):
 				cards.append(build(info))
 		if not cards and not self.quiet:
@@ -166,6 +169,16 @@ class SettingsPanel(Gtk.Box):
 		s.connect('value-changed', lambda w: self.loading or self._do(
 			lambda v=int(w.get_value()): headset.set_sidetone(self.dev, v)))
 		c.append(row('Level', s))
+		return c
+
+	def _pattern_card(self, info):
+		c = card('Polar pattern', 'Which directions the microphone picks up.')
+		patterns, current = info['patterns']
+		dd = Gtk.DropDown.new_from_strings([features.PATTERNS[p] for p in patterns])
+		dd.set_selected(patterns.index(current) if current in patterns else 0)
+		dd.connect(NOTIFY_SELECTED, lambda w, _p: self.loading or self._do(
+			lambda p=patterns[w.get_selected()]: features.set_polar_pattern(self.dev, p)))
+		c.append(row('Pattern', dd))
 		return c
 
 	def _mode_card(self, info):

@@ -14,6 +14,7 @@ BRIGHTNESS = 0x8040
 ONBOARD = 0x8100
 REPORT_RATE = 0x8060
 SIDETONE = 0x8300
+POLAR_PATTERN = 0x8330
 
 NAMES = {
 	0x0000: 'Root', 0x0001: 'Feature set', 0x0002: 'Feature info', 0x0003: 'Firmware info',
@@ -26,7 +27,8 @@ NAMES = {
 	0x8020: 'M-keys', 0x8030: 'MR key', 0x8040: 'Brightness', 0x8060: 'Report rate',
 	0x8061: 'Report rate', 0x8070: 'Lighting', 0x8071: 'RGB effects', 0x8080: 'Per-key lighting',
 	0x8081: 'Per-key lighting', 0x8090: 'Mode status', 0x8100: 'Onboard profiles', 0x8110: 'Mouse button spy',
-	0x8300: 'Sidetone', 0x8310: 'Equalizer', 0x8320: 'Headset out',
+	0x8300: 'Sidetone', 0x8310: 'Equalizer', 0x8320: 'Headset out', 0x8330: 'Polar pattern',
+	0x8350: 'Mic monitoring', 0x8360: 'Headphone level', 0x8370: 'Mic gain',
 }
 
 # --- battery -------------------------------------------------------------------------------
@@ -109,6 +111,23 @@ def effect_params(effect_id, color=(255, 255, 255), period=3000, brightness=100)
 
 def set_effect(dev, zone, effect_index, params, persist=True):
 	dev.call(COLOR_LED_EFFECTS, 3, bytes([zone, effect_index]) + params + bytes([1 if persist else 0]))
+
+
+# --- polar pattern (0x8330, Yeti mics) -----------------------------------------------------
+# As G HUB's Feature8330MicrophonePolarPattern: fn 0 = bitmask of supported patterns (bit n ->
+# pattern n + 1), fn 1 = current pattern, fn 2 = set; the device also reports changes (event 0).
+
+PATTERNS = {1: 'Stereo', 2: 'Cardioid', 3: 'Bidirectional', 4: 'Omnidirectional'}
+
+
+def polar_patterns(dev):
+	"""(supported pattern numbers, current pattern)."""
+	mask = dev.call(POLAR_PATTERN, 0)[0]
+	return [p for p in PATTERNS if mask >> (p - 1) & 1], dev.call(POLAR_PATTERN, 1)[0]
+
+
+def set_polar_pattern(dev, pattern):
+	dev.call(POLAR_PATTERN, 2, bytes([pattern]))
 
 
 # --- brightness (0x8040) -------------------------------------------------------------------

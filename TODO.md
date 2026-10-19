@@ -37,7 +37,7 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 - **HID++ lighting (0x8070)**: effect parameter bytes and the persist flag; the current effect
   isn't read back (the page starts at the first effect).
 
-## Progress on the open work (overall about 65%)
+## Progress on the open work (overall about 67%)
 
 | Item | Done | What's left |
 | --- | --- | --- |
@@ -47,7 +47,7 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 | Macros on buttons and G-keys | 85% | DPI/profile macro actions; 0x1B04 divert for newer mice; hardware check |
 | Per-key lighting | 90% | 0x8081 done (G HUB's zone table, colours back on at connect); 0x8080 for older keyboards; hardware check |
 | Blue VO!CE 2 (Yetis, G735) | 75% | runs with G HUB's presets; per-setting sliders, Effects (voice changer etc.), inputGain, Wine check, hardware check |
-| Yeti controls | 10% | features found (0x8330/50/60/70); protocol details and UI |
+| Yeti controls | 50% | polar pattern (0x8330) done; mic monitoring 0x8350, headphone 0x8360, gain/mute 0x8370 over HID++ (gain and headphone volume work through the sound card) |
 | Keyboard onboard profiles | 5% | format from G HUB's agent |
 | 5-band "PRO" equalizer | 0% | band frequencies |
 
@@ -74,8 +74,11 @@ Details:
   per-setting sliders; the Effects chain (voice changer, flanger, ring mod, reverb, delay:
   pids 600-1108, names not mapped); `inputGain` (the mic's own gain); the PRO X 2 (no depot
   known); a check against the real APO under Wine. Pass-through when off is ours.
-- **Yeti**: polar pattern 0x8330, blend 0x8350, headphone mix 0x8360, mic gain 0x8370 (G HUB's
-  own feature classes); LED meter.
+- **Yeti**: polar pattern 0x8330 done as G HUB drives it (fn0 mask, fn1 get, fn2 set; 1 Stereo,
+  2 Cardioid, 3 Bidirectional, 4 Omni). 0x8350 (G HUB's audio::sidetone: mic monitoring level
+  and mode), 0x8360 (headphone level), 0x8370 (gain levels, mute = fn3 type 0) have their
+  function layouts decoded (re/notes) but the channel numbering isn't pinned down; the sound
+  card's own controls cover gain and headphone volume meanwhile. LED meter not done.
 - **Keyboard onboard profiles**: G HUB's onboard_profiles.proto extracted; format from the agent.
 - **5-band "PRO" equalizer** (pro_eq_presets.json: TSM Bjergsen, Hamlinz, ...): the band
   frequencies aren't in the preset files; the 10-band headset presets are in.
@@ -85,7 +88,7 @@ Details:
 
 Checked against the device features G HUB's agent knows (its `Feature####` classes) and its
 app features. Lghub handles 0x0000-0x0005, battery (0x1000/0x1001/0x1004), 0x2201 DPI, 0x8040,
-0x8060, 0x8070, 0x8081, 0x8100, 0x8110, 0x8010 and 0x8300. Not yet:
+0x8060, 0x8070, 0x8081, 0x8100, 0x8110, 0x8010, 0x8300 and 0x8330. Not yet:
 
 - [ ] Mice: 0x2202 extended DPI and 0x8061 extended report rate (newer mice, 2-8 kHz), 0x1B04
   special keys / divert (newer mice' buttons), 0x2121 hi-res wheel, 0x2130 ratchet wheel,
@@ -96,7 +99,7 @@ app features. Lghub handles 0x0000-0x0005, battery (0x1000/0x1001/0x1004), 0x220
 - [ ] Headsets: 0x8305 bass tone, 0x8310 device EQ, 0x8320 jack detection, 0x1F20 battery for
   older wireless headsets; the newer "Centurion" protocol (0x06xx: mic mute 0x0601, sidetone
   0x0604, ANC 0x0605, mic gain 0x0611, onboard EQ 0x0636) for G735 / PRO X 2.
-- [ ] Mics: 0x8330/0x8350/0x8360/0x8370 (Yeti, see above).
+- [ ] Mics: 0x8350/0x8360/0x8370 (Yeti, see above); 0x8330 done.
 - [ ] Wireless: 0x1814/0x1815 host switching, 0x1D4B wireless status, receiver pairing.
 - [ ] App features: per-game profiles (switch settings when a game starts), LIGHTSYNC screen
   and audio lighting, firmware updates, Discord/OBS integrations.

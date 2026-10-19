@@ -65,6 +65,16 @@ if __name__ == '__main__':
 	unittest.main()
 
 
+class YetiTest(unittest.TestCase):
+	def test_polar_pattern(self):
+		yeti = simulate.FakeYeti()
+		dev = hidpp.Device(yeti)
+		self.assertEqual(features.polar_patterns(dev), ([1, 2, 3, 4], 2))
+		features.set_polar_pattern(dev, 4)
+		self.assertEqual(yeti.pattern, 4)
+		self.assertEqual(features.PATTERNS[4], 'Omnidirectional')
+
+
 class PerKeyTest(unittest.TestCase):
 	def test_zone_table(self):
 		# G HUB's default table: A, the last usage before the gap, a modifier, media keys, G1, logo

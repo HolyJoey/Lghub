@@ -219,6 +219,26 @@ class FakeKeyboard(FakeMouse):
 		return b''
 
 
+class FakeYeti(FakeMouse):
+	"""A Yeti X-like microphone: polar pattern (0x8330), all four patterns."""
+	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, features.POLAR_PATTERN]
+	KIND = 8
+
+	def __init__(self):
+		super().__init__('Yeti X')
+		self.pattern = 2
+
+	def handle(self, feature, fn, p):
+		if feature == features.POLAR_PATTERN:
+			if fn == 0:
+				return bytes([0x0F])
+			if fn == 1:
+				return bytes([self.pattern])
+			self.pattern = p[0]
+			return bytes([self.pattern])
+		return super().handle(feature, fn, p)
+
+
 class FakeReceiver:
 	"""A LIGHTSPEED receiver with one wireless G502 in slot 1; empty slots answer like a
 	receiver does (HID++ 1.0 error)."""
@@ -245,6 +265,7 @@ class FakeReceiver:
 
 MICE = ('c08b', 'c08d', 'c332', 'c07d', 'c084', 'c092')
 KEYBOARDS = ('c33f', 'c339', 'c33c', 'c343', 'c33e')
+YETIS = ('0aaf',)
 RECEIVERS = ('c539', 'c53a', 'c53f', 'c541', 'c545', 'c547', 'c548', 'c52b')
 _FAKES = {}
 
@@ -254,6 +275,7 @@ def transport_for(usb_id, port):
 	app's lifetime so changes stick while it runs."""
 	pid = usb_id.split(':')[1]
 	kinds = {**dict.fromkeys(MICE, FakeMouse), **dict.fromkeys(KEYBOARDS, FakeKeyboard),
+	         **dict.fromkeys(YETIS, FakeYeti),
 	         **dict.fromkeys(RECEIVERS, FakeReceiver)}
 	if pid not in kinds:
 		return None
