@@ -265,6 +265,54 @@ class EchoPress:
 		return out
 
 
+# --- your own animations (G HUB's Freestyle), in G HUB's keyframe format ------------------------
+
+CUSTOM_DIR = os.path.join(store.CONFIG_DIR, 'animations')
+DIRECTIONS = ('CYCLE', 'REVERSE_CYCLE', 'BOUNCE', 'RANDOM')
+CURVES = ('LINEAR', 'INQUAD', 'OUTQUAD', 'INOUTQUAD', 'INCUBIC', 'OUTCUBIC', 'INOUTCUBIC', 'INSINE', 'OUTSINE',
+          'INOUTSINE', 'INEXPO', 'OUTEXPO', 'INCIRC', 'OUTCIRC', 'INBACK', 'OUTBACK', 'INBOUNCE', 'OUTBOUNCE',
+          'INELASTIC', 'OUTELASTIC', 'NONE')
+CUSTOM_SPEED = 100        # ms per length unit, as G HUB's own animation files use
+
+
+def to_ghub(frames, direction='CYCLE', speed=CUSTOM_SPEED):
+	"""G HUB's keyframe JSON for [(length, curve, {"<group>:<id>": [r, g, b]})]."""
+	keyframes = {}
+	for n, (length, curve, colors) in enumerate(frames):
+		slots = {}
+		for key, rgb in colors.items():
+			group, _sep, kid = key.partition(':')
+			slots.setdefault(group, {'perKeyMap': {'colorCodeMap': {}}})['perKeyMap']['colorCodeMap'][kid] = \
+				{'hex': '#%02x%02x%02x' % tuple(rgb)}
+		keyframes[str(n)] = {'curveType': curve, 'length': length, 'lightingSlots': {'infoMap': slots}}
+	return {'keyframeInfo': {'direction': direction, 'speed': speed, 'keyframeMap': keyframes}}
+
+
+def save_custom(name, frames, direction='CYCLE'):
+	"""Write an animation; returns its file name in CUSTOM_DIR."""
+	os.makedirs(CUSTOM_DIR, exist_ok=True)
+	safe = ''.join(c if c.isalnum() else '-' for c in name.lower()).strip('-') or 'animation'
+	file = f'{safe}.json'
+	data = to_ghub(frames, direction)
+	data['name'] = name
+	store._write_json(os.path.join(CUSTOM_DIR, file), data)
+	return file
+
+
+def custom_effects():
+	"""[(name, file)] of the saved animations."""
+	out = []
+	try:
+		files = sorted(os.listdir(CUSTOM_DIR))
+	except OSError:
+		return out
+	for file in files:
+		if file.endswith('.json'):
+			data = store._read_json(os.path.join(CUSTOM_DIR, file), {})
+			out.append((data.get('name') or file[:-5], file))
+	return out
+
+
 def layout_keys(layout):
 	_w, _h, keys = layout
 	return [f'{g}:{k}' for g, k, *_r in keys if g in KEY_GROUPS]

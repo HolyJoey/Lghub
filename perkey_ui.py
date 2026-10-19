@@ -6,6 +6,7 @@ import math
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
 
 import depots
+import freestyle_ui
 import lightsync_ui
 import perkey
 import store
@@ -47,6 +48,8 @@ class PerKeyPage(Gtk.Box):
 		self.colors = load_colors(self.model)       # "group:id" -> [r, g, b]
 		self.selected = set()
 		self.picture = None
+		self.editing = None                         # freestyle_ui.FreestyleCard while an animation is edited
+		self.preview = None                         # colours of the animation preview, while it plays
 		self.append(page_header('Per-key lighting', 'Click keys (or drag across them) to pick them, then '
 		                        'choose a colour.'))
 		if not self.layout:
@@ -85,6 +88,7 @@ class PerKeyPage(Gtk.Box):
 		self.append(self.status)
 		self._status()
 		self.append(lightsync_ui.card(self.model, lambda: self.apply(self.colors), per_key=True))
+		self.append(freestyle_ui.FreestyleCard(self))
 
 	# --- LIGHTSYNC ----------------------------------------------------------------------
 
@@ -106,8 +110,9 @@ class PerKeyPage(Gtk.Box):
 			Gdk.cairo_set_source_pixbuf(cr, self.picture, 0, 0)
 			cr.paint_with_alpha(0.55)
 			cr.restore()
+		shown = self.preview or (self.editing.colors() if self.editing else self.colors)
 		for group, kid, x, y, kw, kh in keys:
-			rgb = self.colors.get(f'{group}:{kid}')
+			rgb = shown.get(f'{group}:{kid}')
 			sel = (group, kid) in self.selected
 			cr.rectangle(ox + x * s + 1, oy + y * s + 1, kw * s - 2, kh * s - 2)
 			if rgb:
@@ -173,6 +178,11 @@ class PerKeyPage(Gtk.Box):
 			return
 		rgba = self.color.get_rgba()
 		rgb = [round(v * 255) for v in (rgba.red, rgba.green, rgba.blue)]
+		if self.editing:                            # painting a frame of an animation
+			for group, kid in self.selected:
+				self.editing.colors()[f'{group}:{kid}'] = rgb
+			self.area.queue_draw()
+			return
 		for group, kid in self.selected:
 			self.colors[f'{group}:{kid}'] = rgb
 		save_colors(self.model, self.colors)

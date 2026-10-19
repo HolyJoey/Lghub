@@ -392,7 +392,10 @@ class Animated(Visualizer):
 			                           s.get('speed', 1000))
 		if s['effect'] == 'cycle':
 			return softlight.ColorCycle(keys, s.get('colors') or softlight.CYCLE_COLORS, s.get('speed', 5000))
-		path = softlight.fetch(softlight.EFFECTS_DIR + s.get('file', ''))
+		if s.get('custom'):
+			path = os.path.join(softlight.CUSTOM_DIR, os.path.basename(s['custom']))
+		else:
+			path = softlight.fetch(softlight.EFFECTS_DIR + s.get('file', ''))
 		with open(path) as f:
 			frames, speed, direction = softlight.parse_keyframes(json.load(f))
 		present = set(keys)

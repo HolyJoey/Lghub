@@ -47,6 +47,22 @@ class ZoneTargetTest(unittest.TestCase):
 		self.assertEqual(fake.set[1][1][:3], bytes([255, 0, 0]))
 
 
+class CustomTest(unittest.TestCase):
+	def test_save_and_play_back(self):
+		import tempfile
+		from unittest import mock
+		with tempfile.TemporaryDirectory() as d, mock.patch.object(softlight, 'CUSTOM_DIR', d):
+			frames = [(10, 'LINEAR', {'PERKEY_KEYBOARD:4': [0, 0, 0]}), (10, 'OUTQUAD', {'PERKEY_KEYBOARD:4': [255, 0, 0]})]
+			file = softlight.save_custom('Red pulse!', frames, 'BOUNCE')
+			self.assertEqual(file, 'red-pulse.json')
+			self.assertEqual(softlight.custom_effects(), [('Red pulse!', 'red-pulse.json')])
+			import json
+			with open(os.path.join(d, file)) as f:
+				back = softlight.parse_keyframes(json.load(f))
+		self.assertEqual(back, ([(10, 'LINEAR', {'PERKEY_KEYBOARD:4': [0, 0, 0]}),
+		                         (10, 'OUTQUAD', {'PERKEY_KEYBOARD:4': [255, 0, 0]})], 100, 'BOUNCE'))
+
+
 class EasingTest(unittest.TestCase):
 	def test_curves(self):
 		for name in ('LINEAR', 'INQUAD', 'OUTCUBIC', 'INOUTSINE', 'OUTINEXPO', 'INCIRC', 'OUTBACK', 'INOUTBOUNCE',

@@ -19,8 +19,7 @@ def card(model, restore, per_key=True):
 	card.append(label('LIGHTSYNC', ['section-title']))
 	card.append(label(_intro(per_key), ['muted', 'small'], wrap=True))
 	effects = _effects(per_key)
-	chosen = next((i for i, (k, f, _n) in enumerate(effects)
-	               if k == settings.get('effect') and f == settings.get('file')), 0)
+	chosen = _chosen(effects, settings)
 	effect = Gtk.DropDown.new_from_strings([name for _k, _f, name in effects])
 	effect.set_selected(chosen)
 	card.append(_row('Effect', effect))
@@ -48,18 +47,11 @@ def card(model, restore, per_key=True):
 	        'starlight': [('Star colour', star), ('Sky colour', sky), ('Stars', count), ('Speed', speed)],
 	        'cycle': [('Speed', cycle_speed)],
 	        'echo': [('Echo colour', echo), ('Rest colour', rest), ('Fade', echo_speed)]}
-	widgets = {}
-	for kind, items in rows.items():
-		for text, w in items:
-			r = _row(text, w)
-			card.append(r)
-			widgets.setdefault(kind, []).append(r)
+	widgets = _add_rows(card, rows)
 
 	def show():
 		kind = effects[effect.get_selected()][0]
-		for k, rs in widgets.items():
-			for r in rs:
-				r.set_visible(k == kind)
+		_show(widgets, kind)
 		return kind
 
 	def changed(*_):
@@ -72,9 +64,10 @@ def card(model, restore, per_key=True):
 		                                'speed': round(speed.get_value())},
 		          'cycle': lambda: {'speed': round(cycle_speed.get_value())},
 		          'echo': lambda: {'echo': _rgb(echo), 'rest': _rgb(rest), 'speed': round(echo_speed.get_value())},
-		          'keyframe': lambda: {'file': effects[effect.get_selected()][1]}}
+		          'keyframe': lambda: {'file': effects[effect.get_selected()][1]},
+		          'custom': lambda: {'custom': effects[effect.get_selected()][1]}}
 		if kind:
-			data[model] = {'effect': kind, **values[kind]()}
+			data[model] = {'effect': 'keyframe' if kind == 'custom' else kind, **values[kind]()}
 		else:
 			data.pop(model, None)
 			restore()                        # the device's own lighting back on
@@ -90,6 +83,33 @@ def card(model, restore, per_key=True):
 	return card
 
 
+def _add_rows(card, rows):
+	"""{effect: [row widgets]} after adding every effect's setting rows to the card."""
+	widgets = {}
+	for kind, items in rows.items():
+		for text, w in items:
+			r = _row(text, w)
+			card.append(r)
+			widgets.setdefault(kind, []).append(r)
+	return widgets
+
+
+def _show(widgets, kind):
+	for k, rows in widgets.items():
+		for r in rows:
+			r.set_visible(k == kind)
+
+
+def _chosen(effects, settings):
+	"""The list position of the effect in settings (0 = off)."""
+	for i, (kind, file, _name) in enumerate(effects):
+		if kind == 'custom' and file == settings.get('custom'):
+			return i
+		if kind == settings.get('effect') and file == settings.get('file') and not settings.get('custom'):
+			return i
+	return 0
+
+
 def _intro(per_key):
 	if per_key:
 		return ('Effects the background service plays on the keys: G HUB’s own animations, starlight, colour '
@@ -101,10 +121,11 @@ def _intro(per_key):
 
 
 def _effects(per_key):
+	import softlight
 	effects = [(None, None, 'Off'), ('audio', None, 'Audio visualizer'), ('screen', None, 'Screen sampler'),
 	           ('starlight', None, 'Starlight'), ('cycle', None, 'Colour cycle'), ('echo', None, 'Echo press')]
 	if per_key:
-		return effects + _keyframe_effects()
+		return effects + _keyframe_effects() + [('custom', file, name) for name, file in softlight.custom_effects()]
 	return [e for e in effects if e[0] != 'echo']      # G HUB: no echo press or animations on zones
 
 
