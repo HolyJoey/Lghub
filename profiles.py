@@ -77,6 +77,12 @@ def _processes():
 	return names, lines
 
 
+def persistent(data):
+	"""G HUB's persistent profile: the profile that stays on whatever runs, or None."""
+	pid = data.get('persistent')
+	return next((p for p in data['profiles'] if p['id'] == pid), None) if pid else None
+
+
 def running(profiles, processes=None):
 	"""The first profile whose game is running, or None."""
 	names, lines = processes or _processes()
@@ -111,9 +117,9 @@ class Switcher:
 	def check(self, now):
 		self.last = now
 		data = load()
-		if not data['profiles'] and not data.get('active'):
+		if not data['profiles'] and not data.get('active'):  # nothing to switch
 			return None
-		game = running(data['profiles'])
+		game = persistent(data) or running(data['profiles'])
 		active = data.get('active')
 		if game and game['id'] != active:
 			if not active:

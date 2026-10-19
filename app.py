@@ -14,6 +14,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango  # noqa: E402
 
 import bluevoice_ui  # noqa: E402
 import games_ui  # noqa: E402
+import settings_ui  # noqa: E402
 import devices  # noqa: E402
 import hidpp_ui  # noqa: E402
 import depots  # noqa: E402
@@ -59,7 +60,8 @@ class HomePage(Gtk.Box):
 		super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=24, css_classes=['page'])
 		self.win = win
 		self.append(page_header('Devices', 'Your connected Logitech G gear. Pick one to set it up.',
-		                        button_widget('Games', ['ghost'], win.show_games)))
+		                        button_widget('Games', ['ghost'], win.show_games),
+		                        button_widget('Settings', ['ghost'], win.show_settings)))
 		self.flow = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, column_spacing=16, row_spacing=16,
 		                        min_children_per_line=1, max_children_per_line=5, homogeneous=True,
 		                        valign=Gtk.Align.START)
@@ -188,6 +190,8 @@ class MainWindow(Adw.ApplicationWindow):
 		GLib.timeout_add_seconds(DISCOVER_SECONDS, self._discover)
 		if start_page == 'games':
 			self.show_games()
+		if start_page == 'settings':
+			self.show_settings()
 		if start_page in bluevoice_ui.PAGES:
 			pro_x = next((d for d in self.home.devices if devices.blue_voice_model(d)), None)
 			self.show_device(pro_x)
@@ -217,6 +221,13 @@ class MainWindow(Adw.ApplicationWindow):
 		if not self.stack.get_child_by_name('games'):
 			self.stack.add_named(scrolled(games_ui.GamesPage(self)), 'games')
 		self.stack.set_visible_child_name('games')
+
+	def show_settings(self):
+		self.current = None
+		if self.stack.get_child_by_name('settings'):
+			self.stack.remove(self.stack.get_child_by_name('settings'))      # fresh: the games list may have changed
+		self.stack.add_named(scrolled(settings_ui.SettingsPage(self)), 'settings')
+		self.stack.set_visible_child_name('settings')
 
 	def show_device(self, device):
 		"""Open a device's page (None: the headset view without a headset, for --page)."""

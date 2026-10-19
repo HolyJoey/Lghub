@@ -4,7 +4,7 @@ Only what is still open. What works is in the README; how things were found is i
 comments. Checked against the device features G HUB's agent knows (its 212 `Feature####`
 classes, G HUB 2026.6) and its app features.
 
-## Progress (overall about 82%)
+## Progress (overall about 84%)
 
 The percentages are rough estimates of how much of each area's G HUB features Lghub has, not
 measurements.
@@ -22,7 +22,7 @@ measurements.
 | Webcams | 90% | check on the C920 |
 | Wireless (receivers, power) | 75% | see "Wireless and power" below |
 | Lighting | 95% | screen sampler on GNOME / KDE; per-key on mice |
-| App features | 75% | see "App" below |
+| App features | 85% | see "App" below |
 | Background service | 90% | re-measure CPU and memory with the current version installed |
 
 ## 1. Check on the real hardware (G Pro X, G502, C920)
@@ -162,6 +162,8 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 - Game scan done (G HUB scans for installed games): Steam, Heroic / Legendary (Epic), Lutris.
 - Tray icon done (G HUB's system tray: devices with battery, Blue VO!CE / equalizer / surround
   switches, Open Lghub; StatusNotifierItem + dbusmenu). config.json "tray": false turns it off.
+- Settings page done (G HUB's general settings: notifications, tray, persistent profile). Not
+  ours to copy: language (Lghub is English only), analytics, G HUB updates.
 - **Firmware updates**: not planned (a mistake can brick a device).
 - **Discord / OBS integrations**: not planned.
 - **Racing wheels and pedals** (0x8123-0x8140): nobody here owns one.

@@ -59,5 +59,11 @@ class SwitcherTest(unittest.TestCase):
 				self.assertEqual([c.args[0] for c in notify.call_args_list], ['Game profile on', 'Desktop profile on'])
 
 
+	def test_persistent_profile(self):
+		data = {'profiles': [{'id': 'a'}, {'id': 'b'}], 'persistent': 'b'}
+		self.assertEqual(profiles.persistent(data), {'id': 'b'})
+		self.assertIsNone(profiles.persistent({'profiles': [{'id': 'a'}]}))
+
+
 if __name__ == '__main__':
 	unittest.main()

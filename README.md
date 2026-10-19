@@ -151,8 +151,9 @@ Then open **Lghub** from your menu (or run `lghub`).
 
 Like G HUB, the background service puts an icon in the tray (waybar, KDE, GNOME with the
 AppIndicator extension): your devices with their battery, switches for Blue VO!CE, the equalizer
-and surround, and Open Lghub. `"tray": false` in `~/.config/lghub-bluevoice/config.json` turns
-it off.
+and surround, and Open Lghub. The Settings page (from the home screen) turns it off, along with
+each kind of notification, and sets a persistent profile (one game profile that stays on, as in
+G HUB).
 
 ## Is it heavy?
 
