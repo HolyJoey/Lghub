@@ -19,6 +19,7 @@ ANGLE_SNAPPING = 0x2230
 FN_INVERSION = 0x40A3
 DISABLE_KEYS = 0x4522
 CHANGE_HOST = 0x1814
+DEVICE_EQ = 0x8310
 
 NAMES = {
 	0x0000: 'Root', 0x0001: 'Feature set', 0x0002: 'Feature info', 0x0003: 'Firmware info',
@@ -152,6 +153,36 @@ def fn_inversion(dev, host=0):
 
 def set_fn_inversion(dev, on, host=0):
 	dev.call(FN_INVERSION, 1, bytes([host, 1 if on else 0]))
+
+
+# The headset's own equalizer (0x8310), as G HUB's Feature8310Equalizer: fn 0 getEQInfo (count,
+# dbRange, capabilities, dbMin, dbMax), fn 1 frequencies from a band index (index, then 16-bit
+# big-endian Hz), fn 2 gains (signed dB, one byte each), fn 3 set gains (G HUB sends 2, then the
+# gains), fn 4 / fn 5 read / set whether it's on.
+
+def device_eq(dev):
+	"""{'freqs', 'gains', 'low', 'high', 'on'} of the headset's own equalizer."""
+	info = dev.call(DEVICE_EQ, 0)
+	count = info[0]
+	low, high = struct.unpack('bb', info[3:5])
+	freqs = []
+	while len(freqs) < count:
+		r = dev.call(DEVICE_EQ, 1, bytes([len(freqs)]))
+		got = [struct.unpack('>H', r[1 + 2 * i:3 + 2 * i])[0] for i in range(min(7, count - len(freqs)))]
+		if not any(got):
+			break
+		freqs += got
+	gains = list(struct.unpack(f'{count}b', dev.call(DEVICE_EQ, 2)[:count]))
+	return {'freqs': freqs, 'gains': gains, 'low': low or -12, 'high': high or 12,
+	        'on': bool(dev.call(DEVICE_EQ, 4)[0])}
+
+
+def set_device_eq(dev, gains):
+	dev.call(DEVICE_EQ, 3, bytes([2]) + struct.pack(f'{len(gains)}b', *(round(g) for g in gains)))
+
+
+def set_device_eq_on(dev, on):
+	dev.call(DEVICE_EQ, 5, bytes([1 if on else 0]))
 
 
 # Easy-Switch (0x1814 ChangeHost): fn 0 = host count, current host; fn 1 = switch to a host. The

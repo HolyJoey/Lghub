@@ -104,6 +104,8 @@ class SettingsPanel(Gtk.Box):
 			info['sidetone'] = headset.sidetone(dev)
 		if features.POLAR_PATTERN in have:
 			info['patterns'] = features.polar_patterns(dev)
+		if features.DEVICE_EQ in have:
+			info['device_eq'] = features.device_eq(dev)
 		if features.ANGLE_SNAPPING in have:
 			info['angle_snapping'] = features.angle_snapping(dev)
 		host = 0
@@ -156,6 +158,7 @@ class SettingsPanel(Gtk.Box):
 		                   ('sidetone', self._sidetone_card), ('patterns', self._pattern_card),
 		                   ('angle_snapping', self._angle_card), ('fn_inversion', self._fn_card),
 		                   ('game_mode', self._game_mode_card), ('hosts', self._hosts_card),
+		                   ('device_eq', self._device_eq_card),
 		                   ('mode', self._mode_card)):
 			if info.get(key) not in (None, []):
 				cards.append(build(info))
@@ -238,6 +241,26 @@ class SettingsPanel(Gtk.Box):
 			sw.connect(NOTIFY_ACTIVE, lambda w, _p, u=usage: self.loading or self._game_key(u, w.get_active()))
 			c.append(row(f'Turn off {name}', sw))
 		return c
+
+	def _device_eq_card(self, info):
+		eq = info['device_eq']
+		c = card('Headset equalizer', 'The equalizer inside the headset: it works on any computer or console.')
+		sw = Gtk.Switch(active=eq['on'], valign=Gtk.Align.CENTER)
+		sw.connect(NOTIFY_ACTIVE, lambda w, _p: self.loading or self._do(
+			lambda on=w.get_active(): features.set_device_eq_on(self.dev, on)))
+		c.append(row('On', sw))
+		gains = list(eq['gains'])
+		for i, hz in enumerate(eq['freqs'][:len(gains)]):
+			s = slider(eq['low'], eq['high'], gains[i])
+			s.connect('value-changed', lambda w, n=i: self._eq_band(gains, n, w.get_value()))
+			c.append(row(f'{hz / 1000:g} kHz' if hz >= 1000 else f'{hz} Hz', s))
+		return c
+
+	def _eq_band(self, gains, n, value):
+		if self.loading or round(value) == gains[n]:
+			return
+		gains[n] = round(value)
+		self._do(lambda g=list(gains): features.set_device_eq(self.dev, g))
 
 	def _hosts_card(self, info):
 		count, current = info['hosts']
