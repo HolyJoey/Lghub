@@ -48,6 +48,14 @@ def apply(dev, values):
 	dev.call(SURFACE_TUNING, 1, bytes(values[:3]))
 
 
+def info(dev):
+	"""(values in use now, factory values) from fn 0's 9 bytes: G HUB's surface control matches
+	bytes 3-5 against the saved surfaces to find the active one, and makes its factory surface
+	from bytes 6-8 (bytes 0-2 it doesn't use there)."""
+	r = dev.call(SURFACE_TUNING, 0)
+	return list(r[3:6]), list(r[6:9])
+
+
 def speed_hint(speed):
 	if speed < SPEED_MIN:
 		return FASTER

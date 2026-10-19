@@ -11,23 +11,25 @@ from ui import box, button_widget, label
 HINTS = {surface_tuning.GOOD: 'Good speed, keep going',
          surface_tuning.SLOWER: 'Slower',
          surface_tuning.FASTER: 'Faster'}
-FACTORY = 'As it is now'
+FACTORY = 'Factory'
 
 
-def surface_card(card, row, win, device, dev, live):
+def surface_card(card, row, win, device, dev, live, info=(None, None)):
 	"""The card for a mouse with 0x2240; card / row are the page's own builders, live(job) runs
-	a device job on the page's worker."""
+	a device job on the page's worker, info = surface_tuning.info() read on that worker."""
 	key = device.serial or device.id
 	c = card('Surface tuning', 'Calibrates the sensor to your mouse pad: move the mouse around on '
 	         'it for a few seconds. Tuned surfaces are kept, to switch back to later.')
 	surfaces = surface_tuning.load(key)
-	names = [FACTORY] + [s['name'] for s in surfaces]
-	dd = Gtk.DropDown.new_from_strings(names)
+	current, factory = info
+	dd = Gtk.DropDown.new_from_strings([FACTORY] + [s['name'] for s in surfaces])
+	dd.set_selected(next((i + 1 for i, s in enumerate(surfaces) if s['values'] == current), 0))
 
 	def picked(w, _p):
 		n = w.get_selected()
-		if n > 0:
-			live(lambda values=surfaces[n - 1]['values']: surface_tuning.apply(dev, values))
+		values = surfaces[n - 1]['values'] if n > 0 else factory
+		if values:
+			live(lambda v=values: surface_tuning.apply(dev, v))
 
 	dd.connect('notify::selected', picked)
 	c.append(row('Surface', dd))

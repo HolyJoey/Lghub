@@ -239,6 +239,8 @@ class FakeWheelMouse(FakeMouse):
 	def _surface_tuning(self, fn, p):
 		self.tuning.append(fn)
 		idx = self.FEATURES.index(0x2240)
+		if fn == 0:                             # [?, ?, ?, in use (3), factory (3)]
+			return bytes([0, 0, 0] + (self.surface or [20, 5, 25]) + [20, 5, 25])
 		if fn == 1:
 			self.surface = list(p[:3])
 		elif fn == 3:                           # shutter calibrated: done, LED drive 42

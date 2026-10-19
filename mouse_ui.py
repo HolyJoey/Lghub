@@ -155,14 +155,13 @@ class MouseView(Gtk.Box):
 		m = mouse.Mouse(devices.open_hidpp(self.device), self.device.serial or self.device.id)
 		curves = battery_model.for_device(self.device) if m.dev.has(features.BATTERY_VOLTAGE) else None
 		state = {'battery': features.battery(m.dev, curves), 'wheel': m.wheel()}
-		if features.BUTTON_SWAP in m.features:
-			state['swap'] = features.button_swap(m.dev)
-		if features.HYBRID_TRACKING in m.features:
-			state['hybrid'] = features.hybrid_mode(m.dev)
-		if device_settings.GLOBAL_SETTINGS in m.features:
-			state['power'] = device_settings.power_timers(m.dev)
-		if features.BUNNY_HOPPING in m.features:
-			state['bhop'] = features.bunny_hopping(m.dev)
+		for feature, key, read in ((features.BUTTON_SWAP, 'swap', features.button_swap),
+		                           (features.HYBRID_TRACKING, 'hybrid', features.hybrid_mode),
+		                           (surface_tuning.SURFACE_TUNING, 'surface', surface_tuning.info),
+		                           (device_settings.GLOBAL_SETTINGS, 'power', device_settings.power_timers),
+		                           (features.BUNNY_HOPPING, 'bhop', features.bunny_hopping)):
+			if feature in m.features:
+				state[key] = read(m.dev)
 		if m.onboard:
 			m.load_profiles()
 			state['mode'] = m.mode()
@@ -402,7 +401,8 @@ class MouseView(Gtk.Box):
 
 	def _surface_card(self, page):
 		if surface_tuning.SURFACE_TUNING in self.mouse.features:
-			page.append(surface_ui.surface_card(card, row, self.win, self.device, self.mouse.dev, self._live))
+			page.append(surface_ui.surface_card(card, row, self.win, self.device, self.mouse.dev, self._live,
+			                                    self.state.get('surface', (None, None))))
 
 	def _bhop_card(self, page):
 		if 'bhop' not in self.state:

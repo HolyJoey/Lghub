@@ -57,6 +57,12 @@ class SurfaceTuningTest(unittest.TestCase):
 		self.assertEqual(seen[-1], 1.0)
 		self.assertTrue(all(a <= b for a, b in zip(seen, seen[1:])))
 
+	def test_info(self):
+		fake = simulate.FakeWheelMouse()
+		dev = hidpp.Device(fake)
+		surface_tuning.apply(dev, [42, 7, 30])
+		self.assertEqual(surface_tuning.info(dev), ([42, 7, 30], [20, 5, 25]))
+
 	def test_cancel_still_ends_tuning(self):
 		fake = simulate.FakeWheelMouse()
 		cancel = threading.Event()
