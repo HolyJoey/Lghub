@@ -78,9 +78,11 @@ class ProceduralTest(unittest.TestCase):
 	def test_starlight_and_cycle(self):
 		keys = [f'PERKEY_KEYBOARD:{i}' for i in range(100)]
 		star = softlight.Starlight(keys, count=40, speed=1000, rng=random.Random(1))
+		star.frame(0.0)                                  # 40 stars start
 		frame = star.frame(0.5)
 		self.assertEqual(len(frame), 100)
-		self.assertTrue(any(c != [0, 0, 40] for c in frame.values()))
+		self.assertEqual(sum(c != [0, 0, 40] for c in frame.values()), 40)   # G HUB: star count at once
+		self.assertEqual(star.frame(1.0)['PERKEY_KEYBOARD:0'] in ([255, 255, 255], [0, 0, 40]), True)
 		cycle = softlight.ColorCycle(keys[:1], speed=1000)
 		self.assertEqual(cycle.frame(0.0)[keys[0]], [255, 0, 0])
 		self.assertEqual(cycle.frame(1.0)[keys[0]], [0, 255, 0])

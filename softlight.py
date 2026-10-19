@@ -4,12 +4,12 @@
 The animated ones are G HUB's own files (LGHUB/data/lighting/effects/*.json in its core depot,
 listed in effect_prefabs.json), downloaded at first use and not stored in the repo: a list of
 frames, each with a length, an easing curve into it and a colour per key (keys by the same ids
-as the per-key page), played in G HUB's directions (cycle, reverse, bounce, random). A frame
-lasting length x speed milliseconds is ours.
+as the per-key page), played in G HUB's directions (cycle, reverse, bounce, random); a frame
+lasts length x speed milliseconds (G HUB's keyframe_metadata player).
 
 Starlight (StarlightEffect: star colour, sky colour, star count 5-100, speed 100-10000 ms) and
-Color cycle (ColorCycleEffect: colours, speed 1000-10000 ms) use G HUB's settings and ranges;
-how a star twinkles and the default values are ours.
+Color cycle (ColorCycleEffect: colours, speed 1000-10000 ms) use G HUB's settings and ranges; the
+default values are ours.
 """
 import json
 import math
@@ -192,25 +192,32 @@ class Keyframes:
 
 
 class Starlight:
-	def __init__(self, keys, star=(255, 255, 255), sky=(0, 0, 40), count=50, speed=2000, rng=None):
+	"""As G HUB's starlight player: up to star-count stars twinkle at once; each fades from the sky
+	colour to the star colour over `speed` ms on its in-curve, then back over `speed` ms on its
+	out-curve, and a resting key takes its place. Which key comes next (random) is ours."""
+
+	def __init__(self, keys, star=(255, 255, 255), sky=(0, 0, 40), count=50, speed=2000,
+	             in_curve='LINEAR', out_curve='LINEAR', rng=None):
 		self.keys, self.star, self.sky = list(keys), list(star), list(sky)
 		self.count = max(STAR_COUNT[0], min(STAR_COUNT[1], count))
 		self.speed = max(STAR_SPEED[0], min(STAR_SPEED[1], speed)) / 1000
+		self.fade_in, self.fade_out = easing(in_curve), easing(out_curve)
 		self.rng = rng or random.Random()
 		self.stars = {}        # key -> start time
 
 	def frame(self, t):
-		for k in [k for k, s in self.stars.items() if t - s >= self.speed]:
-			del self.stars[k]
-		want = max(1, round(len(self.keys) * self.count / 100 / 4))      # ours: count as % of keys / 4
-		free = [k for k in self.keys if k not in self.stars]
-		while len(self.stars) < want and free:
-			k = free.pop(self.rng.randrange(len(free)))
-			self.stars[k] = t - self.rng.random() * self.speed * 0.2
+		self.stars = {k: s for k, s in self.stars.items() if t - s < 2 * self.speed}
+		resting = [k for k in self.keys if k not in self.stars]
+		while len(self.stars) < self.count and resting:
+			k = resting.pop(self.rng.randrange(len(resting)))
+			self.stars[k] = t
 		out = {k: list(self.sky) for k in self.keys}
 		for k, s in self.stars.items():
 			phase = (t - s) / self.speed
-			out[k] = mix(self.sky, self.star, math.sin(math.pi * min(1.0, phase)))
+			if phase < 1:
+				out[k] = mix(self.sky, self.star, self.fade_in(phase))
+			else:
+				out[k] = mix(self.star, self.sky, self.fade_out(phase - 1))
 		return out
 
 
