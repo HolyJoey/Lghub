@@ -11,6 +11,7 @@ import headset
 import mouse
 import perkey
 import perkey_ui
+import store
 from ui import box, label
 from worker import Worker
 
@@ -79,6 +80,22 @@ def power_card(timers, do, dev, card=card, row=row):
 		dd.connect(NOTIFY_SELECTED, lambda w, _p, t=tag, ms=minutes: do(
 			lambda m=ms[w.get_selected()]: device_settings.set_timeout(dev, t, m * 60)))
 		c.append(row(title, dd))
+	return c
+
+
+def battery_warnings_card(card=card, row=row):
+	"""The switch for low-battery notifications (all devices, as G HUB's setting)."""
+	c = card('Notifications', 'A desktop notification when a wireless device’s battery gets low (30 %) '
+	         'and again when it’s nearly empty (15 %).')
+	sw = Gtk.Switch(active=store.load_config().get('battery_warnings', True), valign=Gtk.Align.CENTER)
+
+	def changed(w, _p):
+		cfg = store.load_config()
+		cfg['battery_warnings'] = w.get_active()
+		store.save_config(cfg)
+
+	sw.connect(NOTIFY_ACTIVE, changed)
+	c.append(row('Warn when the battery is low', sw))
 	return c
 
 
@@ -257,6 +274,7 @@ class SettingsPanel(Gtk.Box):
 		                   ('device_eq', self._device_eq_card), ('charging', self._charging_card),
 		                   ('bass_tone', self._bass_card), ('mic', self._mic_card),
 		                   ('power', lambda i: power_card(i['power'], self._do, self.dev)),
+		                   ('battery', lambda _i: battery_warnings_card()),
 		                   ('mode', self._mode_card)):
 			if info.get(key) not in (None, []) or key in ('charging', 'bass_tone') and key in info:
 				cards.append(build(info))

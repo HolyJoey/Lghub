@@ -17,6 +17,7 @@ import eq
 import inputd
 import hotplug
 import presets
+import battery_watch
 import lightsync
 import profiles
 import restore
@@ -62,6 +63,7 @@ class Engine:
 		self.games = profiles.Switcher()
 		self.restorer = restore.Restorer()
 		self.lightsync = lightsync.Runner()
+		self.battery = battery_watch.Watch()
 		self.game = None
 		self.mic_gain = None         # (mic, gain) last set for Blue VO!CE 2
 
@@ -303,6 +305,8 @@ class Engine:
 			self.restorer.check(now)
 		if self.lightsync.due(now):
 			self.lightsync.check(now)
+		if self.battery.due(now):
+			self.battery.check(now)
 
 	def run(self):
 		signal.signal(signal.SIGTERM, lambda *_: self.stop.set())

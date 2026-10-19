@@ -83,7 +83,7 @@ memory is backed up to `~/.local/share/lghub-bluevoice/backups/`.
 | ![Mouse](docs/screenshots/mouse.png) | ![Buttons](docs/screenshots/mouse-buttons.png) | ![Lighting](docs/screenshots/mouse-lighting.png) |
 
 Wireless mice also show their battery (devices that only report a voltage get G HUB's own
-voltage curves).
+voltage curves), with a desktop notification when it gets low, as G HUB does.
 
 ## Keyboards and the rest
 

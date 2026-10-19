@@ -138,6 +138,9 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   thirds of the screen).
 
 ### App
+- Low-battery notifications done (G HUB's LOW 30 % / CRITICAL 15 %; checking every 5 minutes is
+  ours). G HUB's other desktop notifications (profile switched, equalizer / surround toggled from
+  a headset button) not yet.
 - **Firmware updates**: not planned (a mistake can brick a device).
 - **Discord / OBS integrations**: not planned.
 - **Racing wheels and pedals** (0x8123-0x8140): nobody here owns one.
