@@ -186,6 +186,8 @@ class FakeKeyboard(FakeMouse):
 			return self._lighting(fn, p)
 		if feature == features.DISABLE_KEYS:
 			return self._disable_keys(fn, p)
+		if feature == features.CHANGE_HOST:
+			return bytes([3, 1, 0]) if fn == 0 else b''
 		if feature == features.FN_INVERSION:
 			if fn == 1:
 				self.fn_inverted = bool(p[1])
@@ -236,6 +238,11 @@ class FakeKeyboard(FakeMouse):
 			return struct.pack('>H', self.level)
 		self.level = struct.unpack('>H', p[:2])[0]
 		return b''
+
+
+class FakeMultiHostKeyboard(FakeKeyboard):
+	"""A G915-like wireless keyboard with Easy-Switch (0x1814), on its second of three hosts."""
+	FEATURES = FakeKeyboard.FEATURES + [0x1814]
 
 
 class FakeKeyboardV1(FakeKeyboard):

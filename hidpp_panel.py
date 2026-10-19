@@ -66,6 +66,7 @@ class SettingsPanel(Gtk.Box):
 		self.on_status = on_status or (lambda _title, _detail: None)
 		self.quiet = quiet
 		self.dev = None
+		self.host = 0               # Easy-Switch host the device is on (Fn inversion is per host)
 		self.loading = False
 		self.worker = Worker()
 		self.body = self
@@ -104,8 +105,13 @@ class SettingsPanel(Gtk.Box):
 			info['patterns'] = features.polar_patterns(dev)
 		if features.ANGLE_SNAPPING in have:
 			info['angle_snapping'] = features.angle_snapping(dev)
-		if features.FN_INVERSION in have and features.CHANGE_HOST not in have:
-			info['fn_inversion'] = features.fn_inversion(dev)   # one host; multi-host keyboards not yet
+		host = 0
+		if features.CHANGE_HOST in have:
+			info['hosts'] = features.hosts(dev)
+			host = info['hosts'][1]
+		if features.FN_INVERSION in have:
+			info['fn_inversion'] = features.fn_inversion(dev, host)
+			self.host = host
 		if features.DISABLE_KEYS in have:
 			info['game_mode'] = (features.max_disabled_keys(dev), game_mode_keys(self.device))
 			features.set_disabled_keys(dev, info['game_mode'][1])   # ours: the chosen keys stay off
@@ -148,7 +154,8 @@ class SettingsPanel(Gtk.Box):
 		for key, build in (('brightness', self._brightness_card), ('rates', self._rate_card),
 		                   ('sidetone', self._sidetone_card), ('patterns', self._pattern_card),
 		                   ('angle_snapping', self._angle_card), ('fn_inversion', self._fn_card),
-		                   ('game_mode', self._game_mode_card), ('mode', self._mode_card)):
+		                   ('game_mode', self._game_mode_card), ('hosts', self._hosts_card),
+		                   ('mode', self._mode_card)):
 			if info.get(key) not in (None, []):
 				cards.append(build(info))
 		if not cards and not self.quiet:
@@ -218,7 +225,7 @@ class SettingsPanel(Gtk.Box):
 		         + (' (the keyboard’s default).' if default else '.'))
 		sw = Gtk.Switch(active=inverted, valign=Gtk.Align.CENTER)
 		sw.connect('notify::active', lambda w, _p: self.loading or self._do(
-			lambda on=w.get_active(): features.set_fn_inversion(self.dev, on)))
+			lambda on=w.get_active(): features.set_fn_inversion(self.dev, on, self.host)))
 		c.append(row('Media keys first', sw))
 		return c
 
@@ -229,6 +236,19 @@ class SettingsPanel(Gtk.Box):
 			sw = Gtk.Switch(active=usage in chosen, valign=Gtk.Align.CENTER)
 			sw.connect('notify::active', lambda w, _p, u=usage: self.loading or self._game_key(u, w.get_active()))
 			c.append(row(f'Turn off {name}', sw))
+		return c
+
+	def _hosts_card(self, info):
+		count, current = info['hosts']
+		c = card('Easy-Switch', 'Which computer the device works with. Switching sends it to the other '
+		         'computer right away.')
+		buttons = box(Gtk.Orientation.HORIZONTAL, 10)
+		for h in range(count):
+			b = Gtk.Button(label=f'Computer {h + 1}' + (' (this one)' if h == current else ''))
+			b.set_sensitive(h != current)
+			b.connect('clicked', lambda _w, n=h: self._do(lambda: features.set_host(self.dev, n)))
+			buttons.append(b)
+		c.append(buttons)
 		return c
 
 	def _game_key(self, usage, off):

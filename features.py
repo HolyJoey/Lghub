@@ -154,6 +154,21 @@ def set_fn_inversion(dev, on, host=0):
 	dev.call(FN_INVERSION, 1, bytes([host, 1 if on else 0]))
 
 
+# Easy-Switch (0x1814 ChangeHost): fn 0 = host count, current host; fn 1 = switch to a host. The
+# device leaves for the other computer at once, so there's no answer to wait for (as in G HUB).
+
+def hosts(dev):
+	r = dev.call(CHANGE_HOST, 0)
+	return r[0], r[1]
+
+
+def set_host(dev, host):
+	try:
+		dev.call(CHANGE_HOST, 1, bytes([host]))
+	except hidpp.NoReply:
+		pass
+
+
 # Game mode (0x4522 DisableKeysByUsage): fn 0 = how many keys can be off, fn 1 = turn these HID
 # usages off, fn 2 = back on, fn 3 = all back on. The keyboard doesn't report which are off.
 GAME_MODE_KEYS = ((0xE3, 'Left Windows'), (0xE7, 'Right Windows'), (0x65, 'Menu'), (0x39, 'Caps Lock'))
