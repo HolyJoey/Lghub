@@ -128,15 +128,20 @@ def _audio_controls(settings):
 	bass = _slider(0, 100, settings.get('bass_noise', 0), ' %')
 	mid = _slider(0, 100, settings.get('mid_high_noise', 0), ' %')
 	smooth = Gtk.Switch(active=settings.get('smooth', False), valign=Gtk.Align.CENTER)
+	clip = Gtk.Switch(active=settings.get('clip', False), valign=Gtk.Align.CENTER)
+	clip_color = _color_button(settings.get('clip_color', [255, 0, 0]))
+	clip_at = _slider(0, 100, settings.get('clip_threshold', 80), ' %')
 	rows = [('Colour mode', mode), ('Second colour', high), ('Background', background), ('Audio boost', boost),
 	        ('Adaptive max amplitude', adaptive), ('Max amplitude', top), ('Bass noise threshold', bass),
-	        ('Mid / high noise threshold', mid), ('Smooth animation', smooth)]
+	        ('Mid / high noise threshold', mid), ('Smooth animation', smooth), ('Clip zone', clip),
+	        ('Clip zone colour', clip_color), ('Clip zone threshold', clip_at)]
 
 	def values():
 		return {'mode': MODES[mode.get_selected()][0], 'color_high': _rgb(high), 'background': _rgb(background),
 		        'boost': round(boost.get_value()), 'adaptive': adaptive.get_active(),
 		        'max_amplitude': round(top.get_value()), 'bass_noise': round(bass.get_value()),
-		        'mid_high_noise': round(mid.get_value()), 'smooth': smooth.get_active()}
+		        'mid_high_noise': round(mid.get_value()), 'smooth': smooth.get_active(), 'clip': clip.get_active(),
+		        'clip_color': _rgb(clip_color), 'clip_threshold': round(clip_at.get_value())}
 
 	return rows, values, [w for _t, w in rows]
 

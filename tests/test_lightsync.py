@@ -87,6 +87,8 @@ class AudioOptionsTest(unittest.TestCase):
 		self.assertEqual((gradient['a'], gradient['b']), ([0, 0, 0], [200, 0, 0]))
 		dark = lightsync.column_frame(cols, lambda lo, hi: 0.0, [100, 0, 0], {'a', 'b'}, background=[0, 0, 9])
 		self.assertEqual(dark['a'], [0, 0, 9])
+		clipped = lightsync.column_frame(cols, lambda lo, hi: 1.0, [0, 0, 0], {'a', 'b'}, clip=(0.5, [9, 9, 9]))
+		self.assertEqual((clipped['a'], clipped['b']), ([0, 0, 0], [9, 9, 9]))
 
 
 class ScreenSamplerTest(unittest.TestCase):

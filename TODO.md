@@ -148,7 +148,7 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   is built too (move / resize G HUB's regions; adding new regions isn't).
 - Audio visualizer: G HUB's per-key layout and its options (colour mode fixed / reactive /
   gradient, background, boost, max amplitude, noise thresholds, smooth animation; how each shapes
-  the level is ours). Clip zone not yet.
+  the level is ours) and the clip zone.
 - **Software effects done**: G HUB's own animations (Verticool, Contrastic, Ocean Wave, Lightning,
   Red White and Blue: its keyframe files, downloaded at first use), Starlight, Colour cycle
   and Echo press (key presses read from the keyboard's own reports: ours) with G HUB's settings.

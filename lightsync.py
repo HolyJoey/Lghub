@@ -109,9 +109,11 @@ def ghub_columns(data):
 	return out
 
 
-def _key_color(n, keys, lit, level, color, back, mode, high):
+def _key_color(n, keys, lit, level, color, back, mode, high, clip=None):
 	if n >= lit:
 		return list(back)
+	if clip and n >= clip[0] * len(keys):         # G HUB's clip zone: the keys above the threshold
+		return list(clip[1])
 	if mode == 'reactive' and high:
 		return [round(a + (b - a) * level) for a, b in zip(color, high)]
 	if mode == 'gradient' and high:
@@ -120,7 +122,7 @@ def _key_color(n, keys, lit, level, color, back, mode, high):
 	return list(color)
 
 
-def column_frame(columns, level_of, color, present, background=None, mode='fixed', high=None):
+def column_frame(columns, level_of, color, present, background=None, mode='fixed', high=None, clip=None):
 	"""As G HUB's visualizer: each column lights its keys from the bottom up to its range's level;
 	the rest show the background colour (8 % of the colour when none is set: ours). Colour modes
 	(G HUB's): fixed; reactive, from colour to `high` with the level; gradient, from colour at the
@@ -132,7 +134,7 @@ def column_frame(columns, level_of, color, present, background=None, mode='fixed
 		lit = round(level * len(keys))
 		for n, key in enumerate(keys):
 			if key and key in present:
-				out[key] = _key_color(n, keys, lit, level, color, back, mode, high)
+				out[key] = _key_color(n, keys, lit, level, color, back, mode, high, clip)
 	return out
 
 
@@ -377,6 +379,8 @@ class Visualizer:
 		state = {}
 		background = self.options.get('background')
 		mode, high = self.options.get('mode', 'fixed'), self.options.get('color_high')
+		clip = ((self.options.get('clip_threshold', 80) / 100, self.options.get('clip_color', [255, 0, 0]))
+		        if self.options.get('clip') else None)
 		last = 0.0
 		while not self.stop_event.is_set():
 			data = self.proc.stdout.read(FRAME * 2)
@@ -390,7 +394,7 @@ class Visualizer:
 			if columns:
 				by_range = dict(zip(ranges, levels))
 				frame = column_frame(columns, lambda lo, hi, levels=by_range: levels[(lo, hi)], self.color, present,
-				                     background, mode, high)
+				                     background, mode, high, clip)
 			elif self.layout:
 				frame = frame_colors(self.layout, levels, self.color)
 			else:                                   # zones: the whole device follows the loudness (ours)
