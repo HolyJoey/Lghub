@@ -200,8 +200,8 @@ simulator. The webcam screenshot is a real camera.
 - Most devices here have only met the simulator. If something doesn't work on yours, open an
   issue with `journalctl --user -u lghub-bluevoice` and what the device's page says.
 - Still open, compared with G HUB: the 5-band PRO equalizer, the G735 / PRO X 2 protocol,
-  receiver pairing, keyboard onboard-profile editing, the screen sampler on GNOME and KDE, the
-  the Yeti's LED meter, and a few newer-mouse features. The full list is in [TODO.md](TODO.md).
+  receiver pairing, keyboard onboard-profile editing, the screen sampler on GNOME and KDE, and
+  a few newer-mouse features. The full list is in [TODO.md](TODO.md).
 
 ## If something's off
 
