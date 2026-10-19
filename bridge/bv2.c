@@ -33,8 +33,9 @@ typedef WINAPI int (*release_fn)(void *);
 
 #define API(name, args) "?dtsClearVoice2" name "@DtsClearVoice2_API_V1@@YA?AW4DtsClearVoice2Result@1@" args
 
-/* pid -> (byte offset in DtsClearVoice2Parameters, is a switch), from the APO's setter lambdas
- * (one per property key, in the order of its key table). Pids 3 and 4 aren't parameters. */
+/* pid -> (byte offset in DtsClearVoice2Parameters, kind), from the APO's setter lambdas (one per
+ * property key, in the order of its key table). Kind: 0 float, 1 switch (one byte), 2 a mode
+ * number G HUB sends as an integer (VT_I4: the effects' enums). Pids 3 and 4 aren't parameters. */
 static const struct { unsigned short pid, offset; unsigned char flag; } fields[] = {
 	{100, 12, 0}, {101, 16, 0}, {102, 24, 0}, {103, 20, 1},
 	{200, 28, 0}, {201, 32, 0}, {202, 36, 0}, {203, 40, 0}, {204, 48, 0}, {205, 44, 1},
@@ -47,15 +48,15 @@ static const struct { unsigned short pid, offset; unsigned char flag; } fields[]
 	{500, 164, 0}, {501, 168, 0}, {502, 172, 0}, {503, 176, 0}, {504, 180, 0}, {505, 196, 0},
 	{506, 204, 0}, {507, 221, 1}, {508, 184, 0}, {509, 188, 0}, {510, 192, 0}, {511, 208, 0},
 	{512, 212, 0}, {513, 222, 1}, {514, 200, 0}, {515, 216, 0}, {516, 220, 1},
-	{600, 224, 0}, {601, 228, 0}, {602, 240, 0}, {603, 232, 0}, {604, 236, 0}, {605, 244, 0},
+	{600, 224, 2}, {601, 228, 0}, {602, 240, 0}, {603, 232, 2}, {604, 236, 0}, {605, 244, 0},
 	{606, 248, 1}, {607, 252, 0}, {608, 256, 0}, {609, 260, 0}, {610, 264, 0}, {611, 268, 0},
 	{612, 276, 0}, {613, 272, 1},
-	{700, 280, 0}, {701, 284, 0}, {702, 288, 0}, {703, 292, 0}, {704, 296, 1},
-	{800, 300, 0}, {801, 304, 0}, {802, 308, 0}, {803, 312, 0}, {804, 316, 1},
+	{700, 280, 2}, {701, 284, 0}, {702, 288, 0}, {703, 292, 0}, {704, 296, 1},
+	{800, 300, 0}, {801, 304, 2}, {802, 308, 0}, {803, 312, 0}, {804, 316, 1},
 	{900, 320, 0}, {901, 324, 0}, {902, 328, 0}, {903, 332, 0}, {904, 336, 1},
-	{1000, 340, 0}, {1001, 344, 0}, {1002, 348, 0}, {1003, 352, 0}, {1004, 356, 0}, {1005, 360, 0},
+	{1000, 340, 0}, {1001, 344, 2}, {1002, 348, 0}, {1003, 352, 0}, {1004, 356, 0}, {1005, 360, 0},
 	{1006, 364, 0}, {1007, 368, 0}, {1008, 372, 0}, {1009, 376, 1},
-	{1100, 380, 0}, {1101, 384, 0}, {1102, 388, 0}, {1103, 392, 0}, {1104, 396, 0}, {1105, 400, 0},
+	{1100, 380, 2}, {1101, 384, 2}, {1102, 388, 2}, {1103, 392, 0}, {1104, 396, 0}, {1105, 400, 0},
 	{1106, 404, 0}, {1107, 408, 0}, {1108, 412, 1},
 };
 
@@ -88,6 +89,23 @@ static const struct { const char *name; unsigned short pid; } names[] = {
 	{"deEsser.release", 512},
 	{"hardLimiter.enabled", 904}, {"hardLimiter.attack", 900}, {"hardLimiter.release", 901},
 	{"hardLimiter.boost", 902},
+	/* Effects.Settings (the voice effects), same method; enums as their numbers */
+	{"effects.vocalChanger.vocalMode1", 600}, {"effects.vocalChanger.voiceModFactor1", 601},
+	{"effects.vocalChanger.vocalMode2", 603}, {"effects.vocalChanger.voiceModFactor2", 604},
+	{"effects.vocalChanger.voiceGain1", 602}, {"effects.vocalChanger.voiceGain2", 605},
+	{"effects.vocalChanger.chorusEnabled", 606}, {"effects.vocalChanger.chorusDelay", 607},
+	{"effects.vocalChanger.chorusDelayMod", 608}, {"effects.vocalChanger.chorusDelayModRate", 609},
+	{"effects.vocalChanger.chorusPitchMod", 610}, {"effects.vocalChanger.chorusPitchModRate", 611},
+	{"effects.flangerPhaser.enabled", 704}, {"effects.flangerPhaser.phaserMode", 700},
+	{"effects.flangerPhaser.depth", 701}, {"effects.flangerPhaser.rate", 702},
+	{"effects.ringModulation.enabled", 804}, {"effects.ringModulation.mix", 800},
+	{"effects.ringModulation.shapeMode", 801}, {"effects.ringModulation.carrierFrequency", 802},
+	{"effects.reverb.enabled", 1009}, {"effects.reverb.earlyLateMix", 1000},
+	{"effects.reverb.reflectionMode", 1001}, {"effects.reverb.reflectionLowPassFrequency", 1002},
+	{"effects.reverb.roomSize", 1003}, {"effects.reverb.mix", 1007},
+	{"effects.delay.enabled", 1108}, {"effects.delay.inputMode", 1100}, {"effects.delay.feedbackMode", 1101},
+	{"effects.delay.feedbackTimbre", 1102}, {"effects.delay.leftDelay", 1103},
+	{"effects.delay.rightDelay", 1104}, {"effects.delay.feedback", 1105}, {"effects.delay.mix", 1106},
 };
 
 struct bv2 {
@@ -169,8 +187,14 @@ int bv2_set(bv2 *b, unsigned pid, float value)
 {
 	for (size_t i = 0; i < sizeof fields / sizeof fields[0]; i++) {
 		if (fields[i].pid != pid) continue;
-		if (fields[i].flag) b->params[fields[i].offset] = value != 0.0f;
-		else memcpy(b->params + fields[i].offset, &value, sizeof value);
+		if (fields[i].flag == 1) {
+			b->params[fields[i].offset] = value != 0.0f;
+		} else if (fields[i].flag == 2) {
+			int32_t mode = (int32_t)value;
+			memcpy(b->params + fields[i].offset, &mode, sizeof mode);
+		} else {
+			memcpy(b->params + fields[i].offset, &value, sizeof value);
+		}
 		return 0;
 	}
 	return -1;

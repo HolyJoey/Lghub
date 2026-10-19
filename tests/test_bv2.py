@@ -1,6 +1,7 @@
 """Blue VO!CE 2: G HUB preset files to the bridge's params, and which mics get it."""
 import json
 import os
+import re
 import sys
 import tempfile
 import unittest
@@ -21,6 +22,9 @@ FILE = {'presets': [
 	{'id': 'b', 'name': 'ACOUSTICS', 'attribute': 'ACOUSTICS', 'acoustics': {}},
 	{'id': 'c', 'name': '42_High Voice - Loud', 'attribute': 'BLUE_VOICE_2_SETTINGS',
 	 'blueVoice2Settings': {'settings': {}}},
+	{'id': 'd', 'name': '50_Robot', 'attribute': 'AUDIO_EFFECTS_SETTINGS', 'audioEffectsSettings': {
+		'settings': {'vocalChanger': {'vocalMode1': 'VOCAL_MODE_ROBOT', 'voiceGain1': 1},
+		             'delay': {'inputMode': 'INPUT_MODE_LEFT'}, 'reverb': {'enabled': True, 'mix': 0.5}}}},
 ]}
 
 
@@ -36,9 +40,25 @@ class PresetTest(unittest.TestCase):
 	def test_load(self):
 		presets = bv2_presets.load(self.path)
 		self.assertEqual([(i, n) for i, n, _ in presets], [('a', 'Broadcaster 1'), ('c', 'High Voice - Loud')])
-		self.assertEqual(presets[0][2], {'highPassFilter.enabled': 1, 'highPassFilter.frequency': 70.0,
-		                                 'multiBandEq.enabled': 0, 'multiBandEq.lowBandFilter.frequency': 175.0,
-		                                 'multiBandEq.lowBandFilter.gain': 4.0, 'multiBandEq.lowBandFilter.q': 1.0})
+		settings = presets[0][2]
+		self.assertEqual(set(settings), set(bv2_presets.VOICE_NAMES))   # every field, as G HUB sends them
+		self.assertEqual(settings['highPassFilter.frequency'], 70.0)
+		self.assertEqual(settings['multiBandEq.lowBandFilter.gain'], 4.0)
+		self.assertEqual(settings['gatingCompressor.noiseGateAttack'], 0)   # left out of the file = 0
+
+	def test_effects(self):
+		presets = bv2_presets.load(self.path, effects=True)
+		self.assertEqual([(i, n) for i, n, _ in presets], [('d', 'Robot')])
+		settings = presets[0][2]
+		self.assertEqual(set(settings), set(bv2_presets.EFFECT_NAMES))
+		self.assertEqual(settings['effects.vocalChanger.vocalMode1'], 4)        # VOCAL_MODE_ROBOT
+		self.assertEqual(settings['effects.delay.inputMode'], 2)                # INPUT_MODE_LEFT
+		self.assertEqual(settings['effects.reverb.mix'], 0.5)
+
+	def test_names_match_bridge(self):
+		with open(os.path.join(os.path.dirname(__file__), '..', 'bridge', 'bv2.c')) as f:
+			bridge = set(re.findall(r'\{"([A-Za-z.0-9]+)", \d+\}', f.read()))
+		self.assertEqual(bridge, set(bv2_presets.VOICE_NAMES) | set(bv2_presets.EFFECT_NAMES))
 
 	def test_missing_file(self):
 		self.assertEqual(bv2_presets.load(self.path + '.gone'), [])
@@ -47,9 +67,15 @@ class PresetTest(unittest.TestCase):
 		text = bv2_presets.params_text({'noiseReduction.release': 250.0, 'deEsser.enabled': 1}, enabled=False)
 		self.assertEqual(text, 'enabled 0\ndeEsser.enabled 1\nnoiseReduction.release 250\n')
 
-	def test_switches(self):
-		self.assertEqual(bv2_presets.switch_for('Noise gate'), 'gatingCompressor.noiseGateEnabled')
-		self.assertEqual(bv2_presets.switch_for('Limiter'), 'hardLimiter.enabled')
+	def test_controls_cover_names(self):
+		# every setting has a control on the page, and controls only use names the bridge knows
+		used = set()
+		for _title, switch, controls in bv2_presets.STAGES + bv2_presets.EFFECT_STAGES:
+			used |= {switch} - {None} | {c[0] for c in controls}
+		names = set(bv2_presets.VOICE_NAMES) | set(bv2_presets.EFFECT_NAMES)
+		self.assertEqual(used - names, set())
+		self.assertEqual(names - used, set())
+		self.assertEqual(bv2_presets.choices('SHAPE_MODE_')[0], (0, 'Sine'))
 
 
 class MicTest(unittest.TestCase):

@@ -35,7 +35,9 @@ not Logitech's DSP.
 **Blue VO!CE 2.** On Yeti mics and the G735, the newer voice chain G HUB runs there
 (Logitech's own DTS ClearVoice 2 processing), with G HUB's presets for the mic (Broadcaster,
 High Voice, Warm and Vintage, ...) and a switch for each stage: high-pass, noise reduction,
-noise gate, compressor, equalizer, de-popper, de-esser, limiter. Untested on a real Yeti.
+noise gate, compressor, equalizer, de-popper, de-esser, limiter, each with G HUB's own controls.
+Plus G HUB's voice effects (Robot, Helium Chipmunk, Demon, ...: voice changer, chorus, flanger,
+reverb, delay, ring modulator). Untested on a real Yeti.
 
 **Surround.** G HUB's DTS Headphone:X 2.0 virtual 7.1, running Logitech's own DTS processing
 with your headset's tuning (G Pro X, G Pro X Wireless, G733 and more), on a new output
@@ -178,8 +180,8 @@ simulator. The webcam screenshot is a real camera.
 
 ## Not there yet
 
-- Per-key lighting for older keyboards (0x8080: G910, G810, G410); keyboard onboard profiles; Blue VO!CE 2's
-  per-setting sliders and voice effects, and the PRO X 2; Yeti controls.
+- Per-key lighting for older keyboards (0x8080: G910, G810, G410); keyboard onboard profiles; Blue VO!CE 2 on the PRO X 2;
+  the Yeti's mic monitoring and gain over HID++; the 5-band PRO equalizer.
 - Most devices here have only met the simulator. If something doesn't work on yours, open an
   issue with `journalctl --user -u lghub-bluevoice` and what the device's page says.
 

@@ -37,7 +37,7 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 - **HID++ lighting (0x8070)**: effect parameter bytes and the persist flag; the current effect
   isn't read back (the page starts at the first effect).
 
-## Progress on the open work (overall about 67%)
+## Progress on the open work (overall about 70%)
 
 | Item | Done | What's left |
 | --- | --- | --- |
@@ -46,10 +46,10 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 | Background service idle cost | 90% | 0.2% of a core now; the engine loop and the link monitor remain |
 | Macros on buttons and G-keys | 85% | DPI/profile macro actions; 0x1B04 divert for newer mice; hardware check |
 | Per-key lighting | 90% | 0x8081 done (G HUB's zone table, colours back on at connect); 0x8080 for older keyboards; hardware check |
-| Blue VO!CE 2 (Yetis, G735) | 75% | runs with G HUB's presets; per-setting sliders, Effects (voice changer etc.), inputGain, Wine check, hardware check |
+| Blue VO!CE 2 (Yetis, G735) | 90% | presets, every setting, voice effects done; inputGain, Wine check, hardware check |
 | Yeti controls | 50% | polar pattern (0x8330) done; mic monitoring 0x8350, headphone 0x8360, gain/mute 0x8370 over HID++ (gain and headphone volume work through the sound card) |
 | Keyboard onboard profiles | 5% | format from G HUB's agent |
-| 5-band "PRO" equalizer | 0% | band frequencies |
+| 5-band "PRO" equalizer | 20% | runs on the headset's Conexant chip: write sequence found; HID report layout; G Pro X check |
 
 Details:
 
@@ -69,19 +69,24 @@ Details:
   `bridge/bv2.c` runs the DSP natively, `bluevoice-bridge --engine bv2` around it. G HUB's
   setting names (BlueVoice2.Settings) -> pids from the agent's APO <-> settings code, checked
   against its protobuf offset table. Presets: each device's `defaults_override.json`, fetched
-  on first sight (G735, Yeti, Yeti Nano, Yeti X, Yeti X WoW: 11-18 presets). The engine runs
-  Blue VO!CE 2 when the mic is a Yeti or G735. Page: on/off, presets, stage switches. Not yet:
-  per-setting sliders; the Effects chain (voice changer, flanger, ring mod, reverb, delay:
-  pids 600-1108, names not mapped); `inputGain` (the mic's own gain); the PRO X 2 (no depot
-  known); a check against the real APO under Wine. Pass-through when off is ours.
+  on first sight (G735, Yeti, Yeti Nano, Yeti X, Yeti X WoW: 11-18 voice presets, 21 effect
+  presets). The engine runs Blue VO!CE 2 when the mic is a Yeti or G735. Page: on/off, presets,
+  every stage with G HUB's controls and ranges (from its app), voice effects (voice changer,
+  chorus, flanger, reverb, delay, ring modulator; enums sent as integers like G HUB). Like G HUB,
+  a preset sets every field (0 where its file has none). Not yet: `inputGain` (the mic's own
+  gain); the PRO X 2 (no depot known); a check against the real APO under Wine. Pass-through
+  when off is ours.
 - **Yeti**: polar pattern 0x8330 done as G HUB drives it (fn0 mask, fn1 get, fn2 set; 1 Stereo,
   2 Cardioid, 3 Bidirectional, 4 Omni). 0x8350 (G HUB's audio::sidetone: mic monitoring level
   and mode), 0x8360 (headphone level), 0x8370 (gain levels, mute = fn3 type 0) have their
   function layouts decoded (re/notes) but the channel numbering isn't pinned down; the sound
   card's own controls cover gain and headphone volume meanwhile. LED meter not done.
 - **Keyboard onboard profiles**: G HUB's onboard_profiles.proto extracted; format from the agent.
-- **5-band "PRO" equalizer** (pro_eq_presets.json: TSM Bjergsen, Hamlinz, ...): the band
-  frequencies aren't in the preset files; the 10-band headset presets are in.
+- **5-band "PRO" equalizer** (pro_eq_presets.json: TSM Bjergsen, Hamlinz, ...): G HUB doesn't
+  filter this itself; it sets 5 band gains (+-12 dB) on the headset's own Conexant chip
+  (CX2089x, through logi_audio_conexant.dll over HID): the band frequencies live on the chip.
+  Decoded so far: the per-band write sequence and gain format; the HID report layout comes
+  from a per-chip table still to be read. Needs the G Pro X to check.
 - **Service idle**: checks run when a sound card or USB device comes or goes, 60 s fallbacks.
 
 ## Compared with G HUB: still missing
