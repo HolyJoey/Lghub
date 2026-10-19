@@ -203,19 +203,41 @@ def product_image(model_key, size):
 	return picture
 
 
+_waiting = {}   # model key -> [(icon holder, size)] still showing the type's icon (until the photo comes)
+
+
+class _IconHolder(Gtk.Box):
+	"""The type's icon until the product photo arrives (forget_image puts it in)."""
+
+	def set_pixel_size(self, size):
+		child = self.get_first_child()
+		if isinstance(child, Gtk.Image) and not child.has_css_class('photo'):
+			child.set_pixel_size(size)
+
+
 def forget_image(model_key):
-	"""Drop cached lookups for a model, e.g. after its picture was downloaded."""
+	"""Drop cached lookups for a model, e.g. after its picture was downloaded, and put the
+	picture into icons already on screen."""
 	path = os.path.join(store.IMAGE_DIR, f'{model_key}.png')
 	for key in [k for k in _textures if k[0] == path]:
 		_textures.pop(key)
+	for holder, size in _waiting.pop(model_key, []):
+		picture = product_image(model_key, size) if holder.get_first_child() else None
+		if picture:
+			holder.remove(holder.get_first_child())
+			holder.append(picture)
 
 
 def device_icon(device, size):
-	"""Photo if we have one, else the device type's symbolic icon."""
+	"""Photo if we have one, else the device type's symbolic icon (replaced by the photo when
+	it arrives)."""
 	picture = product_image(device.model.key, size)
 	if picture:
 		return picture
 	icon = Gtk.Image.new_from_icon_name(device.icon)
 	icon.set_pixel_size(size)
 	icon.add_css_class('device-icon')
-	return icon
+	holder = _IconHolder(halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
+	holder.append(icon)
+	_waiting.setdefault(device.model.key, []).append((holder, size))
+	return holder
