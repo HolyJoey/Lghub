@@ -114,8 +114,7 @@ app features. Lghub handles 0x0000-0x0005, battery (0x1000/0x1001/0x1004), 0x220
   0x2240 surface tuning. 0x2230 angle snapping and 0x2110/0x2111 SmartShift done (G HUB's mode
   bytes 1 free spin / 2 ratchet, 0xFF always ratchet, torque; G HUB's speed slider maps to the
   device value with per-model numbers we don't have, so ours shows the device's value 4-50).
-- [ ] Keyboards: 0x8071 on mice' pages (keyboards and others have it: G HUB's info queries and
-  SetEffectByIndex; its parameter bytes assumed to be 0x8070's), 0x8030 MR (macro record: needs the
+- [ ] Keyboards: 0x8030 MR (macro record: needs the
   keystrokes, which Lghub can't read without input-device access), 0x8020 M-keys done (G-key sets
   M1-M3 as in G HUB),
   0x4522 game mode done (the chosen keys stay off: ours, the keyboard can't report them),

@@ -7,6 +7,7 @@ from gi.repository import Gdk, Gtk
 
 import devices
 import features
+import hidpp_panel
 import macros_ui
 import mouse
 from ui import box, button_widget, device_icon, device_sidebar, label, nav_button, page_header, scrolled
@@ -155,6 +156,10 @@ class MouseView(Gtk.Box):
 			state['slot'] = m.current_dpi_slot()
 		else:
 			state['dpi'] = m.current_dpi() if m.sensor else None
+			if features.COLOR_LED_EFFECTS in m.features:
+				state['zones'] = features.zones(m.dev)
+			elif features.RGB_EFFECTS in m.features:
+				state['zones'] = features.zones_v2(m.dev)
 			state['rate'] = m.current_rate() if m.rates else None
 		return m, state
 
@@ -473,9 +478,14 @@ class MouseView(Gtk.Box):
 	def _build_lighting(self):
 		page = self.pages['lighting']
 		clear(page)
-		page.append(page_header('Lighting', 'Effects stored in the profile, so they run without the computer.'))
+		page.append(page_header('Lighting', 'Effects stored in the profile, so they run without the computer.'
+		                        if self.mouse.onboard else 'Applies right away, until the mouse is switched off.'))
 		if not self.mouse.onboard:
-			page.append(label('This mouse has no onboard memory; lighting control for it isn’t built yet.', ['muted']))
+			zones = self.state.get('zones') or []
+			if not zones:
+				page.append(label('This mouse has no lighting Lghub can set.', ['muted']))
+			for zone in zones:
+				page.append(hidpp_panel.zone_card(zone, lambda: self.loading, self._live, lambda: self.mouse.dev))
 			return
 		zones = self.device.model.lighting
 		if not zones and self.device.model.key != 'unknown':

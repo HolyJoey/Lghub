@@ -69,6 +69,49 @@ def slider(low, high, value, width=280):
 	return s
 
 
+def zone_card(zone, loading, do, dev):
+	"""A lighting zone's effect, colour, speed and brightness (0x8070 / 0x8071), applied live."""
+	c = card(f'Lighting · {zone.name}')
+	effects = [(i, eid) for i, eid in zone.effects]
+	names = [features.EFFECTS.get(eid, f'Effect 0x{eid:04X}') for _i, eid in effects]
+	effect_dd = Gtk.DropDown.new_from_strings(names)
+	c.append(row('Effect', effect_dd))
+	color = Gtk.ColorDialogButton(dialog=Gtk.ColorDialog(with_alpha=False))
+	rgba = Gdk.RGBA()
+	rgba.parse('#2f8cff')
+	color.set_rgba(rgba)
+	color_row = row('Color', color)
+	c.append(color_row)
+	speed = slider(1, 20, 3)
+	speed_row = row('Speed (seconds per cycle)', speed)
+	c.append(speed_row)
+	bright = slider(1, 100, 100)
+	bright_row = row('Brightness (%)', bright)
+	c.append(bright_row)
+
+	def visible():
+		eid = effects[effect_dd.get_selected()][1]
+		color_row.set_visible(eid in features.NEEDS_COLOR)
+		speed_row.set_visible(eid in features.NEEDS_SPEED)
+		bright_row.set_visible(eid in features.NEEDS_SPEED)
+
+	def apply(*_):
+		visible()
+		if loading():
+			return
+		index, eid = effects[effect_dd.get_selected()]
+		rgb = color.get_rgba()
+		params = features.effect_params(eid, tuple(round(v * 255) for v in (rgb.red, rgb.green, rgb.blue)),
+		                                speed.get_value() * 1000, bright.get_value())
+		do(lambda: features.set_effect(dev(), zone.index, index, params, feature=zone.feature))
+	effect_dd.connect(NOTIFY_SELECTED, apply)
+	color.connect('notify::rgba', apply)
+	speed.connect('value-changed', apply)
+	bright.connect('value-changed', apply)
+	visible()
+	return c
+
+
 class SettingsPanel(Gtk.Box):
 	"""on_status(title, detail) gets the device's own name and its battery/firmware line.
 	quiet: show nothing at all when the device doesn't speak HID++ (for pages that have other
@@ -319,42 +362,4 @@ class SettingsPanel(Gtk.Box):
 		return c
 
 	def _zone_card(self, zone):
-		c = card(f'Lighting · {zone.name}')
-		effects = [(i, eid) for i, eid in zone.effects]
-		names = [features.EFFECTS.get(eid, f'Effect 0x{eid:04X}') for _i, eid in effects]
-		effect_dd = Gtk.DropDown.new_from_strings(names)
-		c.append(row('Effect', effect_dd))
-		color = Gtk.ColorDialogButton(dialog=Gtk.ColorDialog(with_alpha=False))
-		rgba = Gdk.RGBA()
-		rgba.parse('#2f8cff')
-		color.set_rgba(rgba)
-		color_row = row('Color', color)
-		c.append(color_row)
-		speed = slider(1, 20, 3)
-		speed_row = row('Speed (seconds per cycle)', speed)
-		c.append(speed_row)
-		bright = slider(1, 100, 100)
-		bright_row = row('Brightness (%)', bright)
-		c.append(bright_row)
-
-		def visible():
-			eid = effects[effect_dd.get_selected()][1]
-			color_row.set_visible(eid in features.NEEDS_COLOR)
-			speed_row.set_visible(eid in features.NEEDS_SPEED)
-			bright_row.set_visible(eid in features.NEEDS_SPEED)
-
-		def apply(*_):
-			visible()
-			if self.loading:
-				return
-			index, eid = effects[effect_dd.get_selected()]
-			rgb = color.get_rgba()
-			params = features.effect_params(eid, tuple(round(v * 255) for v in (rgb.red, rgb.green, rgb.blue)),
-			                                speed.get_value() * 1000, bright.get_value())
-			self._do(lambda: features.set_effect(self.dev, zone.index, index, params, feature=zone.feature))
-		effect_dd.connect(NOTIFY_SELECTED, apply)
-		color.connect('notify::rgba', apply)
-		speed.connect('value-changed', apply)
-		bright.connect('value-changed', apply)
-		visible()
-		return c
+		return zone_card(zone, lambda: self.loading, lambda job: self._do(job), lambda: self.dev)
