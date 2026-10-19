@@ -62,14 +62,13 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 ### Mice
 - **0x1B04 buttons on newer mice** (those without 0x8110): functions found; the divert flag bits
   and G HUB's button -> control-id map not.
-- **Not started**:
-  - 0x2240 surface tuning (a calibration routine on the mouse pad)
-  - 0x2006 / 0x2205 pointer orientation and motion scaling (functions found, value ranges not),
-    0x2150 thumbwheel (the Linux driver already handles it)
-  - 0x80E0 bunny hopping (functions found; whether the byte is the switch or the timeout not),
-    0x8111 latency monitoring
-  - Done: 0x2005 left-handed, 0x2400 hybrid tracking, 0x2202 extended DPI, 0x8061 extended report rates.
-  - 0x8120 gaming attachments
+- **0x2240 surface tuning**: G HUB's calibration routine on the mouse pad (presets factory / hard /
+  soft, custom surfaces, a speed hint while tuning); not started.
+- **Not started**: 0x8111 latency monitoring, 0x8120 gaming attachments.
+- Done: 0x2005 left-handed, 0x2400 hybrid tracking, 0x2202 extended DPI, 0x8061 extended report
+  rates, 0x80E0 bunny hopping.
+- Left out on purpose: 0x2006 pointer orientation, 0x2205 motion scaling and 0x2150 thumbwheel;
+  G HUB's agent knows them but its app has no setting for them.
 - **Per-key lighting on mice** (if any have it) and 0x8071 inside onboard profiles.
 
 ### Keyboards

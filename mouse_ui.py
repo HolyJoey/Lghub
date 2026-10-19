@@ -153,6 +153,8 @@ class MouseView(Gtk.Box):
 			state['swap'] = features.button_swap(m.dev)
 		if features.HYBRID_TRACKING in m.features:
 			state['hybrid'] = features.hybrid_mode(m.dev)
+		if features.BUNNY_HOPPING in m.features:
+			state['bhop'] = features.bunny_hopping(m.dev)
 		if m.onboard:
 			m.load_profiles()
 			state['mode'] = m.mode()
@@ -254,6 +256,7 @@ class MouseView(Gtk.Box):
 		if not self.mouse.onboard:
 			self._live_sensitivity(page)
 			self._wheel_card(page)
+			self._bhop_card(page)
 			self._tracking_card(page)
 			return
 		self._profile_picker(page)
@@ -304,6 +307,7 @@ class MouseView(Gtk.Box):
 		c.append(row('Reports per second', dd))
 		page.append(c)
 		self._wheel_card(page)
+		self._bhop_card(page)
 		self._tracking_card(page)
 
 	def _edit(self, change):
@@ -374,6 +378,31 @@ class MouseView(Gtk.Box):
 			dd.connect(NOTIFY_SELECTED, lambda w, _p: self._live(
 				lambda mode=modes[w.get_selected()][0]: features.set_hybrid_mode(self.mouse.dev, mode)))
 			c.append(row('Hybrid tracking', dd))
+		page.append(c)
+
+	def _bhop_card(self, page):
+		if 'bhop' not in self.state:
+			return
+		ms = self.state['bhop']
+		c = card('Bunny hopping', 'Keeps the scroll wheel repeating for a while after you flick it.')
+		sw = Gtk.Switch(active=ms > 0, valign=Gtk.Align.CENTER)
+		scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, features.BHOP_MIN, features.BHOP_MAX,
+		                                 features.BHOP_STEP)
+		scale.set_value(min(max(ms, features.BHOP_MIN), features.BHOP_MAX) if ms else 500)
+		scale.set_size_request(280, -1)
+		scale.set_draw_value(True)
+		scale.set_format_value_func(lambda _s, v: f'{round(v / 100) * 100:.0f} ms')
+		scale.set_sensitive(ms > 0)
+
+		def apply(*_):
+			scale.set_sensitive(sw.get_active())
+			value = round(scale.get_value() / 100) * 100 if sw.get_active() else 0
+			self._live(lambda: features.set_bunny_hopping(self.mouse.dev, value))
+
+		sw.connect('notify::active', apply)
+		scale.connect('value-changed', apply)
+		c.append(row('Bunny hopping', sw))
+		c.append(row('Timeout', scale))
 		page.append(c)
 
 	def _wheel_card(self, page):

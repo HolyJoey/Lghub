@@ -24,6 +24,8 @@ HOSTS_INFO = 0x1815
 DEVICE_EQ = 0x8310
 BUTTON_SWAP, HYBRID_TRACKING, CHARGING = 0x2005, 0x2400, 0x1010
 BASS_TONE = 0x8305
+BUNNY_HOPPING = 0x80E0
+BHOP_MIN, BHOP_MAX, BHOP_STEP = 100, 1000, 100     # G HUB's slider, ms
 
 NAMES = {
 	0x0000: 'Root', 0x0001: 'Feature set', 0x0002: 'Feature info', 0x0003: 'Firmware info',
@@ -253,6 +255,19 @@ def bass_tone(dev):
 
 def set_bass_tone(dev, level):
 	dev.call(BASS_TONE, 1, bytes([max(0, min(100, int(level)))]))
+
+
+# Bunny hopping (0x80E0, G HUB's Feature80E0BunnyHopping): fn 1 get, fn 2 set the timeout in
+# 10 ms steps, up to 2540 ms; 0 = off (G HUB won't switch it on with a 0 ms timeout). G HUB's page:
+# a switch and a 100-1000 ms slider in 100 ms steps.
+
+def bunny_hopping(dev):
+	"""The timeout in ms, 0 when off."""
+	return dev.call(BUNNY_HOPPING, 1)[0] * 10
+
+
+def set_bunny_hopping(dev, ms):
+	dev.call(BUNNY_HOPPING, 2, bytes([max(0, min(254, int(ms) // 10))]))
 
 
 # Easy-Switch (0x1814 ChangeHost): fn 0 = host count, current host; fn 1 = switch to a host. The

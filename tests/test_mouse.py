@@ -6,6 +6,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
+import features  # noqa: E402
 import hidpp  # noqa: E402
 import mouse  # noqa: E402
 import simulate  # noqa: E402
@@ -117,6 +118,14 @@ class WheelTest(unittest.TestCase):
 		self.assertEqual(m.current_dpi(), 1600)
 		m.set_dpi(3200)
 		self.assertEqual(fake.ext_dpi, (3200, 3200, 2))     # Y follows X, lift-off kept
+
+	def test_bunny_hopping(self):
+		fake = simulate.FakeWheelMouse()
+		dev = hidpp.Device(fake)
+		self.assertEqual(features.bunny_hopping(dev), 0)
+		features.set_bunny_hopping(dev, 300)
+		self.assertEqual(fake.bhop, 30)
+		self.assertEqual(features.bunny_hopping(dev), 300)
 
 	def test_swap_and_hybrid(self):
 		import features

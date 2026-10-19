@@ -168,7 +168,7 @@ class FakeWheelMouse(FakeMouse):
 	"""A mouse with SmartShift and ratchet force (0x2111), button swap (0x2005) and hybrid
 	tracking (0x2400), like the G502 X."""
 	FEATURES = ([f for f in FakeMouse.FEATURES if f not in (mouse.REPORT_RATE, mouse.DPI)]
-	            + [0x2111, 0x2005, 0x2400, 0x8061, 0x2202])
+	            + [0x2111, 0x2005, 0x2400, 0x8061, 0x2202, 0x80E0])
 
 	def __init__(self):
 		super().__init__('G502 X')
@@ -176,10 +176,15 @@ class FakeWheelMouse(FakeMouse):
 		self.swap, self.hybrid = 0, 0
 		self.rate_n = 3
 		self.ext_dpi = (1600, 1600, 2)
+		self.bhop = 0
 
 	def handle(self, feature, fn, p):
 		if feature == 0x2202:
 			return self._ext_dpi(fn, p)
+		if feature == 0x80E0:
+			if fn == 2:
+				self.bhop = p[0]
+			return bytes([self.bhop])
 		if feature == 0x8061:
 			if fn == 1:
 				return bytes([0, 0x7F])                 # 125 Hz to 8 kHz
