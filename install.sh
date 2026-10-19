@@ -39,7 +39,7 @@ say "Building"
 mkdir -p "$APP_DIR/bin"
 read -ra PW_FLAGS <<< "$(pkg-config --cflags --libs libpipewire-0.3)"
 gcc -O2 -o "$APP_DIR/bin/bluevoice-bridge" \
-  "$SRC/bridge/bluevoice_bridge.c" "$SRC/bridge/micopt.c" "$SRC/bridge/peloader.c" \
+  "$SRC/bridge/bluevoice_bridge.c" "$SRC/bridge/micopt.c" "$SRC/bridge/bv2.c" "$SRC/bridge/peloader.c" \
   "${PW_FLAGS[@]}" -lm
 gcc -O2 -o "$APP_DIR/bin/surround-bridge" \
   "$SRC/bridge/surround_bridge.c" "$SRC/bridge/hx2e.c" "$SRC/bridge/peloader.c" \

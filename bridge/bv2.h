@@ -10,6 +10,11 @@ int bv2_block(const bv2 *b);
 /* One APO property (pid, as in G HUB's property store) to the parameters; applied by bv2_apply. */
 int bv2_set(bv2 *b, unsigned pid, float value);
 int bv2_apply(bv2 *b);
+/* The same by G HUB's setting name (e.g. "noiseReduction.sensitivity"); "enabled 0" bypasses. */
+int bv2_set_name(bv2 *b, const char *name, float value);
+/* A "name value" params file (missing settings keep the DLL's defaults), then bv2_apply. */
+int bv2_load_params(bv2 *b, const char *path);
+int bv2_supports_rate(int rate);
 /* One block, in and out of length bv2_block(). 0 = ok. */
 int bv2_process(bv2 *b, const float *in, float *out);
 void bv2_close(bv2 *b);

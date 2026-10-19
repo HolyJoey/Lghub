@@ -2,6 +2,8 @@
 plus the controls of the device's USB sound card if it has one."""
 from gi.repository import Gtk
 
+import bv2_presets
+import bv2_ui
 import headset
 import headset_ui
 import macros_ui
@@ -47,6 +49,11 @@ class GenericView(Gtk.Box):
 			                                                                  for i in range(1, gkeys + 1)])),
 			                     'macros')
 			self._add_nav('macros', 'Macros', 'media-record-symbolic')
+		self.bv2 = None
+		if device.model.key in bv2_presets.MODELS:
+			self.bv2 = bv2_ui.Bv2Page(win, device)
+			self.stack.add_named(scrolled(self.bv2), 'bluevoice')
+			self._add_nav('bluevoice', 'Blue VO!CE', 'audio-input-microphone-symbolic')
 		self.audio = None
 		if not device.wireless and headset.alsa_card(device.port) is not None:
 			self.audio = headset_ui.HeadsetPage(win, hidpp=False)
@@ -58,6 +65,8 @@ class GenericView(Gtk.Box):
 
 	def close(self):
 		self.panel.close()
+		if self.bv2:
+			self.bv2.close()
 		if self.audio:
 			self.audio.close()
 

@@ -16,7 +16,10 @@
  *
  * stderr: "ready ..." once, then "meter <in dBFS> <out dBFS>" every 100 ms (every second in silence).
  *
- * Usage: bluevoice-bridge --dll APO.dll --params FILE
+ * --engine bv2 runs Blue VO!CE 2 (DTS ClearVoice 2, bv2.c) from its own APO the same way; its
+ * params file uses G HUB's setting names ("noiseReduction.sensitivity 6").
+ *
+ * Usage: bluevoice-bridge --dll APO.dll --params FILE [--engine micopt|bv2]
  */
 #define _GNU_SOURCE
 #include <math.h>
@@ -30,6 +33,7 @@
 #include <pipewire/pipewire.h>
 #include <pipewire/filter.h>
 
+#include "bv2.h"
 #include "micopt.h"
 
 #define RATE 48000                  /* until the graph tells us otherwise */
@@ -39,6 +43,30 @@
 #define XFADE_BLOCKS 6              /* ~30 ms */
 
 struct port { void *unused; };
+
+/* The DSP behind the filter: both work on fixed mono blocks and are rebuilt to change parameters. */
+struct dsp {
+	void *(*open)(const char *dll_path, int rate);
+	int (*block)(const void *inst);
+	int (*supports_rate)(int rate);
+	int (*load_params)(void *inst, const char *path);
+	int (*process)(void *inst, const float *in, float *out);
+	void (*close)(void *inst);
+};
+
+static void *mo_open(const char *dll, int rate) { return micopt_open(dll, rate); }
+static int mo_block(const void *m) { return micopt_block(m); }
+static int mo_load(void *m, const char *path) { return micopt_load_params(m, path); }
+static int mo_process(void *m, const float *in, float *out) { return micopt_process(m, in, out); }
+static void mo_close(void *m) { micopt_close(m); }
+static const struct dsp MICOPT = {mo_open, mo_block, micopt_supports_rate, mo_load, mo_process, mo_close};
+
+static void *cv_open(const char *dll, int rate) { return bv2_open(dll, rate); }
+static int cv_block(const void *b) { return bv2_block(b); }
+static int cv_load(void *b, const char *path) { return bv2_load_params(b, path); }
+static int cv_process(void *b, const float *in, float *out) { return bv2_process(b, in, out); }
+static void cv_close(void *b) { bv2_close(b); }
+static const struct dsp BV2 = {cv_open, cv_block, bv2_supports_rate, cv_load, cv_process, cv_close};
 
 struct fifo {
 	float data[FIFO_SIZE];
@@ -65,14 +93,15 @@ struct bridge {
 	struct port *in_port, *out_port;
 	struct pw_proxy *virtual_mic;
 	const char *dll_path, *params_path;
+	const struct dsp *dsp;
 	int rate;                       /* main thread: rate of the newest instance */
 	struct timespec params_mtime;
 
 	/* audio-thread state */
-	micopt *current;
-	_Atomic(micopt *) pending;      /* main -> audio: next instance */
-	_Atomic(micopt *) retired;      /* audio -> main: instance to free */
-	micopt *next;
+	void *current;
+	_Atomic(void *) pending;        /* main -> audio: next instance */
+	_Atomic(void *) retired;        /* audio -> main: instance to free */
+	void *next;
 	int next_age;
 	int block;
 	_Atomic int graph_rate;         /* audio -> main: rate the graph runs at */
@@ -103,19 +132,19 @@ static void meter_max(_Atomic uint32_t *slot, float value)
 	} while (!atomic_compare_exchange_weak(slot, &old, bits));
 }
 
-/* One MicOpt block, crossfading to a new instance while one is pending. */
+/* One DSP block, crossfading to a new instance while one is pending. */
 static void process_block(struct bridge *b)
 {
-	micopt_process(b->current, b->blk_in, b->blk_out);
+	b->dsp->process(b->current, b->blk_in, b->blk_out);
 	if (!b->next) {
-		micopt *p = atomic_load(&b->pending);
-		if (p && micopt_block(p) == b->block && atomic_compare_exchange_strong(&b->pending, &p, NULL)) {
+		void *p = atomic_load(&b->pending);
+		if (p && b->dsp->block(p) == b->block && atomic_compare_exchange_strong(&b->pending, &p, NULL)) {
 			b->next = p;
 			b->next_age = 0;
 		}
 	}
 	if (!b->next) return;
-	micopt_process(b->next, b->blk_in, b->blk_next);
+	b->dsp->process(b->next, b->blk_in, b->blk_next);
 	int k = b->next_age - WARMUP_BLOCKS;
 	if (k >= 0) {
 		for (int i = 0; i < b->block; i++) {
@@ -123,12 +152,12 @@ static void process_block(struct bridge *b)
 			b->blk_out[i] = (1.0f - g) * b->blk_out[i] + g * b->blk_next[i];
 		}
 		if (k + 1 >= XFADE_BLOCKS) {
-			micopt *old = b->current;
+			void *old = b->current;
 			b->current = b->next;
 			b->next = NULL;
-			micopt *expect = NULL;
+			void *expect = NULL;
 			if (!atomic_compare_exchange_strong(&b->retired, &expect, old))
-				micopt_close(old); /* the main thread hasn't collected the last one; rare */
+				b->dsp->close(old); /* the main thread hasn't collected the last one; rare */
 		}
 	}
 	b->next_age++;
@@ -146,16 +175,16 @@ static void on_process(void *data, struct spa_io_position *position)
 
 	/* A new instance for a different sample rate can't be crossfaded (other block size): swap it
 	 * in directly and restart the FIFOs. */
-	micopt *p = atomic_load(&b->pending);
-	if (p && !b->next && micopt_block(p) != b->block && atomic_compare_exchange_strong(&b->pending, &p, NULL)) {
-		micopt *old = b->current, *expect = NULL;
+	void *p = atomic_load(&b->pending);
+	if (p && !b->next && b->dsp->block(p) != b->block && atomic_compare_exchange_strong(&b->pending, &p, NULL)) {
+		void *old = b->current, *expect = NULL;
 		b->current = p;
-		b->block = micopt_block(p);
+		b->block = b->dsp->block(p);
 		b->in_fifo.read = b->in_fifo.write;
 		b->out_fifo.read = 0;
 		b->out_fifo.write = b->block;
 		memset(b->out_fifo.data, 0, b->block * sizeof(float));
-		if (!atomic_compare_exchange_strong(&b->retired, &expect, old)) micopt_close(old);
+		if (!atomic_compare_exchange_strong(&b->retired, &expect, old)) b->dsp->close(old);
 	}
 
 	if (in) {
@@ -189,10 +218,10 @@ static const struct pw_filter_events filter_events = {
 	PW_VERSION_FILTER_EVENTS, .state_changed = on_state, .process = on_process,
 };
 
-static micopt *new_instance(struct bridge *b, int rate)
+static void *new_instance(struct bridge *b, int rate)
 {
-	micopt *m = micopt_open(b->dll_path, rate);
-	if (m && micopt_load_params(m, b->params_path) < 0) fprintf(stderr, "bridge: cannot read %s\n", b->params_path);
+	void *m = b->dsp->open(b->dll_path, rate);
+	if (m && b->dsp->load_params(m, b->params_path) < 0) fprintf(stderr, "bridge: cannot read %s\n", b->params_path);
 	return m;
 }
 
@@ -218,13 +247,13 @@ static void on_timer(void *data, uint64_t expirations)
 {
 	(void)expirations;
 	struct bridge *b = data;
-	micopt *old = atomic_exchange(&b->retired, NULL);
-	if (old) micopt_close(old);
+	void *old = atomic_exchange(&b->retired, NULL);
+	if (old) b->dsp->close(old);
 	int rate = atomic_load(&b->graph_rate);
-	int rate_changed = rate && rate != b->rate && micopt_supports_rate(rate);
+	int rate_changed = rate && rate != b->rate && b->dsp->supports_rate(rate);
 	if ((rate_changed || params_changed(b)) && !atomic_load(&b->pending)) {
 		if (rate_changed) b->rate = rate;
-		micopt *m = new_instance(b, b->rate);
+		void *m = new_instance(b, b->rate);
 		if (m) {
 			atomic_store(&b->pending, m);
 			fprintf(stderr, rate_changed ? "sample rate now %d\n" : "reloaded parameters\n", b->rate);
@@ -248,13 +277,16 @@ static void on_signal(void *data, int sig)
 int main(int argc, char **argv)
 {
 	struct bridge *b = &B;
+	const char *engine = "micopt";
 	for (int i = 1; i < argc; i++) {
 		if (!strcmp(argv[i], "--dll") && i + 1 < argc) b->dll_path = argv[++i];
 		else if (!strcmp(argv[i], "--params") && i + 1 < argc) b->params_path = argv[++i];
+		else if (!strcmp(argv[i], "--engine") && i + 1 < argc) engine = argv[++i];
 		else if (!strcmp(argv[i], "--max-latency") && i + 1 < argc) i++; /* accepted for compatibility */
 	}
-	if (!b->dll_path || !b->params_path) {
-		fprintf(stderr, "usage: %s --dll APO.dll --params FILE\n", argv[0]);
+	b->dsp = !strcmp(engine, "bv2") ? &BV2 : !strcmp(engine, "micopt") ? &MICOPT : NULL;
+	if (!b->dll_path || !b->params_path || !b->dsp) {
+		fprintf(stderr, "usage: %s --dll APO.dll --params FILE [--engine micopt|bv2]\n", argv[0]);
 		return 2;
 	}
 
@@ -265,7 +297,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "bridge: cannot load Blue VO!CE from %s\n", b->dll_path);
 		return 1;
 	}
-	b->block = micopt_block(b->current);
+	b->block = b->dsp->block(b->current);
 	b->blk_in = calloc(MAX_BLOCK, sizeof(float));
 	b->blk_out = calloc(MAX_BLOCK, sizeof(float));
 	b->blk_next = calloc(MAX_BLOCK, sizeof(float));
@@ -322,9 +354,9 @@ int main(int argc, char **argv)
 	pw_context_destroy(b->context);
 	pw_main_loop_destroy(b->loop);
 	pw_deinit();
-	micopt_close(b->current);
-	micopt_close(b->next);
-	micopt_close(atomic_load(&b->pending));
-	micopt_close(atomic_load(&b->retired));
+	b->dsp->close(b->current);
+	b->dsp->close(b->next);
+	b->dsp->close(atomic_load(&b->pending));
+	b->dsp->close(atomic_load(&b->retired));
 	return 0;
 }

@@ -50,8 +50,19 @@ def is_blue_voice_headset(src):
 	return any(name in text for name in ('pro x', 'prox', 'g pro', 'g733'))
 
 
+# Blue VO!CE 2 mics and headsets (bv2_presets.MODELS), going by their PipeWire names.
+BV2_NAMES = ('yeti', 'g735')
+
+
+def is_bv2_mic(src):
+	"""A Yeti or G735 microphone: G HUB runs Blue VO!CE 2 on these."""
+	text = f"{src['name']} {src['description']}".lower().replace('_', ' ')
+	return any(name in text for name in BV2_NAMES)
+
+
 def pick_input(wanted, objs=None):
-	"""The source to process: the configured one if present, else a Blue VO!CE headset, else the default mic."""
+	"""The source to process: the configured one if present, else a Blue VO!CE headset or mic,
+	else the default mic."""
 	srcs = sources(objs)
 	if wanted and wanted != 'auto':
 		for s in srcs:
@@ -59,7 +70,7 @@ def pick_input(wanted, objs=None):
 				return s
 		return None  # the chosen mic is unplugged; wait for it rather than grabbing another
 	for s in srcs:
-		if is_blue_voice_headset(s):
+		if is_blue_voice_headset(s) or is_bv2_mic(s):
 			return s
 	default = default_source_name()
 	for s in srcs:

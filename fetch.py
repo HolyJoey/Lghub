@@ -35,6 +35,8 @@ APO_NAME = 'logi_audio_dts_studio_capture_apo'
 APO_SHA256 = 'efaabe5c8b5a246ad5fb0d84a157c8a8330d055d601f041e43423cb0e53481a6'
 HX2E_NAME = 'logi_audio_hx2e_render_apo'
 HX2E_SHA256 = 'f6662b76008433d6f6137ca252a9965fbbb9a0aba100d0a6eb2ed8d1ec28dcde'
+BV2_NAME = 'logi_audio_dts_clearvoice_2_capture_apo'   # Blue VO!CE 2 (Yetis, G735, PRO X 2)
+BV2_SHA256 = 'a366cb2499466f7d9f18eb931f64fa13ac4c7d9b3a6d84dae821a3ca8c777160'
 DEPOT_MAGIC = 0x20170110
 
 
@@ -129,6 +131,12 @@ def main():
 			f.write(surround)
 	else:
 		print('The surround DLL is not the expected build; surround sound stays off.')
+	bv2 = embedded_pe(apo_files['ghub_audio_driver_apo.exe'], BV2_NAME)
+	if bv2 and sha256(bv2) == BV2_SHA256:
+		with open(os.path.join(args.dest, 'apo', BV2_NAME + '.dll'), 'wb') as f:
+			f.write(bv2)
+	else:
+		print('The Blue VO!CE 2 DLL is not the expected build; Blue VO!CE 2 stays off.')
 
 	headset_files = depot_files(get_depot('pro_headset', args.depot_dir))
 	os.makedirs(os.path.join(args.dest, 'presets'), exist_ok=True)

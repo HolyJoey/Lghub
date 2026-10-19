@@ -59,6 +59,37 @@ static const struct { unsigned short pid, offset; unsigned char flag; } fields[]
 	{1106, 404, 0}, {1107, 408, 0}, {1108, 412, 1},
 };
 
+/* G HUB's setting names (BlueVoice2.Settings in its microphone.proto, as its presets spell them) ->
+ * pid, from the agent's APO <-> settings code (one lambda per pid, field offsets matched against the
+ * generated protobuf offset table). volume (pid 3) and the on/off switch (pid 1) aren't DSP
+ * parameters; inputGain is the mic's own gain. */
+static const struct { const char *name; unsigned short pid; } names[] = {
+	{"highPassFilter.enabled", 103}, {"highPassFilter.frequency", 101},
+	{"noiseReduction.enabled", 205}, {"noiseReduction.sensitivity", 201}, {"noiseReduction.bias", 202},
+	{"noiseReduction.maxAttenuation", 203}, {"noiseReduction.release", 200},
+	{"gatingCompressor.noiseGateEnabled", 312}, {"gatingCompressor.noiseGateThreshold", 300},
+	{"gatingCompressor.noiseGateMaxAttenuation", 301}, {"gatingCompressor.noiseGateAttack", 302},
+	{"gatingCompressor.noiseGateRelease", 303}, {"gatingCompressor.noiseGateHoldTime", 304},
+	{"gatingCompressor.compressorEnabled", 313}, {"gatingCompressor.compressorThreshold", 305},
+	{"gatingCompressor.compressorRatio", 306}, {"gatingCompressor.compressorPreGain", 307},
+	{"gatingCompressor.compressorPostGain", 308}, {"gatingCompressor.compressorAttack", 309},
+	{"gatingCompressor.compressorRelease", 310},
+	{"multiBandEq.enabled", 414},
+	{"multiBandEq.lowBandFilter.frequency", 404}, {"multiBandEq.lowBandFilter.gain", 406},
+	{"multiBandEq.lowBandFilter.q", 405}, {"multiBandEq.midBandFilter.frequency", 407},
+	{"multiBandEq.midBandFilter.gain", 409}, {"multiBandEq.midBandFilter.q", 408},
+	{"multiBandEq.highBandFilter.frequency", 410}, {"multiBandEq.highBandFilter.gain", 412},
+	{"multiBandEq.highBandFilter.q", 411},
+	{"dePopper.enabled", 507}, {"dePopper.threshold", 500}, {"dePopper.frequency", 502},
+	{"dePopper.width", 503}, {"dePopper.maxAttenuation", 504}, {"dePopper.attack", 505},
+	{"dePopper.release", 506},
+	{"deEsser.enabled", 513}, {"deEsser.threshold", 501}, {"deEsser.frequency", 508},
+	{"deEsser.width", 509}, {"deEsser.maxAttenuation", 510}, {"deEsser.attack", 511},
+	{"deEsser.release", 512},
+	{"hardLimiter.enabled", 904}, {"hardLimiter.attack", 900}, {"hardLimiter.release", 901},
+	{"hardLimiter.boost", 902},
+};
+
 struct bv2 {
 	inst_params_fn get, update;
 	process_fn process;
@@ -67,6 +98,7 @@ struct bv2 {
 	unsigned char params[PARAMS_SIZE];
 	float *buf[2];                 /* like the APO: two channel buffers, even for mono */
 	int block;
+	int bypass;                    /* "enabled 0": audio passes through untouched (ours) */
 };
 
 static pe_image *dll;
@@ -144,6 +176,35 @@ int bv2_set(bv2 *b, unsigned pid, float value)
 	return -1;
 }
 
+int bv2_set_name(bv2 *b, const char *name, float value)
+{
+	if (!strcmp(name, "enabled")) {   /* G HUB's on/off (pid 1), not a DSP parameter */
+		b->bypass = value == 0.0f;
+		return 0;
+	}
+	for (size_t i = 0; i < sizeof names / sizeof names[0]; i++)
+		if (!strcmp(names[i].name, name)) return bv2_set(b, names[i].pid, value);
+	return -1;
+}
+
+int bv2_supports_rate(int rate) { return block_for_rate(rate) != 0; }
+
+int bv2_load_params(bv2 *b, const char *path)
+{
+	FILE *f = fopen(path, "r");
+	if (!f) return -1;
+	char line[256];
+	while (fgets(line, sizeof line, f)) {
+		/* "name value" with G HUB's names; anything else (comments, blank lines, bad numbers) is skipped */
+		char *name = strtok(line, " \t\r\n"), *text = strtok(NULL, " \t\r\n"), *end;
+		if (!name || !text || name[0] == '#') continue;
+		float value = strtof(text, &end);
+		if (end != text && !*end) bv2_set_name(b, name, value);
+	}
+	int rc = fclose(f) == 0 ? 0 : -1;
+	return bv2_apply(b) ? -1 : rc;
+}
+
 int bv2_apply(bv2 *b)
 {
 	return b->update(b->inst, b->params) ? -1 : 0;
@@ -151,6 +212,10 @@ int bv2_apply(bv2 *b)
 
 int bv2_process(bv2 *b, const float *in, float *out)
 {
+	if (b->bypass) {
+		memmove(out, in, (size_t)b->block * sizeof(float));
+		return 0;
+	}
 	memcpy(b->buf[0], in, (size_t)b->block * sizeof(float));
 	if (b->process(b->inst, b->buf)) return -1;
 	memcpy(out, b->buf[0], (size_t)b->block * sizeof(float));

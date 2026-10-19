@@ -270,7 +270,16 @@ def fetch_eq_presets(path):
 def fetch_presets(model):
 	"""Path of the headset's G HUB preset file, downloading it if needed, or None. Blocks."""
 	name, preset_set = PRESET_FILES[model]
-	path = store.GHUB_PRESETS[preset_set]
+	return _fetch_file(model, name, store.GHUB_PRESETS[preset_set])
+
+
+def fetch_bv2_presets(model):
+	"""Path of a Blue VO!CE 2 device's G HUB presets (its defaults_override.json), or None. Blocks."""
+	import bv2_presets
+	return _fetch_file(model, bv2_presets.DEPOT_FILE, bv2_presets.path_for(store.DATA_DIR, model))
+
+
+def _fetch_file(model, name, path):
 	if os.path.exists(path):
 		return path
 	url = SERVER + DEPOTS[model]

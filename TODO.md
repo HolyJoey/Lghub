@@ -10,6 +10,7 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 | Area | What it is | Logitech's or ours |
 | --- | --- | --- |
 | Blue VO!CE | DTS MicOpt from G HUB's capture APO, native (`bridge/micopt.c`); G Pro X, G Pro X Wireless, G733 (presets fetched on first sight) | Logitech's DSP and presets |
+| Blue VO!CE 2 | DTS ClearVoice 2 from G HUB's capture APO, native (`bridge/bv2.c`); Yetis, G735 (presets fetched on first sight) | Logitech's DSP and presets |
 | Surround | DTS Headphone:X 2.0 from G HUB's HX2E APO, native (`bridge/hx2e.c`) | Logitech's DSP and tunings |
 | Equalizer | G HUB's 10-band presets on PipeWire biquads | Logitech's presets, our filters |
 | Mice | HID++ 2.0 onboard profiles (0x8100), DPI (0x2201), report rate (0x8060) | the devices' own features |
@@ -27,6 +28,8 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
   byte = ms, writing a 255-byte sector in 16-byte chunks, button order (after Back/Forward the
   names are generic). Backups of every sector written: `~/.local/share/lghub-bluevoice/backups/`.
 - **C920**: control names and ranges, preview at 640x360 MJPEG.
+- **Yeti / G735** (not owned, untested): Automatic picks the mic (`pw.is_bv2_mic` matches
+  "yeti", "g735"; confirm the real PipeWire names); Blue VO!CE 2 by ear.
 - **G733** (not owned, untested): its presets download on first sight; Blue VO!CE picks its mic;
   lighting/battery appear on the Headset page over HID++.
 - **Wireless receivers** (simulated only): slots 1-6 answer to a short-report ping; Bolt pairs
@@ -34,7 +37,7 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 - **HID++ lighting (0x8070)**: effect parameter bytes and the persist flag; the current effect
   isn't read back (the page starts at the first effect).
 
-## Progress on the open work (overall about 60%)
+## Progress on the open work (overall about 65%)
 
 | Item | Done | What's left |
 | --- | --- | --- |
@@ -43,7 +46,7 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 | Background service idle cost | 90% | 0.2% of a core now; the engine loop and the link monitor remain |
 | Macros on buttons and G-keys | 85% | DPI/profile macro actions; 0x1B04 divert for newer mice; hardware check |
 | Per-key lighting | 90% | 0x8081 done (G HUB's zone table, colours back on at connect); 0x8080 for older keyboards; hardware check |
-| Blue VO!CE 2 (Yetis, G735, PRO X 2) | 40% | G HUB names -> pids, bridge, UI, Wine check |
+| Blue VO!CE 2 (Yetis, G735) | 75% | runs with G HUB's presets; per-setting sliders, Effects (voice changer etc.), inputGain, Wine check, hardware check |
 | Yeti controls | 10% | features found (0x8330/50/60/70); protocol details and UI |
 | Keyboard onboard profiles | 5% | format from G HUB's agent |
 | 5-band "PRO" equalizer | 0% | band frequencies |
@@ -62,9 +65,15 @@ Details:
   `light_map` resource could override it, none of our depots ships one. Restoring the colours
   when the keyboard connects is ours. **Check on a G815/G915**: keys light where drawn; 0x8080
   (G910/G810) still to do.
-- **Blue VO!CE 2** (`logi_audio_dts_clearvoice_2_capture_apo.dll`): `bridge/bv2.c` runs the DSP
-  natively; parameter struct and the 107 property keys (pid -> field) decoded; G HUB's setting
-  names -> pids come from the agent.
+- **Blue VO!CE 2** (`logi_audio_dts_clearvoice_2_capture_apo.dll`, fetched at install):
+  `bridge/bv2.c` runs the DSP natively, `bluevoice-bridge --engine bv2` around it. G HUB's
+  setting names (BlueVoice2.Settings) -> pids from the agent's APO <-> settings code, checked
+  against its protobuf offset table. Presets: each device's `defaults_override.json`, fetched
+  on first sight (G735, Yeti, Yeti Nano, Yeti X, Yeti X WoW: 11-18 presets). The engine runs
+  Blue VO!CE 2 when the mic is a Yeti or G735. Page: on/off, presets, stage switches. Not yet:
+  per-setting sliders; the Effects chain (voice changer, flanger, ring mod, reverb, delay:
+  pids 600-1108, names not mapped); `inputGain` (the mic's own gain); the PRO X 2 (no depot
+  known); a check against the real APO under Wine. Pass-through when off is ours.
 - **Yeti**: polar pattern 0x8330, blend 0x8350, headphone mix 0x8360, mic gain 0x8370 (G HUB's
   own feature classes); LED meter.
 - **Keyboard onboard profiles**: G HUB's onboard_profiles.proto extracted; format from the agent.

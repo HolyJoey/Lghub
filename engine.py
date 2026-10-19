@@ -12,6 +12,7 @@ import subprocess
 import threading
 import time
 
+import bv2_presets
 import eq
 import inputd
 import hotplug
@@ -41,6 +42,8 @@ class Engine:
 		self.config = store.load_config()
 		self.config_mtime = None
 		self.params_text = None
+		self.bv2_text = None
+		self.kind = None             # the bridge's DSP: 'micopt' (Blue VO!CE) or 'bv2' (Blue VO!CE 2)
 		self.input = None
 		self.defaulted = False
 		self.last_link_check = 0.0
@@ -82,18 +85,37 @@ class Engine:
 				f.write(text)
 			os.replace(tmp, store.PARAMS_FILE)
 			self.params_text = text
+		text = bv2_presets.params_text(self.config.get('bv2_params', {}), self.config.get('enabled', True))
+		if text != self.bv2_text:
+			os.makedirs(store.RUN_DIR, exist_ok=True)
+			with open(store.BV2_PARAMS_FILE + '.tmp', 'w') as f:
+				f.write(text)
+			os.replace(store.BV2_PARAMS_FILE + '.tmp', store.BV2_PARAMS_FILE)
+			self.bv2_text = text
 
 	# --- bridge process ------------------------------------------------------------------
 
-	def missing_files(self):
-		return [p for p in (store.BRIDGE, store.APO_DLL) if not os.path.exists(p)]
+	def wanted_kind(self):
+		"""Blue VO!CE 2 for the mics G HUB runs it on (Yetis, G735), Blue VO!CE otherwise."""
+		if self.input and pw.is_bv2_mic(self.input) and os.path.exists(store.BV2_DLL):
+			return 'bv2'
+		return 'micopt'
+
+	def missing_files(self, kind):
+		dll = store.BV2_DLL if kind == 'bv2' else store.APO_DLL
+		return [p for p in (store.BRIDGE, dll) if not os.path.exists(p)]
 
 	def start_bridge(self):
-		missing = self.missing_files()
+		kind = self.wanted_kind()
+		missing = self.missing_files(kind)
 		if missing:
 			self.last_error = 'Not installed: ' + ', '.join(os.path.basename(m) for m in missing)
 			return
-		cmd = [store.BRIDGE, '--dll', store.APO_DLL, '--params', store.PARAMS_FILE]
+		if kind == 'bv2':
+			cmd = [store.BRIDGE, '--dll', store.BV2_DLL, '--params', store.BV2_PARAMS_FILE, '--engine', 'bv2']
+		else:
+			cmd = [store.BRIDGE, '--dll', store.APO_DLL, '--params', store.PARAMS_FILE]
+		self.kind = kind
 		self.ready = False
 		self.proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
 		                             stderr=subprocess.PIPE, text=True, start_new_session=True)
@@ -170,6 +192,11 @@ class Engine:
 		virtual one, so the mic isn't kept open (and its in-use light on) and nothing runs idle."""
 		objs = pw.dump()
 		self.input = pw.pick_input(self.config.get('input', 'auto'), objs)
+		if self.wanted_kind() != self.kind:
+			print(f'engine: switching to {self.wanted_kind()} for {self.input and self.input["name"]}', flush=True)
+			self.stop_bridge()          # check_bridge starts the right one next round
+			self.ready = False
+			return
 		mic_in = next((n for _, _, n in pw.ports(pw.VIRTUAL_MIC, 'in', objs)), None)
 		if not pw.node_id(pw.DSP, objs) or not mic_in:
 			return  # bridge still starting
@@ -216,6 +243,7 @@ class Engine:
 			'error': self.last_error,
 			'enabled': self.config.get('enabled', True),
 			'input': self.input,
+			'voice': self.kind,
 			'listening': self.listening,
 			'meter_in': self.meter[0] if self.ready and self.listening else -120.0,
 			'meter_out': self.meter[1] if self.ready and self.listening else -120.0,
