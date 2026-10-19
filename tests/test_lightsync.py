@@ -30,10 +30,6 @@ class VisualizerTest(unittest.TestCase):
 		self.assertNotIn('PERKEY_GKEY:1', frame)
 
 
-if __name__ == '__main__':
-	unittest.main()
-
-
 class RunnerTest(unittest.TestCase):
 	def test_switching_off_puts_the_colours_back(self):
 		import tempfile
@@ -56,3 +52,28 @@ class RunnerTest(unittest.TestCase):
 			self.assertEqual(stopped, [True])
 			self.assertEqual(kb.keys[1], (9, 8, 7))
 			self.assertEqual(runner.running, {})
+
+
+class ScreenSamplerTest(unittest.TestCase):
+	def test_regions_and_keys(self):
+		# 6x6 picture: left third red, right third blue, middle green
+		row = ([255, 0, 0] * 2 + [0, 255, 0] * 2 + [0, 0, 255] * 2)
+		ppm = b'P6\n6 6\n255\n' + bytes(row * 6)
+		colors = lightsync.region_colors(*lightsync.parse_ppm(ppm), step=1)
+		self.assertEqual(colors['TOP_LEFT'], [255, 0, 0])
+		self.assertEqual(colors['MID_RIGHT'], [0, 0, 255])
+		self.assertEqual(colors['BOTTOM_CENTER'], [0, 255, 0])
+		layout = (90, 90, [('PERKEY_KEYBOARD', 4, 0, 0, 10, 10), ('PERKEY_KEYBOARD', 5, 40, 40, 10, 10),
+		                   ('PERKEY_KEYBOARD', 6, 80, 80, 10, 10)])
+		frame = lightsync.sampler_frame(layout, colors)
+		self.assertEqual(frame, {'PERKEY_KEYBOARD:4': [255, 0, 0], 'PERKEY_KEYBOARD:5': [0, 255, 0],
+		                         'PERKEY_KEYBOARD:6': [0, 0, 255]})
+
+	def test_boost(self):
+		self.assertEqual(lightsync.boost([100, 100, 100], 3), [100, 100, 100])   # grey stays grey
+		self.assertEqual(lightsync.boost([150, 100, 50], 0), [150, 100, 50])
+		self.assertEqual(lightsync.boost([150, 100, 50], 1), [200, 100, 0])
+
+
+if __name__ == '__main__':
+	unittest.main()

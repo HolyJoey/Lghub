@@ -21,7 +21,7 @@ measurements.
 | Yeti controls | 50% | see "Mics" below |
 | Webcams | 90% | check on the C920 |
 | Wireless (receivers, power) | 50% | see "Wireless and power" below |
-| Lighting | 85% | LIGHTSYNC screen sampler; per-key on mice |
+| Lighting | 90% | screen sampler on GNOME / KDE; per-key on mice |
 | App features | 70% | see "App" below |
 | Background service | 90% | re-measure CPU and memory with the current version installed |
 
@@ -119,8 +119,10 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   not instant).
 
 ### Lighting
-- **LIGHTSYNC screen sampler**: needs Wayland's screen-sharing portal (permission prompt,
-  PipeWire video stream).
+- **LIGHTSYNC screen sampler**: works on wlroots compositors (grim). GNOME and KDE need Wayland's
+  screen-sharing portal and GStreamer's pipewiresrc (permission prompt, PipeWire video stream).
+  G HUB's default region rectangles and its region editor: not found / not built (ours are
+  thirds of the screen).
 
 ### App
 - **Firmware updates**: not planned (a mistake can brick a device).

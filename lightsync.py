@@ -1,10 +1,17 @@
-"""LIGHTSYNC audio visualizer: keyboard lighting that follows what's playing, like G HUB's Audio
-Visualizer effect. The background service reads the sound going to the default output
-(PipeWire's monitor of it), splits it into frequency bands, one per stretch of keyboard columns
-left (bass) to right (treble), and streams the colours to the keyboard without saving them in it
-(per-key lighting, 0x8081 / 0x8080). How the bands map onto keys is ours.
+"""LIGHTSYNC: keyboard lighting that follows what's playing or what's on screen, like G HUB's
+Audio Visualizer and Screen Sampler effects. The background service streams the colours to the
+keyboard without saving them in it (per-key lighting, 0x8081 / 0x8080).
 
-lightsync.json in the config folder: {model key: {"effect": "audio", "color": [r, g, b]}}.
+- Audio visualizer: the sound going to the default output (PipeWire's monitor of it), split into
+  frequency bands, one per stretch of keyboard columns left (bass) to right (treble). How the
+  bands map onto keys is ours.
+- Screen sampler: the average colour of screen regions (G HUB's ScreenSamplerEffect: regions by
+  G HUB's names, average colour, colour boost 0-3 shown as 0-100 %, smoothing). The rectangles,
+  which key takes which region, and what boost and smoothing do to a colour are ours. Screens
+  are read with grim (wlroots compositors: Hyprland, Sway, ...).
+
+lightsync.json in the config folder: {model key: {"effect": "audio", "color": [r, g, b]}} or
+{model key: {"effect": "screen", "color_boost": 0-100, "smoothing": bool}}.
 """
 import math
 import os
@@ -22,6 +29,16 @@ BANDS = 8
 LOW_HZ, HIGH_HZ = 60, 6000
 FPS = 25
 FLOOR_DB = -60.0
+SCREEN_FPS = 10             # about 14 ms of CPU per frame (grim and the averaging)
+SAMPLE_STEP = 8             # every 8th pixel of every 8th row
+
+# G HUB's region names; the rectangles (left, top, right, bottom as fractions of the screen) ours
+REGIONS = {
+	'TOP_LEFT': (0.0, 0.0, 1 / 3, 1 / 3), 'TOP_RIGHT': (2 / 3, 0.0, 1.0, 1 / 3),
+	'MID_LEFT': (0.0, 1 / 3, 1 / 3, 2 / 3), 'MID_RIGHT': (2 / 3, 1 / 3, 1.0, 2 / 3),
+	'BOTTOM_LEFT': (0.0, 2 / 3, 1 / 3, 1.0), 'BOTTOM_RIGHT': (2 / 3, 2 / 3, 1.0, 1.0),
+	'BOTTOM_CENTER': (1 / 3, 2 / 3, 2 / 3, 1.0),
+}
 
 
 def load():
@@ -72,6 +89,56 @@ def frame_colors(layout, levels, color):
 	return out
 
 
+def parse_ppm(data):
+	"""(width, height, pixel bytes) of a binary PPM (P6, 8 bits), as grim writes it."""
+	parts = data.split(maxsplit=4)
+	if len(parts) < 5 or parts[0] != b'P6' or parts[3] != b'255':
+		raise ValueError('not an 8-bit P6 picture')
+	return int(parts[1]), int(parts[2]), parts[4]
+
+
+def region_colors(width, height, pixels, step=SAMPLE_STEP):
+	"""{region: [r, g, b]}: the average of every step-th pixel in each region."""
+	out = {}
+	stride = width * 3
+	for name, (left, top, right, bottom) in REGIONS.items():
+		x0, x1 = int(left * width), max(int(left * width) + 1, int(right * width))
+		y0, y1 = int(top * height), max(int(top * height) + 1, int(bottom * height))
+		sums, count = [0, 0, 0], 0
+		for y in range(y0, y1, step):
+			row = pixels[y * stride + x0 * 3:y * stride + x1 * 3]
+			for c in range(3):
+				part = row[c::3 * step]
+				sums[c] += sum(part)
+			count += len(row[0::3 * step])
+		out[name] = [round(s / count) if count else 0 for s in sums]
+	return out
+
+
+def boost(color, amount):
+	"""Colour boost (G HUB's 0-3): pushes the colour away from its grey, 0 = as it is."""
+	grey = sum(color) / 3
+	return [max(0, min(255, round(grey + (c - grey) * (1 + amount)))) for c in color]
+
+
+def key_region(x, y, width, height):
+	"""The region a key at (x, y) takes: by its third of the keyboard, sides by height, the middle
+	from the bottom centre."""
+	fx, fy = x / max(1, width), y / max(1, height)
+	row = 'TOP' if fy < 1 / 3 else 'MID' if fy < 2 / 3 else 'BOTTOM'
+	if fx < 1 / 3:
+		return f'{row}_LEFT'
+	if fx >= 2 / 3:
+		return f'{row}_RIGHT'
+	return 'BOTTOM_CENTER'
+
+
+def sampler_frame(layout, colors):
+	width, height, keys = layout
+	return {f'{group}:{kid}': colors[key_region(x + w / 2, y + h / 2, width, height)]
+	        for group, kid, x, y, w, h in keys if group == 'PERKEY_KEYBOARD'}
+
+
 class Visualizer:
 	"""Streams the audio visualizer to one keyboard (an open hidpp.Device) until stopped."""
 
@@ -117,6 +184,42 @@ class Visualizer:
 				return
 
 
+class ScreenSampler(Visualizer):
+	"""Streams the screen sampler to one keyboard until stopped."""
+
+	def __init__(self, dev, model, settings):
+		super().__init__(dev, model, None)
+		self.boost = max(0, min(100, settings.get('color_boost', 0))) * 3 / 100
+		self.smoothing = settings.get('smoothing', False)
+
+	def start(self):
+		if not self.layout:
+			return False
+		self.thread = threading.Thread(target=self._run, daemon=True)
+		self.thread.start()
+		return True
+
+	def _run(self):
+		shown = None
+		while not self.stop_event.wait(1 / SCREEN_FPS):
+			try:
+				shot = subprocess.run(['grim', '-t', 'ppm', '-'], capture_output=True, timeout=5, check=True).stdout
+				colors = region_colors(*parse_ppm(shot))
+			except (OSError, subprocess.SubprocessError, ValueError):
+				print('lightsync: screen sampler needs grim (wlroots compositors)', flush=True)
+				return
+			colors = {k: boost(c, self.boost) for k, c in colors.items()}
+			if self.smoothing and shown:
+				colors = {k: [round(o + (n - o) * 0.3) for o, n in zip(shown[k], c)] for k, c in colors.items()}
+			if colors == shown:
+				continue
+			shown = colors
+			try:
+				perkey.apply(self.dev, sampler_frame(self.layout, colors), persist=False)
+			except OSError:
+				return
+
+
 def devices_open(device):
 	import devices
 	return devices.open_hidpp(device)
@@ -142,7 +245,7 @@ class Runner:
 	def check(self, now):
 		import devices
 		self.last = now
-		wanted = {m: s for m, s in load().items() if s.get('effect') == 'audio'}
+		wanted = {m: s for m, s in load().items() if s.get('effect') in ('audio', 'screen')}
 		if not wanted and not self.running:
 			return
 		present = {d.id: d for d in devices.discover()}
@@ -166,12 +269,16 @@ class Runner:
 
 	def _start(self, dev_id, device, settings):
 		try:
-			visualizer = Visualizer(devices_open(device), device.model.key, settings.get('color', [0, 140, 255]))
+			dev = devices_open(device)
 		except OSError:
 			return
+		if settings['effect'] == 'screen':
+			visualizer = ScreenSampler(dev, device.model.key, settings)
+		else:
+			visualizer = Visualizer(dev, device.model.key, settings.get('color', [0, 140, 255]))
 		if visualizer.start():
 			self.running[dev_id] = (visualizer, settings)
-			print(f'engine: audio visualizer on {device.name}', flush=True)
+			print(f'engine: {settings["effect"]} LIGHTSYNC on {device.name}', flush=True)
 
 	def stop(self):
 		for v, _settings in self.running.values():

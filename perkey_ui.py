@@ -88,38 +88,72 @@ class PerKeyPage(Gtk.Box):
 	# --- LIGHTSYNC ----------------------------------------------------------------------
 
 	def _lightsync_card(self):
-		"""G HUB's Audio Visualizer: the background service lights the keys to the music."""
+		"""G HUB's Audio Visualizer and Screen Sampler: the background service lights the keys."""
 		import lightsync
 		settings = lightsync.load().get(self.model, {})
 		card = box(spacing=10, css=['card'])
 		card.append(label('LIGHTSYNC', ['section-title']))
 		card.append(label('Audio visualizer: the keys light up with what is playing, bass on the left, treble '
-		                  'on the right. Your colours come back when it is off.', ['muted', 'small'], wrap=True))
-		r = box(Gtk.Orientation.HORIZONTAL, 16)
-		r.append(label('Audio visualizer', hexpand=True, valign=Gtk.Align.CENTER))
-		sw = Gtk.Switch(active=settings.get('effect') == 'audio', valign=Gtk.Align.CENTER)
+		                  'on the right. Screen sampler: the keys take the colours at the edges of your screen '
+		                  '(needs grim: Hyprland, Sway). Your colours come back when it is off.',
+		                  ['muted', 'small'], wrap=True))
+		effects = [(None, 'Off'), ('audio', 'Audio visualizer'), ('screen', 'Screen sampler')]
+		effect = Gtk.DropDown.new_from_strings([name for _k, name in effects])
+		effect.set_selected(next((i for i, (k, _n) in enumerate(effects) if k == settings.get('effect')), 0))
+		card.append(self._lightsync_row('Effect', effect))
+
 		color = Gtk.ColorDialogButton(dialog=Gtk.ColorDialog(with_alpha=False))
 		rgba = Gdk.RGBA()
 		rgba.red, rgba.green, rgba.blue = (c / 255 for c in settings.get('color', [0, 140, 255]))
 		rgba.alpha = 1.0
 		color.set_rgba(rgba)
-		r.append(color)
-		r.append(sw)
-		card.append(r)
+		color_row = self._lightsync_row('Colour', color)
+		card.append(color_row)
+		boost = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1)   # G HUB's 0-100 %
+		boost.set_value(settings.get('color_boost', 0))
+		boost.set_draw_value(True)
+		boost.set_size_request(280, -1)
+		boost.set_format_value_func(lambda _s, v: f'{v:.0f} %')
+		boost_row = self._lightsync_row('Colour boost', boost)
+		card.append(boost_row)
+		smoothing = Gtk.Switch(active=settings.get('smoothing', False), valign=Gtk.Align.CENTER)
+		smoothing_row = self._lightsync_row('Smoothing', smoothing)
+		card.append(smoothing_row)
+
+		def show():
+			kind = effects[effect.get_selected()][0]
+			color_row.set_visible(kind == 'audio')
+			boost_row.set_visible(kind == 'screen')
+			smoothing_row.set_visible(kind == 'screen')
+			return kind
 
 		def changed(*_):
-			c = color.get_rgba()
+			kind = show()
 			data = lightsync.load()
-			if sw.get_active():
+			if kind == 'audio':
+				c = color.get_rgba()
 				data[self.model] = {'effect': 'audio', 'color': [round(v * 255) for v in (c.red, c.green, c.blue)]}
+			elif kind == 'screen':
+				data[self.model] = {'effect': 'screen', 'color_boost': round(boost.get_value()),
+				                    'smoothing': smoothing.get_active()}
 			else:
 				data.pop(self.model, None)
 				self.apply(self.colors)          # the static colours back on
 			lightsync.save(data)
 
-		sw.connect('notify::active', changed)
+		show()
+		effect.connect('notify::selected', changed)
 		color.connect('notify::rgba', changed)
+		boost.connect('value-changed', changed)
+		smoothing.connect('notify::active', changed)
 		return card
+
+	@staticmethod
+	def _lightsync_row(text, widget):
+		r = box(Gtk.Orientation.HORIZONTAL, 16)
+		r.append(label(text, hexpand=True, valign=Gtk.Align.CENTER))
+		r.append(widget)
+		return r
 
 	# --- drawing ------------------------------------------------------------------------
 
