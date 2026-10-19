@@ -15,6 +15,10 @@ ONBOARD = 0x8100
 REPORT_RATE = 0x8060
 SIDETONE = 0x8300
 POLAR_PATTERN = 0x8330
+ANGLE_SNAPPING = 0x2230
+FN_INVERSION = 0x40A3
+DISABLE_KEYS = 0x4522
+CHANGE_HOST = 0x1814
 
 NAMES = {
 	0x0000: 'Root', 0x0001: 'Feature set', 0x0002: 'Feature info', 0x0003: 'Firmware info',
@@ -22,7 +26,7 @@ NAMES = {
 	0x00C2: 'DFU control', 0x00D0: 'DFU', 0x1000: 'Battery', 0x1001: 'Battery voltage',
 	0x1004: 'Battery', 0x1814: 'Change host', 0x1815: 'Hosts info', 0x1B04: 'Special keys and buttons',
 	0x1D4B: 'Wireless status', 0x1F20: 'Battery (ADC)', 0x2201: 'Adjustable DPI', 0x2202: 'Extended DPI',
-	0x2250: 'Analysis mode', 0x40A3: 'Fn inversion', 0x4100: 'Encryption', 0x4220: 'Lock key state',
+	0x2230: 'Angle snapping', 0x2250: 'Analysis mode', 0x40A3: 'Fn inversion', 0x4100: 'Encryption', 0x4220: 'Lock key state',
 	0x4521: 'Disable keys', 0x4522: 'Game mode', 0x4540: 'Keyboard layout', 0x8010: 'G-keys',
 	0x8020: 'M-keys', 0x8030: 'MR key', 0x8040: 'Brightness', 0x8060: 'Report rate',
 	0x8061: 'Report rate', 0x8070: 'Lighting', 0x8071: 'RGB effects', 0x8080: 'Per-key lighting',
@@ -128,6 +132,41 @@ def polar_patterns(dev):
 
 def set_polar_pattern(dev, pattern):
 	dev.call(POLAR_PATTERN, 2, bytes([pattern]))
+
+
+# --- small switches G HUB offers (function layouts from its Feature2230 / 40A3 / 4522 classes) ----
+
+def angle_snapping(dev):
+	return dev.call(ANGLE_SNAPPING, 0)[0] == 1
+
+
+def set_angle_snapping(dev, on):
+	dev.call(ANGLE_SNAPPING, 1, bytes([1 if on else 0]))
+
+
+def fn_inversion(dev, host=0):
+	"""(inverted, default) for a host (fn 0: host, state, default, capabilities)."""
+	r = dev.call(FN_INVERSION, 0, bytes([host]))
+	return bool(r[1]), bool(r[2])
+
+
+def set_fn_inversion(dev, on, host=0):
+	dev.call(FN_INVERSION, 1, bytes([host, 1 if on else 0]))
+
+
+# Game mode (0x4522 DisableKeysByUsage): fn 0 = how many keys can be off, fn 1 = turn these HID
+# usages off, fn 2 = back on, fn 3 = all back on. The keyboard doesn't report which are off.
+GAME_MODE_KEYS = ((0xE3, 'Left Windows'), (0xE7, 'Right Windows'), (0x65, 'Menu'), (0x39, 'Caps Lock'))
+
+
+def max_disabled_keys(dev):
+	return dev.call(DISABLE_KEYS, 0)[0]
+
+
+def set_disabled_keys(dev, usages):
+	dev.call(DISABLE_KEYS, 3)
+	if usages:
+		dev.call(DISABLE_KEYS, 1, bytes(usages))
 
 
 # --- brightness (0x8040) -------------------------------------------------------------------

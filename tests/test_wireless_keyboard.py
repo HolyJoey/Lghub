@@ -65,6 +65,21 @@ if __name__ == '__main__':
 	unittest.main()
 
 
+class KeyboardSwitchTest(unittest.TestCase):
+	def test_game_mode_and_fn(self):
+		kb = simulate.FakeKeyboard()
+		dev = hidpp.Device(kb)
+		self.assertEqual(features.max_disabled_keys(dev), 8)
+		kb.disabled = {0x39}
+		features.set_disabled_keys(dev, [0xE3, 0x65])
+		self.assertEqual(kb.disabled, {0xE3, 0x65})        # all back on first, then the chosen ones
+		features.set_disabled_keys(dev, [])
+		self.assertEqual(kb.disabled, set())
+		self.assertEqual(features.fn_inversion(dev), (False, True))
+		features.set_fn_inversion(dev, True)
+		self.assertEqual(features.fn_inversion(dev), (True, True))
+
+
 class YetiTest(unittest.TestCase):
 	def test_polar_pattern(self):
 		yeti = simulate.FakeYeti()

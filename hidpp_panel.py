@@ -9,6 +9,7 @@ import headset
 import mouse
 import perkey
 import perkey_ui
+import store
 from ui import box, label
 from worker import Worker
 
@@ -29,6 +30,20 @@ def row(title, widget):
 	widget.set_valign(Gtk.Align.CENTER)
 	r.append(widget)
 	return r
+
+
+GAME_MODE_FILE = 'game_mode.json'      # in store.CONFIG_DIR: {model key: [HID usages]}
+
+
+def game_mode_keys(device):
+	return store._read_json(f'{store.CONFIG_DIR}/{GAME_MODE_FILE}', {}).get(device.model.key, [])
+
+
+def save_game_mode_keys(device, keys):
+	path = f'{store.CONFIG_DIR}/{GAME_MODE_FILE}'
+	data = store._read_json(path, {})
+	data[device.model.key] = keys
+	store._write_json(path, data)
 
 
 def slider(low, high, value, width=280):
@@ -87,6 +102,13 @@ class SettingsPanel(Gtk.Box):
 			info['sidetone'] = headset.sidetone(dev)
 		if features.POLAR_PATTERN in have:
 			info['patterns'] = features.polar_patterns(dev)
+		if features.ANGLE_SNAPPING in have:
+			info['angle_snapping'] = features.angle_snapping(dev)
+		if features.FN_INVERSION in have and features.CHANGE_HOST not in have:
+			info['fn_inversion'] = features.fn_inversion(dev)   # one host; multi-host keyboards not yet
+		if features.DISABLE_KEYS in have:
+			info['game_mode'] = (features.max_disabled_keys(dev), game_mode_keys(self.device))
+			features.set_disabled_keys(dev, info['game_mode'][1])   # ours: the chosen keys stay off
 		if features.ONBOARD in have:
 			info['mode'] = dev.call(features.ONBOARD, 2)[0]
 		saved = perkey_ui.load_colors(self.device.model.key)
@@ -125,7 +147,8 @@ class SettingsPanel(Gtk.Box):
 		cards = [self._zone_card(zone) for zone in info.get('zones', [])]
 		for key, build in (('brightness', self._brightness_card), ('rates', self._rate_card),
 		                   ('sidetone', self._sidetone_card), ('patterns', self._pattern_card),
-		                   ('mode', self._mode_card)):
+		                   ('angle_snapping', self._angle_card), ('fn_inversion', self._fn_card),
+		                   ('game_mode', self._game_mode_card), ('mode', self._mode_card)):
 			if info.get(key) not in (None, []):
 				cards.append(build(info))
 		if not cards and not self.quiet:
@@ -180,6 +203,38 @@ class SettingsPanel(Gtk.Box):
 			lambda p=patterns[w.get_selected()]: features.set_polar_pattern(self.dev, p)))
 		c.append(row('Pattern', dd))
 		return c
+
+	def _angle_card(self, info):
+		c = card('Angle snapping', 'Straightens slightly wobbly lines into horizontal or vertical ones.')
+		sw = Gtk.Switch(active=info['angle_snapping'], valign=Gtk.Align.CENTER)
+		sw.connect('notify::active', lambda w, _p: self.loading or self._do(
+			lambda on=w.get_active(): features.set_angle_snapping(self.dev, on)))
+		c.append(row('Angle snapping', sw))
+		return c
+
+	def _fn_card(self, info):
+		inverted, default = info['fn_inversion']
+		c = card('Fn keys', 'On: the top row sends F1-F12 only with Fn held'
+		         + (' (the keyboard’s default).' if default else '.'))
+		sw = Gtk.Switch(active=inverted, valign=Gtk.Align.CENTER)
+		sw.connect('notify::active', lambda w, _p: self.loading or self._do(
+			lambda on=w.get_active(): features.set_fn_inversion(self.dev, on)))
+		c.append(row('Media keys first', sw))
+		return c
+
+	def _game_mode_card(self, info):
+		most, chosen = info['game_mode']
+		c = card('Game mode', f'Keys to turn off so they can’t interrupt a game (up to {most}).')
+		for usage, name in features.GAME_MODE_KEYS:
+			sw = Gtk.Switch(active=usage in chosen, valign=Gtk.Align.CENTER)
+			sw.connect('notify::active', lambda w, _p, u=usage: self.loading or self._game_key(u, w.get_active()))
+			c.append(row(f'Turn off {name}', sw))
+		return c
+
+	def _game_key(self, usage, off):
+		keys = [k for k in game_mode_keys(self.device) if k != usage] + ([usage] if off else [])
+		save_game_mode_keys(self.device, keys)
+		self._do(lambda: features.set_disabled_keys(self.dev, keys))
 
 	def _mode_card(self, info):
 		c = card('On-board memory', 'On: the device runs the settings stored in it. Off: it follows software; '

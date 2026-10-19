@@ -77,7 +77,7 @@ Keyboards, other headsets, the G560 speakers, POWERPLAY and anything else Logite
 asks the device what it can do and shows that. Keyboards also get macros on their G-keys and a
 per-key lighting page drawn from G HUB's own key layout, sent over HID++ 0x8081 with G HUB's
 key-to-LED table (0x8080 on older keyboards). Lighting zones and effects, brightness, report
-rate, sidetone, on-board memory and battery. Devices with a USB sound card (headsets,
+rate, Fn keys, game mode, angle snapping, sidetone, on-board memory and battery. Devices with a USB sound card (headsets,
 speakers, Yeti mics) also get its controls.
 
 ![Keyboard](docs/screenshots/keyboard.png)
