@@ -74,8 +74,13 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 - **Per-key lighting on mice** (if any have it) and 0x8071 inside onboard profiles.
 
 ### Keyboards
-- **Onboard profiles**: switching the active one works. Editing them needs G HUB's tag format
-  (OnboardTagConfigurations, 0x8101/0x8102 profile management) decoded, then a keyboard to test.
+- **Onboard profiles**: switching the active one works. Editing goes through 0x8102 with the same
+  tag protocol as the power timers (done in `device_settings.py`). Found in G HUB: the 0x8102
+  functions (0 capabilities, 1 tag list, 6 / 7 read, 9 / 10 write, 11 commit; a profile byte goes
+  before the tag) and its tag ids: 0x0003 profile name, 0x0004 key mapping, 0x0100 / 0x0101 report
+  rate wired / wireless, 0x0102 game-mode keys, 0x0110-0x0112 base / Fn / G-Shift assignments,
+  0x0113 macros, 0x0120-0x0130 analog keys, 0xFF01 profile checksum. Left: each tag's byte
+  format, then a keyboard to test.
 - **0x8030 MR key** (record a macro on the keyboard): needs the keystrokes, which Lghub can't
   read without input-device access.
 - **Analog keyboards**: 0x1B08 / 0x1B0C analog keys, 0x80A3 / 0x80A4 actuation curves.
