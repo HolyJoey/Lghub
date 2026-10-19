@@ -33,6 +33,12 @@ def row(title, widget):
 	return r
 
 
+# Features read the same way on connect: (feature, info key, reader)
+SIMPLE_READS = ((features.SIDETONE, 'sidetone', headset.sidetone),
+                (features.POLAR_PATTERN, 'patterns', features.polar_patterns),
+                (features.DEVICE_EQ, 'device_eq', features.device_eq),
+                (features.ANGLE_SNAPPING, 'angle_snapping', features.angle_snapping))
+
 GAME_MODE_FILE = 'game_mode.json'      # in store.CONFIG_DIR: {model key: [HID usages]}
 
 
@@ -100,14 +106,9 @@ class SettingsPanel(Gtk.Box):
 			info['rates'] = sorted((1000 // (bit + 1) for bit in range(8) if mask >> bit & 1), reverse=True)
 			ms = dev.call(features.REPORT_RATE, 1)[0]
 			info['rate'] = 1000 // ms if ms else 0
-		if features.SIDETONE in have:
-			info['sidetone'] = headset.sidetone(dev)
-		if features.POLAR_PATTERN in have:
-			info['patterns'] = features.polar_patterns(dev)
-		if features.DEVICE_EQ in have:
-			info['device_eq'] = features.device_eq(dev)
-		if features.ANGLE_SNAPPING in have:
-			info['angle_snapping'] = features.angle_snapping(dev)
+		for feature, key, read in SIMPLE_READS:
+			if feature in have:
+				info[key] = read(dev)
 		host = 0
 		if features.CHANGE_HOST in have:
 			info['hosts'] = features.hosts(dev)

@@ -116,8 +116,7 @@ app features. Lghub handles 0x0000-0x0005, battery (0x1000/0x1001/0x1004), 0x220
   M1-M3 as in G HUB),
   0x4522 game mode done (the chosen keys stay off: ours, the keyboard can't report them),
   0x1B08 analog keys / 0x80A4 actuation curves (analog keyboards).
-- [ ] Headsets: 0x8305 bass tone (functions found, range not), 0x8310 device EQ done (untested,
-  no simulator test yet), 0x8320 jack detection, 0x1F20 battery for
+- [ ] Headsets: 0x8305 bass tone (functions found, range not), 0x8310 device EQ done (simulator-tested), 0x8320 jack detection, 0x1F20 battery for
   older wireless headsets; the newer "Centurion" protocol (0x06xx: mic mute 0x0601, sidetone
   0x0604, ANC 0x0605, mic gain 0x0611, onboard EQ 0x0636) for G735 / PRO X 2.
 - [ ] Mics: 0x8350/0x8360/0x8370 (Yeti, see above); 0x8330 done.

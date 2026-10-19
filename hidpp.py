@@ -105,18 +105,26 @@ class Device:
 			self.transport.write(msg)
 			deadline = time.monotonic() + TIMEOUT
 			while (left := deadline - time.monotonic()) > 0:
-				reply = self.transport.read(left)
-				if not reply or len(reply) < 5 or reply[0] not in SIZES or reply[1] != self.index:
-					continue
-				if reply[2] not in (0xFF, 0x8F) and not reply[3] & 0x0F:
-					if len(self._backlog) < BACKLOG:
-						self._backlog.append(reply)    # a notification: next_event gets it
-					continue
-				if reply[2] in (0xFF, 0x8F) and reply[3] == feature_index and reply[4] == func_sw:
-					raise HidppError(reply[5] if len(reply) > 5 else 0)
-				if reply[2] == feature_index and reply[3] == func_sw:
-					return bytes(reply[4:]).ljust(16, b'\0')
+				answer = self._answer(self.transport.read(left), feature_index, func_sw)
+				if answer is not None:
+					return answer
 		raise NoReply()
+
+	def _answer(self, reply, feature_index, func_sw):
+		"""The parameters if reply answers this request (raises on an error answer); None for
+		anything else. Notifications are kept for next_event."""
+		if not reply or len(reply) < 5 or reply[0] not in SIZES or reply[1] != self.index:
+			return None
+		error = reply[2] in (0xFF, 0x8F)
+		if not error and not reply[3] & 0x0F:
+			if len(self._backlog) < BACKLOG:
+				self._backlog.append(reply)
+			return None
+		if error and reply[3] == feature_index and reply[4] == func_sw:
+			raise HidppError(reply[5] if len(reply) > 5 else 0)
+		if reply[2] == feature_index and reply[3] == func_sw:
+			return bytes(reply[4:]).ljust(16, b'\0')
+		return None
 
 	def _report_for(self, size):
 		"""The smallest report the device takes that fits size parameter bytes."""

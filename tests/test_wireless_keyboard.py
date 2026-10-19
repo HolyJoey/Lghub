@@ -82,6 +82,18 @@ class KeyboardSwitchTest(unittest.TestCase):
 		features.set_host(dev, 2)
 
 
+class HeadsetEqTest(unittest.TestCase):
+	def test_device_eq(self):
+		hs = simulate.FakeEqHeadset()
+		dev = hidpp.Device(hs)
+		eq = features.device_eq(dev)
+		self.assertEqual(eq, {'freqs': [80, 240, 750, 2200, 6600], 'gains': [0] * 5, 'low': -12, 'high': 12, 'on': True})
+		features.set_device_eq(dev, [3, -2, 0, 1.4, -12])
+		self.assertEqual((hs.lead, hs.gains), (2, [3, -2, 0, 1, -12]))   # G HUB's leading 2, whole dB
+		features.set_device_eq_on(dev, False)
+		self.assertFalse(features.device_eq(dev)['on'])
+
+
 class YetiTest(unittest.TestCase):
 	def test_polar_pattern(self):
 		yeti = simulate.FakeYeti()

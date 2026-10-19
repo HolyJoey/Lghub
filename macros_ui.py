@@ -38,6 +38,7 @@ def dropdown(options, selected=None):
 
 
 OWN_ACTION = 'Its own action'
+NOTIFY_SELECTED = 'notify::selected'
 
 
 class MacrosPage(Gtk.Box):
@@ -96,7 +97,7 @@ class MacrosPage(Gtk.Box):
 		if any(key.startswith('gkey:') for key, _text in self.buttons):
 			sets = Gtk.DropDown.new_from_strings(['M1', 'M2', 'M3'])
 			sets.set_selected(self.bank - 1)
-			sets.connect('notify::selected', lambda w, _p: self._show_bank(w.get_selected() + 1, lib))
+			sets.connect(NOTIFY_SELECTED, lambda w, _p: self._show_bank(w.get_selected() + 1, lib))
 			r = box(Gtk.Orientation.HORIZONTAL, 16)
 			r.append(label('G-key set (switched with the M-keys)', ['muted'], hexpand=True, valign=Gtk.Align.CENTER))
 			r.append(sets)
@@ -106,7 +107,7 @@ class MacrosPage(Gtk.Box):
 				key = inputd.gkey_name(self.bank, int(key.split(':')[1]))
 			dd = Gtk.DropDown.new_from_strings(names)
 			dd.set_selected(ids.index(current.get(key)) if current.get(key) in ids else 0)
-			dd.connect('notify::selected', lambda w, _p, k=key: self._assign(k, ids[w.get_selected()]))
+			dd.connect(NOTIFY_SELECTED, lambda w, _p, k=key: self._assign(k, ids[w.get_selected()]))
 			r = box(Gtk.Orientation.HORIZONTAL, 16)
 			r.append(label(text, ['muted'], hexpand=True, valign=Gtk.Align.CENTER))
 			r.append(dd)
@@ -156,7 +157,7 @@ class MacroEditor(Gtk.Window):
 		self.name = Gtk.Entry(text=self.macro.get('name', ''), placeholder_text='Name')
 		content.append(self.name)
 		self.type_dd, self.type_keys = dropdown(TYPES, self.macro.get('type'))
-		self.type_dd.connect('notify::selected', lambda *_: self._show_fields())
+		self.type_dd.connect(NOTIFY_SELECTED, lambda *_: self._show_fields())
 		content.append(self.type_dd)
 		self.fields = box(spacing=10, vexpand=True)
 		content.append(self.fields)

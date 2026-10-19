@@ -203,29 +203,28 @@ class FakeKeyboard(FakeMouse):
 		self.m_led = 0
 
 	def handle(self, feature, fn, p):
-		if feature == features.COLOR_LED_EFFECTS:
-			return self._lighting(fn, p)
-		if feature == features.DISABLE_KEYS:
-			return self._disable_keys(fn, p)
-		if feature == 0x8010:                  # G-keys: fn 2 = software control
-			if fn == 2:
-				self.gkeys_software = bool(p[0])
-			return bytes([5])
-		if feature == 0x8020:                  # M-keys: fn 0 count, fn 1 lit key
-			if fn == 1:
-				self.m_led = p[0]
-			return bytes([3])
-		if feature == features.CHANGE_HOST:
-			return bytes([3, 1, 0]) if fn == 0 else b''
-		if feature == features.FN_INVERSION:
-			if fn == 1:
-				self.fn_inverted = bool(p[1])
-			return bytes([p[0], self.fn_inverted, 1, 1])
-		if feature == 0x8081:
-			return self._perkey(fn, p)
-		if feature == features.BRIGHTNESS:
-			return self._brightness(fn, p)
+		handlers = {features.COLOR_LED_EFFECTS: self._lighting, features.DISABLE_KEYS: self._disable_keys,
+		            0x8010: self._gkeys, 0x8020: self._mkeys, features.FN_INVERSION: self._fn_keys,
+		            features.CHANGE_HOST: lambda f, _p: bytes([3, 1, 0]) if f == 0 else b'',
+		            0x8081: self._perkey, features.BRIGHTNESS: self._brightness}
+		if feature in handlers:
+			return handlers[feature](fn, p)
 		return super().handle(feature, fn, p)
+
+	def _gkeys(self, fn, p):           # fn 2 = software control
+		if fn == 2:
+			self.gkeys_software = bool(p[0])
+		return bytes([5])
+
+	def _mkeys(self, fn, p):           # fn 0 count, fn 1 lit key
+		if fn == 1:
+			self.m_led = p[0]
+		return bytes([3])
+
+	def _fn_keys(self, fn, p):
+		if fn == 1:
+			self.fn_inverted = bool(p[1])
+		return bytes([p[0], self.fn_inverted, 1, 1])
 
 	def _lighting(self, fn, p):
 		if fn == 0:
@@ -302,6 +301,34 @@ class FakeKeyboardV1(FakeKeyboard):
 			self.keys.update(self.pending)
 			self.pending = {}
 			self.persisted = bool(p[0])
+		return b''
+
+
+class FakeEqHeadset(FakeMouse):
+	"""A headset with its own equalizer (0x8310): five bands, -12 to +12 dB."""
+	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, 0x8310]
+	FREQS = (80, 240, 750, 2200, 6600)
+
+	def __init__(self):
+		super().__init__('G935 Gaming Headset')
+		self.gains, self.eq_on, self.lead = [0] * 5, True, None
+
+	def handle(self, feature, fn, p):
+		if feature != 0x8310:
+			return super().handle(feature, fn, p)
+		if fn == 0:
+			return bytes([5, 24, 0]) + struct.pack('bb', -12, 12)
+		if fn == 1:
+			rest = self.FREQS[p[0]:p[0] + 7]
+			return bytes([p[0]]) + b''.join(struct.pack('>H', f) for f in rest)
+		if fn == 2:
+			return struct.pack('5b', *self.gains)
+		if fn == 3:
+			self.lead, self.gains = p[0], list(struct.unpack('5b', p[1:6]))
+			return b''
+		if fn == 4:
+			return bytes([self.eq_on])
+		self.eq_on = bool(p[0])
 		return b''
 
 
