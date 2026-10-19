@@ -237,6 +237,37 @@ def fetch_metadata(model):
 	return path
 
 
+def battery_path(model):
+	return os.path.join(store.IMAGE_DIR, f'{model}.battery.xml')
+
+
+def fetch_battery(model, pid=None):
+	"""Path of the model's battery.xml (G HUB's voltage curves for devices that report volts),
+	downloading it if needed; None if there is none. Picks battery_<pid>.xml when there are
+	several. Blocks."""
+	path = battery_path(model)
+	if os.path.exists(path):
+		return path
+	if model not in DEPOTS:
+		return None
+	url = SERVER + DEPOTS[model]
+	try:
+		files = _files(url)
+		names = [n for n in files if n.split('/')[-1].lower().startswith('battery') and n.endswith('.xml')]
+		name = next((n for n in names if pid and pid.lower() in n.lower()), names[0] if names else None)
+		if not name:
+			return None
+		data = _get(url, *files[name])
+	except (OSError, ValueError, KeyError, struct.error) as e:
+		print(f'lghub: no battery curves for {model}: {e}', flush=True)
+		return None
+	os.makedirs(store.IMAGE_DIR, exist_ok=True)
+	with open(path + '.tmp', 'wb') as f:
+		f.write(data)
+	os.replace(path + '.tmp', path)
+	return path
+
+
 # Headsets whose Blue VO!CE presets come from their depot at first sight (the G Pro X ones come
 # with the installer): model -> (file in the depot, preset set in store.GHUB_PRESETS).
 PRESET_FILES = {'g733': ('device_presets.json', 'g733')}

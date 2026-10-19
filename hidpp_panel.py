@@ -4,6 +4,7 @@ the generic device page and on the headset page."""
 from gi.repository import Gdk, Gtk
 
 import devices
+import battery_model
 import device_settings
 import features
 import headset
@@ -158,7 +159,7 @@ class SettingsPanel(Gtk.Box):
 	def _connect(self):
 		dev = devices.open_hidpp(self.device)
 		info = {'features': dev.feature_list(), 'name': dev.name(), 'firmware': dev.firmware(),
-		        'battery': features.battery(dev)}
+		        'battery': features.battery(dev, self._curves(dev))}
 		have = info['features']
 		if features.COLOR_LED_EFFECTS in have:
 			info['zones'] = features.zones(dev)
@@ -183,6 +184,12 @@ class SettingsPanel(Gtk.Box):
 			perkey.apply(dev, saved)   # ours: the saved colours go back on when the keyboard connects
 		self.dev = dev
 		return info
+
+	def _curves(self, dev):
+		"""G HUB's voltage curves, only for devices that report volts."""
+		if dev.has(features.BATTERY_VOLTAGE) or dev.has(features.ADC_MEASUREMENT):
+			return battery_model.for_device(self.device)
+		return None
 
 	def _read_mic(self, dev, have, info):
 		"""The Yeti's own mute, gain, headphone level and mic monitoring (0x8370 / 0x8360 / 0x8350)."""

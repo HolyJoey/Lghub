@@ -100,7 +100,6 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   - Left: the per-device settings from their constructors (`re/notes/decompiled/centurion.c`).
 - **Others**:
   - 0x8320 jack detection (0x8305 bass tone done: G HUB's 0-1 gain x 100)
-  - 0x1F20 battery on older wireless headsets
   - 0x0200 / 0x0201 / 0x020D volume and EQ sets, 0x020E mic test
   - 0x0800 / 0x0801 / 0x0809 mixer, 0x0900-0x0909 voice processing on the headset
   - 0x0920 Bluetooth EQ
@@ -123,6 +122,9 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 - **Sleep / power-off timers** (0x8103 GlobalDeviceSettings tags 1 / 2): done with G HUB's tag
   protocol (sessions, tag read / write, CRC-32 commit) and its minute choices. Ours: first data
   bytes in the start-write call. The screen tags (16-19) aren't used (no device with a screen).
+- Battery from a voltage (0x1001, 0x1F20 on older wireless headsets): percentages from G HUB's
+  battery.xml curves (downloaded at first use). 0x1F20's charging bit is ours; check on a G533 /
+  G933.
 - 0x0108 AutoSleep (Centurion headsets). 0x1010 charging control done.
 - Reconnection: Lghub checks every 60 s instead of listening for 0x1D4B (fine for settings;
   not instant).

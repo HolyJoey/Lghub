@@ -3,12 +3,14 @@ lighting zones, brightness. Every function talks to the device; call from a work
 import struct
 from dataclasses import dataclass, field
 
+import battery_model
 import hidpp
 import store
 
 BATTERY_STATUS = 0x1000      # level and charging state
 BATTERY_VOLTAGE = 0x1001
 UNIFIED_BATTERY = 0x1004
+ADC_MEASUREMENT = 0x1F20      # voltage on older wireless headsets
 COLOR_LED_EFFECTS = 0x8070
 RGB_EFFECTS = 0x8071
 BRIGHTNESS = 0x8040
@@ -52,8 +54,9 @@ NAMES = {
 CHARGING = {0: 'On battery', 1: 'Charging', 2: 'Almost full', 3: 'Charged', 4: 'Charging slowly'}
 
 
-def battery(dev):
-	"""(percent or None, text) or None when the device reports no battery."""
+def battery(dev, curves=None):
+	"""(percent or None, text) or None when the device reports no battery. curves: the device's
+	battery_model.parse() result, to turn a voltage into a percentage as G HUB does."""
 	try:
 		if dev.has(UNIFIED_BATTERY):
 			r = dev.call(UNIFIED_BATTERY, 1)
@@ -63,12 +66,22 @@ def battery(dev):
 			return r[0], CHARGING.get(r[2], '')
 		if dev.has(BATTERY_VOLTAGE):
 			r = dev.call(BATTERY_VOLTAGE, 0)
-			mv = struct.unpack('>H', r[:2])[0]
-			charging = bool(r[2] & 0x80)
-			return None, f'{mv / 1000:.2f} V' + (' · charging' if charging else '')
+			return _from_volts(struct.unpack('>H', r[:2])[0], bool(r[2] & 0x80), curves)
+		if dev.has(ADC_MEASUREMENT):
+			# fn 0 (channel) -> [millivolts u16, flags]; G HUB reads flag bits 1 and 2, bit 1 taken
+			# as charging (ours)
+			r = dev.call(ADC_MEASUREMENT, 0, b'\0')
+			return _from_volts(struct.unpack('>H', r[:2])[0], bool(r[2] & 2), curves)
 	except hidpp.HidppError:
 		return None
 	return None
+
+
+def _from_volts(mv, charging, curves):
+	text = CHARGING[1] if charging else CHARGING[0]
+	if curves:
+		return battery_model.percent(curves, mv / 1000, charging), text
+	return None, f'{mv / 1000:.2f} V' + (' · charging' if charging else '')
 
 
 # --- lighting (0x8070) ---------------------------------------------------------------------

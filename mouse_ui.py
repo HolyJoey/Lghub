@@ -5,6 +5,7 @@ keeps working without Lghub running (like G HUB's on-board memory mode).
 """
 from gi.repository import Gdk, Gtk
 
+import battery_model
 import device_settings
 import devices
 import features
@@ -152,7 +153,8 @@ class MouseView(Gtk.Box):
 
 	def _connect(self):
 		m = mouse.Mouse(devices.open_hidpp(self.device), self.device.serial or self.device.id)
-		state = {'battery': features.battery(m.dev), 'wheel': m.wheel()}
+		curves = battery_model.for_device(self.device) if m.dev.has(features.BATTERY_VOLTAGE) else None
+		state = {'battery': features.battery(m.dev, curves), 'wheel': m.wheel()}
 		if features.BUTTON_SWAP in m.features:
 			state['swap'] = features.button_swap(m.dev)
 		if features.HYBRID_TRACKING in m.features:
