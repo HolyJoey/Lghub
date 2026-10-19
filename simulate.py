@@ -167,7 +167,7 @@ class FakeMouse:
 class FakeKeyboard(FakeMouse):
 	"""A corded G815-like keyboard: two lighting zones, brightness, report rate, onboard mode."""
 	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, features.COLOR_LED_EFFECTS,
-	            features.BRIGHTNESS, mouse.REPORT_RATE, mouse.ONBOARD, 0x8010, 0x8020, 0x4522]
+	            features.BRIGHTNESS, mouse.REPORT_RATE, mouse.ONBOARD, 0x8010, 0x8020, 0x4522, 0x8081]
 	ZONE_EFFECTS = [features.FIXED, features.BREATHING, features.CYCLE, 0x0008, 0x0000]
 	KIND = 0   # keyboard
 
@@ -175,10 +175,15 @@ class FakeKeyboard(FakeMouse):
 		super().__init__('G815 RGB MECHANICAL GAMING KEYBOARD')
 		self.effects = {0: (0, b''), 1: (1, b'')}
 		self.level = 80
+		self.keys = {}       # 0x8081 zone -> (r, g, b), shown after a frame end
+		self.pending = {}
+		self.persisted = None
 
 	def handle(self, feature, fn, p):
 		if feature == features.COLOR_LED_EFFECTS:
 			return self._lighting(fn, p)
+		if feature == 0x8081:
+			return self._perkey(fn, p)
 		if feature == features.BRIGHTNESS:
 			return self._brightness(fn, p)
 		return super().handle(feature, fn, p)
@@ -191,6 +196,18 @@ class FakeKeyboard(FakeMouse):
 		if fn == 2:
 			return bytes([p[0], p[1]]) + struct.pack('>H', self.ZONE_EFFECTS[p[1]])
 		self.effects[p[0]] = (p[1], bytes(p[2:12]))
+		return b''
+
+	def _perkey(self, fn, p):
+		if fn == 1:   # SetIndividualRgbZones: up to 4 x (zone, r, g, b), echoed back
+			for i in range(0, 16, 4):
+				if p[i]:
+					self.pending[p[i]] = tuple(p[i + 1:i + 4])
+			return bytes(p[:16])
+		if fn == 7:   # FrameEnd
+			self.keys.update(self.pending)
+			self.pending = {}
+			self.persisted = bool(p[0])
 		return b''
 
 	def _brightness(self, fn, p):

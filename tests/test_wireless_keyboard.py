@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import devices  # noqa: E402
 import features  # noqa: E402
 import hidpp  # noqa: E402
+import perkey  # noqa: E402
 import simulate  # noqa: E402
 
 
@@ -62,3 +63,32 @@ class KeyboardTest(unittest.TestCase):
 
 if __name__ == '__main__':
 	unittest.main()
+
+
+class PerKeyTest(unittest.TestCase):
+	def test_zone_table(self):
+		# G HUB's default table: A, the last usage before the gap, a modifier, media keys, G1, logo
+		self.assertEqual(perkey.zone_for(perkey.KEYBOARD, 0x04), 1)
+		self.assertEqual(perkey.zone_for(perkey.KEYBOARD, 0x65), 0x62)
+		self.assertEqual(perkey.zone_for(perkey.KEYBOARD, 0xE0), 0x68)
+		self.assertEqual(perkey.zone_for(perkey.CONSUMER, 0xB5), 0x9D)
+		self.assertEqual(perkey.zone_for(perkey.CONSUMER, 0xCD), 0x9B)
+		self.assertEqual(perkey.zone_for(perkey.CONSUMER, 0xE2), 0x9C)
+		self.assertIsNone(perkey.zone_for(perkey.CONSUMER, 0xE3))
+		self.assertEqual(perkey.zone_for(perkey.GKEY, 1), 0xB4)
+		self.assertEqual(perkey.zone_for(perkey.BRANDING, 1), 0xD2)
+		self.assertEqual(perkey.zone_for(perkey.INDICATOR, 1), 0x99)
+		self.assertEqual(perkey.zone_for(perkey.INDICATOR, 3), 0x96)
+		self.assertIsNone(perkey.zone_for(8, 1))
+
+	def test_apply(self):
+		kb = simulate.FakeKeyboard()
+		colors = {f'PERKEY_KEYBOARD:{k}': [k, 0, 255] for k in range(4, 14)}
+		colors['PERKEY_GKEY:1'] = [1, 2, 3]
+		colors['PERKEY_GENERIC:1'] = [9, 9, 9]
+		self.assertEqual(perkey.apply(hidpp.Device(kb), colors), 11)
+		self.assertEqual(kb.keys[1], (4, 0, 255))
+		self.assertEqual(kb.keys[10], (13, 0, 255))
+		self.assertEqual(kb.keys[0xB4], (1, 2, 3))
+		self.assertEqual(len(kb.keys), 11)
+		self.assertTrue(kb.persisted)

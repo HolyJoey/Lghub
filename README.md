@@ -68,7 +68,8 @@ Wireless mice also show their battery.
 
 Keyboards, other headsets, the G560 speakers, POWERPLAY and anything else Logitech: Lghub
 asks the device what it can do and shows that. Keyboards also get macros on their G-keys and a
-per-key lighting page drawn from G HUB's own key layout. Lighting zones and effects, brightness, report
+per-key lighting page drawn from G HUB's own key layout, sent over HID++ 0x8081 with G HUB's
+key-to-LED table. Lighting zones and effects, brightness, report
 rate, sidetone, on-board memory and battery. Devices with a USB sound card (headsets,
 speakers, Yeti mics) also get its controls.
 
@@ -172,8 +173,7 @@ simulator. The webcam screenshot is a real camera.
 
 ## Not there yet
 
-- Per-key lighting is drawn and saved, but not sent to the keyboard yet; keyboard onboard
-  profiles; Blue VO!CE 2 (Yeti mics, G735, PRO X 2); Yeti controls.
+- Per-key lighting for older keyboards (0x8080: G910, G810, G410); keyboard onboard profiles; Blue VO!CE 2 (Yeti mics, G735, PRO X 2); Yeti controls.
 - Most devices here have only met the simulator. If something doesn't work on yours, open an
   issue with `journalctl --user -u lghub-bluevoice` and what the device's page says.
 

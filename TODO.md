@@ -13,7 +13,7 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 | Surround | DTS Headphone:X 2.0 from G HUB's HX2E APO, native (`bridge/hx2e.c`) | Logitech's DSP and tunings |
 | Equalizer | G HUB's 10-band presets on PipeWire biquads | Logitech's presets, our filters |
 | Mice | HID++ 2.0 onboard profiles (0x8100), DPI (0x2201), report rate (0x8060) | the devices' own features |
-| Keyboards, other | HID++ 2.0 lighting (0x8070), brightness (0x8040), sidetone (0x8300), battery | the devices' own features |
+| Keyboards, other | HID++ 2.0 lighting (0x8070), per-key (0x8081), brightness (0x8040), sidetone (0x8300), battery | the devices' own features |
 | Webcams | V4L2 controls and MJPEG preview | standard Linux |
 | Pictures, icon | Product photos and the G HUB icon, read from Logitech's depots | Logitech's |
 
@@ -34,7 +34,7 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 - **HID++ lighting (0x8070)**: effect parameter bytes and the persist flag; the current effect
   isn't read back (the page starts at the first effect).
 
-## Progress on the open work (overall about 55%)
+## Progress on the open work (overall about 60%)
 
 | Item | Done | What's left |
 | --- | --- | --- |
@@ -42,7 +42,7 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 | Headsets' own EQ presets | 100% | — |
 | Background service idle cost | 90% | 0.2% of a core now; the engine loop and the link monitor remain |
 | Macros on buttons and G-keys | 85% | DPI/profile macro actions; 0x1B04 divert for newer mice; hardware check |
-| Per-key lighting | 50% | page done; sending to the keyboard (0x8081 byte layouts, zone ids) |
+| Per-key lighting | 90% | 0x8081 done (G HUB's zone table, colours back on at connect); 0x8080 for older keyboards; hardware check |
 | Blue VO!CE 2 (Yetis, G735, PRO X 2) | 40% | G HUB names -> pids, bridge, UI, Wine check |
 | Yeti controls | 10% | features found (0x8330/50/60/70); protocol details and UI |
 | Keyboard onboard profiles | 5% | format from G HUB's agent |
@@ -55,8 +55,13 @@ Details:
   big-endian button mask), Macros page with recorder and "On buttons". **Check on the G502**:
   that 0x8110 is there and buttons behave; G-key bit order (G1 = bit 0 of the first byte) on a
   keyboard.
-- **Per-key lighting** (0x8080/0x8081): `perkey_ui.py` draws G HUB's key layout (metadata.json);
-  `perkey.py` still a stub. Function numbers found (fn 0-7); byte layouts and zone ids next.
+- **Per-key lighting** (0x8081): `perkey_ui.py` draws G HUB's key layout (metadata.json);
+  `perkey.py` sends it as G HUB's agent does: SetIndividualRgbZones (fn 1, 4 x zone/r/g/b),
+  then FrameEnd (fn 7: persistence, 0, 0). Key -> zone is G HUB's built-in table (keyboard usage
+  -3/-0x24/-0x78, G-keys +0xB3, logo +0xD1, indicators +0x98/+0x93, media keys); a device's
+  `light_map` resource could override it, none of our depots ships one. Restoring the colours
+  when the keyboard connects is ours. **Check on a G815/G915**: keys light where drawn; 0x8080
+  (G910/G810) still to do.
 - **Blue VO!CE 2** (`logi_audio_dts_clearvoice_2_capture_apo.dll`): `bridge/bv2.c` runs the DSP
   natively; parameter struct and the 107 property keys (pid -> field) decoded; G HUB's setting
   names -> pids come from the agent.
@@ -71,7 +76,7 @@ Details:
 
 Checked against the device features G HUB's agent knows (its `Feature####` classes) and its
 app features. Lghub handles 0x0000-0x0005, battery (0x1000/0x1001/0x1004), 0x2201 DPI, 0x8040,
-0x8060, 0x8070, 0x8100, 0x8110, 0x8010 and 0x8300; partly 0x8081. Not yet:
+0x8060, 0x8070, 0x8081, 0x8100, 0x8110, 0x8010 and 0x8300. Not yet:
 
 - [ ] Mice: 0x2202 extended DPI and 0x8061 extended report rate (newer mice, 2-8 kHz), 0x1B04
   special keys / divert (newer mice' buttons), 0x2121 hi-res wheel, 0x2130 ratchet wheel,

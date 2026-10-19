@@ -7,6 +7,8 @@ import devices
 import features
 import headset
 import mouse
+import perkey
+import perkey_ui
 from ui import box, label
 from worker import Worker
 
@@ -61,7 +63,6 @@ class SettingsPanel(Gtk.Box):
 
 	def apply_perkey(self, colors):
 		"""Per-key colours ({"group:id": [r, g, b]}) to the device, if it has per-key lighting."""
-		import perkey
 		dev = self.dev
 		if dev is not None:
 			self._do(lambda: perkey.apply(dev, colors))
@@ -86,6 +87,9 @@ class SettingsPanel(Gtk.Box):
 			info['sidetone'] = headset.sidetone(dev)
 		if features.ONBOARD in have:
 			info['mode'] = dev.call(features.ONBOARD, 2)[0]
+		saved = perkey_ui.load_colors(self.device.model.key)
+		if perkey.PERKEY in have and saved:
+			perkey.apply(dev, saved)   # ours: the saved colours go back on when the keyboard connects
 		self.dev = dev
 		return info
 
