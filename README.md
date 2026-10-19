@@ -194,10 +194,11 @@ simulator. The webcam screenshot is a real camera.
 
 ## Not there yet
 
-- Keyboard onboard profiles; Blue VO!CE 2 on the PRO X 2;
-  the Yeti's mic monitoring and gain over HID++; the 5-band PRO equalizer.
 - Most devices here have only met the simulator. If something doesn't work on yours, open an
   issue with `journalctl --user -u lghub-bluevoice` and what the device's page says.
+- Still open, compared with G HUB: the 5-band PRO equalizer, the G735 / PRO X 2 protocol,
+  receiver pairing, keyboard onboard-profile editing, the LIGHTSYNC screen sampler, the Yeti's
+  HID++ mic controls and a few newer-mouse features. The full list is in [TODO.md](TODO.md).
 
 ## If something's off
 
