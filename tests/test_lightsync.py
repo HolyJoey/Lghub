@@ -32,3 +32,27 @@ class VisualizerTest(unittest.TestCase):
 
 if __name__ == '__main__':
 	unittest.main()
+
+
+class RunnerTest(unittest.TestCase):
+	def test_switching_off_puts_the_colours_back(self):
+		import tempfile
+		from unittest import mock
+
+		import hidpp
+		import perkey
+		import simulate
+		import store
+		with tempfile.TemporaryDirectory() as d, mock.patch.object(store, 'CONFIG_DIR', d), \
+				mock.patch.object(lightsync, 'FILE', os.path.join(d, 'lightsync.json')):
+			perkey.save_colors('g815', {'PERKEY_KEYBOARD:4': [9, 8, 7]})
+			kb = simulate.FakeKeyboard()
+			stopped = []
+			visualizer = mock.Mock(dev=hidpp.Device(kb), stop=lambda: stopped.append(True))
+			device = mock.Mock(id='usb:1', model=mock.Mock(key='g815'))
+			runner = lightsync.Runner()
+			runner.running['usb:1'] = (visualizer, {'effect': 'audio'})
+			runner._maybe_stop('usb:1', device, {})          # the effect was switched off
+			self.assertEqual(stopped, [True])
+			self.assertEqual(kb.keys[1], (9, 8, 7))
+			self.assertEqual(runner.running, {})

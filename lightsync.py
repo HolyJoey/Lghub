@@ -117,6 +117,11 @@ class Visualizer:
 				return
 
 
+def devices_open(device):
+	import devices
+	return devices.open_hidpp(device)
+
+
 class Runner:
 	"""Used by the engine: one Visualizer per connected keyboard that has the effect on."""
 	CHECK_EVERY = 10.0
@@ -140,25 +145,33 @@ class Runner:
 		wanted = {m: s for m, s in load().items() if s.get('effect') == 'audio'}
 		if not wanted and not self.running:
 			return
-		found = {d.id: d for d in devices.discover() if d.model.key in wanted}
+		present = {d.id: d for d in devices.discover()}
 		for dev_id in tuple(self.running):
-			v, settings = self.running[dev_id]
-			d = found.get(dev_id)
-			if not d or wanted.get(d.model.key) != settings:
-				self.running.pop(dev_id)[0].stop()
-				if d:   # switched off: the saved colours back on
-					import restore
-					restore.apply_saved(v.dev, d.model.key)
-		for dev_id, d in found.items():
-			if dev_id in self.running:
-				continue
-			try:
-				v = Visualizer(devices.open_hidpp(d), d.model.key, wanted[d.model.key].get('color', [0, 140, 255]))
-			except OSError:
-				continue
-			if v.start():
-				self.running[dev_id] = (v, wanted[d.model.key])
-				print(f'engine: audio visualizer on {d.name}', flush=True)
+			self._maybe_stop(dev_id, present.get(dev_id), wanted)
+		for dev_id, d in present.items():
+			if d.model.key in wanted and dev_id not in self.running:
+				self._start(dev_id, d, wanted[d.model.key])
+
+	def _maybe_stop(self, dev_id, device, wanted):
+		"""Stop a visualizer whose device is gone or whose setting changed; put the saved colours
+		back when the device is still there."""
+		visualizer, settings = self.running[dev_id]
+		if device and wanted.get(device.model.key) == settings:
+			return
+		self.running.pop(dev_id)
+		visualizer.stop()
+		if device:
+			import restore
+			restore.apply_saved(visualizer.dev, device.model.key)
+
+	def _start(self, dev_id, device, settings):
+		try:
+			visualizer = Visualizer(devices_open(device), device.model.key, settings.get('color', [0, 140, 255]))
+		except OSError:
+			return
+		if visualizer.start():
+			self.running[dev_id] = (visualizer, settings)
+			print(f'engine: audio visualizer on {device.name}', flush=True)
 
 	def stop(self):
 		for v, _settings in self.running.values():
