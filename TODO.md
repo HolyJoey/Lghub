@@ -93,7 +93,7 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
     (CenturionPacketLayer 0x14200f3c0).
   - Left: the per-device settings from their constructors (`re/notes/decompiled/centurion.c`).
 - **Others**:
-  - 0x8305 bass tone (functions found, range not), 0x8320 jack detection
+  - 0x8320 jack detection (0x8305 bass tone done: G HUB's 0-1 gain x 100)
   - 0x1F20 battery on older wireless headsets
   - 0x0200 / 0x0201 / 0x020D volume and EQ sets, 0x020E mic test
   - 0x0800 / 0x0801 / 0x0809 mixer, 0x0900-0x0909 voice processing on the headset

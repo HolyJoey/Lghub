@@ -23,6 +23,7 @@ CHANGE_HOST = 0x1814
 HOSTS_INFO = 0x1815
 DEVICE_EQ = 0x8310
 BUTTON_SWAP, HYBRID_TRACKING, CHARGING = 0x2005, 0x2400, 0x1010
+BASS_TONE = 0x8305
 
 NAMES = {
 	0x0000: 'Root', 0x0001: 'Feature set', 0x0002: 'Feature info', 0x0003: 'Firmware info',
@@ -241,6 +242,17 @@ def charging(dev):
 
 def set_charging(dev, on):
 	dev.call(CHARGING, 1, bytes([1 if on else 0]))
+
+
+# Bass tone (0x8305): fn 0 get, fn 1 set the level, 0-100; G HUB's subwoofer bass volume (0-1)
+# times 100 (Feature8305BassTone::_ApplyBassToneLevel).
+
+def bass_tone(dev):
+	return dev.call(BASS_TONE, 0)[0]
+
+
+def set_bass_tone(dev, level):
+	dev.call(BASS_TONE, 1, bytes([max(0, min(100, int(level)))]))
 
 
 # Easy-Switch (0x1814 ChangeHost): fn 0 = host count, current host; fn 1 = switch to a host. The

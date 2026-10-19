@@ -326,14 +326,19 @@ class FakeKeyboardV1(FakeKeyboard):
 
 class FakeEqHeadset(FakeMouse):
 	"""A headset with its own equalizer (0x8310): five bands, -12 to +12 dB."""
-	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, 0x8310]
+	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, 0x8310, 0x8305]
 	FREQS = (80, 240, 750, 2200, 6600)
 
 	def __init__(self):
 		super().__init__('G935 Gaming Headset')
 		self.gains, self.eq_on, self.lead = [0] * 5, True, None
+		self.bass = 50
 
 	def handle(self, feature, fn, p):
+		if feature == 0x8305:
+			if fn == 1:
+				self.bass = p[0]
+			return bytes([self.bass])
 		if feature != 0x8310:
 			return super().handle(feature, fn, p)
 		if fn == 0:

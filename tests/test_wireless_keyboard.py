@@ -91,6 +91,9 @@ class HeadsetEqTest(unittest.TestCase):
 		self.assertEqual(eq, {'freqs': [80, 240, 750, 2200, 6600], 'gains': [0] * 5, 'low': -12, 'high': 12, 'on': True})
 		features.set_device_eq(dev, [3, -2, 0, 1.4, -12])
 		self.assertEqual((hs.lead, hs.gains), (2, [3, -2, 0, 1, -12]))   # G HUB's leading 2, whole dB
+		self.assertEqual(features.bass_tone(dev), 50)
+		features.set_bass_tone(dev, 140)
+		self.assertEqual(hs.bass, 100)
 		features.set_device_eq_on(dev, False)
 		self.assertFalse(features.device_eq(dev)['on'])
 

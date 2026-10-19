@@ -37,7 +37,8 @@ SIMPLE_READS = ((features.SIDETONE, 'sidetone', headset.sidetone),
                 (features.POLAR_PATTERN, 'patterns', features.polar_patterns),
                 (features.DEVICE_EQ, 'device_eq', features.device_eq),
                 (features.ANGLE_SNAPPING, 'angle_snapping', features.angle_snapping),
-                (features.CHARGING, 'charging', features.charging))
+                (features.CHARGING, 'charging', features.charging),
+                (features.BASS_TONE, 'bass_tone', features.bass_tone))
 
 def report_rates(dev):
 	"""(rates the device offers in Hz, highest first; the current one) from 0x8060."""
@@ -203,8 +204,9 @@ class SettingsPanel(Gtk.Box):
 		                   ('angle_snapping', self._angle_card), ('fn_inversion', self._fn_card),
 		                   ('game_mode', self._game_mode_card), ('hosts', self._hosts_card),
 		                   ('device_eq', self._device_eq_card), ('charging', self._charging_card),
+		                   ('bass_tone', self._bass_card),
 		                   ('mode', self._mode_card)):
-			if info.get(key) not in (None, []) or key == 'charging' and key in info:
+			if info.get(key) not in (None, []) or key in ('charging', 'bass_tone') and key in info:
 				cards.append(build(info))
 		if not cards and not self.quiet:
 			self.body.append(label('This device has no settings Lghub can change yet.', ['muted'], wrap=True))
@@ -284,6 +286,14 @@ class SettingsPanel(Gtk.Box):
 			sw = Gtk.Switch(active=usage in chosen, valign=Gtk.Align.CENTER)
 			sw.connect(NOTIFY_ACTIVE, lambda w, _p, u=usage: self.loading or self._game_key(u, w.get_active()))
 			c.append(row(f'Turn off {name}', sw))
+		return c
+
+	def _bass_card(self, info):
+		c = card('Bass', 'The headset\'s own bass level.')
+		s = slider(0, 100, info['bass_tone'])
+		s.connect('value-changed', lambda w: self.loading or self._do(
+			lambda v=int(w.get_value()): features.set_bass_tone(self.dev, v)))
+		c.append(row('Level (%)', s))
 		return c
 
 	def _charging_card(self, info):
