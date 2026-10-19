@@ -41,7 +41,8 @@ class PresetTest(unittest.TestCase):
 		presets = bv2_presets.load(self.path)
 		self.assertEqual([(i, n) for i, n, _ in presets], [('a', 'Broadcaster 1'), ('c', 'High Voice - Loud')])
 		settings = presets[0][2]
-		self.assertEqual(set(settings), set(bv2_presets.VOICE_NAMES))   # every field, as G HUB sends them
+		self.assertEqual(set(settings), set(bv2_presets.VOICE_NAMES) | {'inputGain'})   # every field, as G HUB sends them
+		self.assertEqual(settings['inputGain'], 0.48)                                  # the mic's own gain
 		self.assertEqual(settings['highPassFilter.frequency'], 70.0)
 		self.assertEqual(settings['multiBandEq.lowBandFilter.gain'], 4.0)
 		self.assertEqual(settings['gatingCompressor.noiseGateAttack'], 0)   # left out of the file = 0
@@ -64,7 +65,8 @@ class PresetTest(unittest.TestCase):
 		self.assertEqual(bv2_presets.load(self.path + '.gone'), [])
 
 	def test_params_text(self):
-		text = bv2_presets.params_text({'noiseReduction.release': 250.0, 'deEsser.enabled': 1}, enabled=False)
+		text = bv2_presets.params_text({'noiseReduction.release': 250.0, 'deEsser.enabled': 1, 'inputGain': 0.5},
+		                               enabled=False)
 		self.assertEqual(text, 'enabled 0\ndeEsser.enabled 1\nnoiseReduction.release 250\n')
 
 	def test_controls_cover_names(self):
@@ -73,7 +75,7 @@ class PresetTest(unittest.TestCase):
 		for _title, switch, controls in bv2_presets.STAGES + bv2_presets.EFFECT_STAGES:
 			used |= {switch} - {None} | {c[0] for c in controls}
 		names = set(bv2_presets.VOICE_NAMES) | set(bv2_presets.EFFECT_NAMES)
-		self.assertEqual(used - names, set())
+		self.assertEqual(used - names, {bv2_presets.MIC_GAIN})
 		self.assertEqual(names - used, set())
 		self.assertEqual(bv2_presets.choices('SHAPE_MODE_')[0], (0, 'Sine'))
 

@@ -19,6 +19,8 @@ def _text(value, unit):
 		return f'{value:+.0f} cents'
 	if unit == 'Q':
 		return f'Q {value:.2f}'
+	if unit == 'gain':
+		return f'{value * 100:.0f} %'
 	if unit == 'Hz' and value < 10:
 		return f'{value:.2f} Hz'
 	return format_value(value, unit)

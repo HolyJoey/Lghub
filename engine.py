@@ -59,6 +59,7 @@ class Engine:
 		self.inputs = inputd.Manager()
 		self.games = profiles.Switcher()
 		self.game = None
+		self.mic_gain = None         # (mic, gain) last set for Blue VO!CE 2
 
 	# --- configuration -------------------------------------------------------------------
 
@@ -209,9 +210,19 @@ class Engine:
 		self.listening = now - self.last_listener < IDLE_GRACE
 		self.link_input(objs)
 		self.link_output(objs, mic_in)
+		self.apply_mic_gain(objs)
 		if self.config.get('make_default') and not self.defaulted:
 			pw.set_default_source(pw.VIRTUAL_MIC)
 			self.defaulted = True
+
+	def apply_mic_gain(self, objs):
+		"""Blue VO!CE 2 presets carry the mic's own gain (G HUB's inputGain); set it on the mic."""
+		gain = self.config.get('bv2_params', {}).get(bv2_presets.MIC_GAIN)
+		if self.kind != 'bv2' or gain is None or not self.input:
+			return
+		want = (self.input['name'], gain)
+		if want != self.mic_gain and pw.set_volume(self.input['name'], float(gain), objs):
+			self.mic_gain = want
 
 	def link_input(self, objs):
 		"""Exactly the chosen microphone into the DSP while listening; nothing otherwise."""

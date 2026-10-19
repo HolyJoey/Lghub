@@ -46,7 +46,7 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 | Background service idle cost | 90% | 0.2% of a core now; the engine loop and the link monitor remain |
 | Macros on buttons and G-keys | 90% | DPI/profile actions done; G-Shift; 0x1B04 divert for newer mice; hardware check |
 | Per-key lighting | 95% | 0x8081 and 0x8080 done; hardware check |
-| Blue VO!CE 2 (Yetis, G735) | 90% | presets, every setting, voice effects done; inputGain, Wine check, hardware check |
+| Blue VO!CE 2 (Yetis, G735) | 95% | presets, every setting, voice effects, mic gain done; Wine check, hardware check |
 | Yeti controls | 50% | polar pattern (0x8330) done; mic monitoring 0x8350, headphone 0x8360, gain/mute 0x8370 over HID++ (gain and headphone volume work through the sound card) |
 | Keyboard onboard profiles | 5% | format from G HUB's agent |
 | 5-band "PRO" equalizer | 20% | runs on the headset's Conexant chip: write sequence found; HID report layout; G Pro X check |
@@ -81,9 +81,10 @@ Details:
   presets). The engine runs Blue VO!CE 2 when the mic is a Yeti or G735. Page: on/off, presets,
   every stage with G HUB's controls and ranges (from its app), voice effects (voice changer,
   chorus, flanger, reverb, delay, ring modulator; enums sent as integers like G HUB). Like G HUB,
-  a preset sets every field (0 where its file has none). Not yet: `inputGain` (the mic's own
-  gain); the PRO X 2 (no depot known); a check against the real APO under Wine. Pass-through
-  when off is ours.
+  a preset sets every field (0 where its file has none). `inputGain` (the mic's own gain, 0-1)
+  goes to the mic's PipeWire volume (wpctl scale, like the Windows slider: ours). Not yet: the
+  PRO X 2 (no depot known); a check against the real APO under Wine. Pass-through when off is
+  ours.
 - **Yeti**: polar pattern 0x8330 done as G HUB drives it (fn0 mask, fn1 get, fn2 set; 1 Stereo,
   2 Cardioid, 3 Bidirectional, 4 Omni). 0x8350 (G HUB's audio::sidetone: mic monitoring level
   and mode), 0x8360 (headphone level), 0x8370 (gain levels, mute = fn3 type 0) have their

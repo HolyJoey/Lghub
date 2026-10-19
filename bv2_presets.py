@@ -14,7 +14,8 @@ import os
 # Devices G HUB ships Blue VO!CE 2 presets for (checked against every depot we know).
 MODELS = ('g735', 'yeti_classic', 'yeti_nano', 'yeti_original_nano', 'yeti_x', 'yeti_x_wow')
 DEPOT_FILE = 'defaults_override.json'
-SKIP = {'volume', 'inputGain'}          # not DSP settings (see bv2.c)
+SKIP = {'volume'}          # not a DSP setting (see bv2.c)
+MIC_GAIN = 'inputGain'     # the mic's own gain (its PipeWire volume, 0-1); the engine sets it, not the DSP
 
 # Every setting the bridge knows (bridge/bv2.c's names table; tests/test_bv2.py keeps them equal).
 VOICE_NAMES = (
@@ -75,6 +76,8 @@ def _eq_band(band, label, low, high, step):
 
 
 STAGES = (
+	('Microphone', None, (
+		(MIC_GAIN, 'Mic gain', 0, 1, 0.01, 'gain'),)),
 	('High-pass filter', 'highPassFilter.enabled', (
 		('highPassFilter.frequency', 'Frequency', 20, 400, 1, 'Hz'),)),
 	('Noise reduction', 'noiseReduction.enabled', (
@@ -207,7 +210,10 @@ def load(path, effects=False):
 	for entry in entries:
 		body = entry.get(key)
 		if entry.get('attribute') == attribute and body:
-			settings = complete(flatten(body.get('settings', {}), prefix), names)
+			flat = flatten(body.get('settings', {}), prefix)
+			settings = complete(flat, names)
+			if MIC_GAIN in flat:
+				settings[MIC_GAIN] = flat[MIC_GAIN]
 			out.append((entry['id'], pretty_name(entry.get('name', '')), settings))
 	return out
 
@@ -215,7 +221,7 @@ def load(path, effects=False):
 def params_text(settings, enabled=True):
 	"""The bridge's params file (--engine bv2)."""
 	lines = [f'enabled {1 if enabled else 0}\n']
-	lines += [f'{k} {settings[k]:g}\n' for k in sorted(settings)]
+	lines += [f'{k} {settings[k]:g}\n' for k in sorted(settings) if k != MIC_GAIN]
 	return ''.join(lines)
 
 

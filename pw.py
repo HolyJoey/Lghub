@@ -156,6 +156,14 @@ def unlink(out_port, in_port):
 	subprocess.run(['pw-link', '-d', out_port, in_port], capture_output=True, text=True)
 
 
+def set_volume(node_name, volume, objs=None):
+	"""A node's volume as wpctl and the desktop's sound settings show it (0-1)."""
+	nid = node_id(node_name, objs)
+	if nid:
+		subprocess.run(['wpctl', 'set-volume', str(nid), f'{max(0.0, min(1.0, volume)):.3f}'], capture_output=True)
+	return bool(nid)
+
+
 def set_default_source(node_name):
 	nid = node_id(node_name)
 	if nid is not None:
