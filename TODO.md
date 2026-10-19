@@ -120,7 +120,8 @@ app features. Lghub handles 0x0000-0x0005, battery (0x1000/0x1001/0x1004), 0x220
   older wireless headsets; the newer "Centurion" protocol (0x06xx: mic mute 0x0601, sidetone
   0x0604, ANC 0x0605, mic gain 0x0611, onboard EQ 0x0636) for G735 / PRO X 2.
 - [ ] Mics: 0x8350/0x8360/0x8370 (Yeti, see above); 0x8330 done.
-- [ ] Wireless: 0x1815 hosts info, 0x1D4B wireless status, receiver pairing. 0x1814 Easy-Switch
+- [ ] Wireless: 0x1D4B wireless status, receiver pairing. 0x1815 host names done (which reply
+  bytes hold the name is ours; falls back to "Computer N"). 0x1814 Easy-Switch
   done (G HUB's fn 0 host count/current, fn 1 switch without waiting for an answer).
 - [ ] App features: LIGHTSYNC screen and audio lighting, firmware updates, Discord/OBS
   integrations. Per-game profiles done (profiles.py, Games page: G HUB's Application fields; the

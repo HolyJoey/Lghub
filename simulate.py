@@ -274,8 +274,18 @@ class FakeKeyboard(FakeMouse):
 
 
 class FakeMultiHostKeyboard(FakeKeyboard):
-	"""A G915-like wireless keyboard with Easy-Switch (0x1814), on its second of three hosts."""
-	FEATURES = FakeKeyboard.FEATURES + [0x1814]
+	"""A G915-like wireless keyboard with Easy-Switch (0x1814) and host names (0x1815), on its
+	second of three hosts."""
+	FEATURES = FakeKeyboard.FEATURES + [0x1814, 0x1815]
+	NAMES = (b'desktop', b'my-laptop-running-linux', b'')
+
+	def handle(self, feature, fn, p):
+		if feature != 0x1815:
+			return super().handle(feature, fn, p)
+		name = self.NAMES[p[0]]
+		if fn == 1:
+			return bytes([p[0], 1, 1, 1, len(name), 24])
+		return bytes([p[0], p[1]]) + name[p[1]:p[1] + 14]
 
 
 class FakeKeyboardV1(FakeKeyboard):

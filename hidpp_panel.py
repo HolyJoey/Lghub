@@ -113,6 +113,8 @@ class SettingsPanel(Gtk.Box):
 		if features.CHANGE_HOST in have:
 			info['hosts'] = features.hosts(dev)
 			host = info['hosts'][1]
+			if features.HOSTS_INFO in have:
+				info['host_names'] = [features.host_name(dev, h) for h in range(info['hosts'][0])]
 		if features.FN_INVERSION in have:
 			info['fn_inversion'] = features.fn_inversion(dev, host)
 			self.host = host
@@ -268,8 +270,10 @@ class SettingsPanel(Gtk.Box):
 		c = card('Easy-Switch', 'Which computer the device works with. Switching sends it to the other '
 		         'computer right away.')
 		buttons = box(Gtk.Orientation.HORIZONTAL, 10)
+		names = info.get('host_names') or []
 		for h in range(count):
-			b = Gtk.Button(label=f'Computer {h + 1}' + (' (this one)' if h == current else ''))
+			name = (names[h] if h < len(names) else None) or f'Computer {h + 1}'
+			b = Gtk.Button(label=name + (' (this one)' if h == current else ''))
 			b.set_sensitive(h != current)
 			b.connect('clicked', lambda _w, n=h: self._do(lambda: features.set_host(self.dev, n)))
 			buttons.append(b)

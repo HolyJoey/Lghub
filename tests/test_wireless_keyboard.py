@@ -80,6 +80,7 @@ class KeyboardSwitchTest(unittest.TestCase):
 		self.assertEqual(features.fn_inversion(dev, 1), (True, True))
 		self.assertEqual(features.hosts(dev), (3, 1))
 		features.set_host(dev, 2)
+		self.assertEqual([features.host_name(dev, h) for h in range(3)], ['desktop', 'my-laptop-running-linux', None])
 
 
 class HeadsetEqTest(unittest.TestCase):

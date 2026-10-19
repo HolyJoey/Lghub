@@ -19,6 +19,7 @@ ANGLE_SNAPPING = 0x2230
 FN_INVERSION = 0x40A3
 DISABLE_KEYS = 0x4522
 CHANGE_HOST = 0x1814
+HOSTS_INFO = 0x1815
 DEVICE_EQ = 0x8310
 
 NAMES = {
@@ -191,6 +192,23 @@ def set_device_eq_on(dev, on):
 def hosts(dev):
 	r = dev.call(CHANGE_HOST, 0)
 	return r[0], r[1]
+
+
+def host_name(dev, host):
+	"""A host's name (0x1815 GetHostInfos, then GetHostFriendlyName in 14-byte pieces), or None.
+	G HUB's functions; which reply bytes hold the length and the text is ours."""
+	try:
+		length = min(dev.call(HOSTS_INFO, 1, bytes([host]))[4], 64)
+		name = b''
+		while len(name) < length:
+			chunk = dev.call(HOSTS_INFO, 2, bytes([host, len(name)]))[2:16]
+			if not chunk.strip(b'\0'):
+				break
+			name += chunk
+		text = name[:length].split(b'\0')[0].decode('utf-8', 'replace').strip()
+	except hidpp.HidppError:
+		return None
+	return text if text and text.isprintable() else None
 
 
 def set_host(dev, host):
