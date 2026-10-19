@@ -91,6 +91,14 @@ def running(profiles, processes=None):
 	return None
 
 
+def _notify(title, body):
+	"""G HUB's profile-activated notification (desktop notifications on, battery_watch's sender)."""
+	import store
+	if store.load_config().get('profile_notifications', True):
+		import battery_watch
+		battery_watch.notify(title, body)
+
+
 class Switcher:
 	"""Used by the engine: applies a game's profile while it runs."""
 
@@ -113,7 +121,9 @@ class Switcher:
 			restore(game['settings'])
 			data['active'] = game['id']
 			save(data)
-			print(f"engine: {game['application'].get('name')} started: its profile is on", flush=True)
+			name = game['application'].get('name')
+			print(f"engine: {name} started: its profile is on", flush=True)
+			_notify(f'{name} profile on', 'Its settings are on while it runs.')
 		elif not game and active:
 			for p in data['profiles']:      # changes made while it ran belong to its profile, as in G HUB
 				if p['id'] == active:
@@ -122,4 +132,5 @@ class Switcher:
 			data.pop('active', None)
 			save(data)
 			print('engine: game closed: settings are back', flush=True)
+			_notify('Desktop profile on', 'The game closed; your usual settings are back.')
 		return data.get('active')

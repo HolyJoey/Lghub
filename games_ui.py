@@ -28,10 +28,23 @@ class GamesPage(Gtk.Box):
 		add.append(button_widget('Add with current settings', ['suggested-action'], self._add))
 		self.append(add)
 
+		note = box(Gtk.Orientation.HORIZONTAL, 16, ['card'])
+		note.append(label('Notify when a game’s profile switches on or off', hexpand=True, valign=Gtk.Align.CENTER))
+		sw = Gtk.Switch(active=store.load_config().get('profile_notifications', True), valign=Gtk.Align.CENTER)
+		sw.connect('notify::active', self._notifications)
+		note.append(sw)
+		self.append(note)
+
 		self.list = box(spacing=12)
 		self.append(self.list)
 		self.refresh()
 		self._timer = GLib.timeout_add_seconds(2, self._poll)
+
+	@staticmethod
+	def _notifications(sw, _p):
+		cfg = store.load_config()
+		cfg['profile_notifications'] = sw.get_active()
+		store.save_config(cfg)
 
 	def refresh(self):
 		while (child := self.list.get_first_child()):

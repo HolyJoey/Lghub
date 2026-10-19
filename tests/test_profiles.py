@@ -42,7 +42,8 @@ class SwitcherTest(unittest.TestCase):
 				state['eq'] = settings.get('equalizer')
 
 			with mock.patch.object(profiles, 'FILE', os.path.join(d, 'g.json')), \
-					mock.patch.object(profiles, 'snapshot', snapshot), mock.patch.object(profiles, 'restore', restore):
+					mock.patch.object(profiles, 'snapshot', snapshot), mock.patch.object(profiles, 'restore', restore), \
+					mock.patch.object(profiles, '_notify') as notify:
 				game = profiles.new_profile('Game', executable='game')
 				game['settings'] = {'equalizer': 'fps'}
 				profiles.save({'profiles': [game]})
@@ -55,6 +56,7 @@ class SwitcherTest(unittest.TestCase):
 					self.assertIsNone(sw.check(10))
 				self.assertEqual(state['eq'], 'desktop')
 				self.assertEqual(profiles.load()['profiles'][0]['settings'], {'equalizer': 'fps tweaked'})
+				self.assertEqual([c.args[0] for c in notify.call_args_list], ['Game profile on', 'Desktop profile on'])
 
 
 if __name__ == '__main__':

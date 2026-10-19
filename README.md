@@ -41,7 +41,8 @@ reverb, delay, ring modulator). Untested on a real Yeti.
 
 **Games.** Settings that switch on while a game runs, like G HUB's game profiles: add a game by
 its executable (Proton games too) or Steam App ID, and its Blue VO!CE, equalizer and surround
-settings come on when it starts and go back when it closes.
+settings come on when it starts and go back when it closes, with a desktop notification each
+time (can be turned off).
 
 | Blue VO!CE 2 (Yeti X) | Games |
 | --- | --- |
