@@ -1,14 +1,12 @@
 """Per-key lighting: the keyboard's picture with every key where G HUB draws it (its metadata.json),
 click keys to select them, pick a colour. The colours are kept per keyboard; apply(colors) sends
 them to the device (set by the page's owner, which knows the protocol)."""
-import json
 import math
-import os
-import threading
 
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
 
 import depots
+import lightsync_ui
 import perkey
 import store
 from ui import box, button_widget, label, page_header
@@ -86,116 +84,10 @@ class PerKeyPage(Gtk.Box):
 		self.status = label('', ['muted', 'small'])
 		self.append(self.status)
 		self._status()
-		self.append(self._lightsync_card())
+		self.append(lightsync_ui.card(self.model, lambda: self.apply(self.colors), per_key=True))
 
 	# --- LIGHTSYNC ----------------------------------------------------------------------
 
-	def _lightsync_card(self):
-		"""G HUB's software effects: the background service lights the keys (lightsync.py)."""
-		import lightsync
-		import softlight
-		settings = lightsync.load().get(self.model, {})
-		card = box(spacing=10, css=['card'])
-		card.append(label('LIGHTSYNC', ['section-title']))
-		card.append(label('Effects the background service plays on the keys: G HUB’s own animations, starlight, '
-		                  'colour cycle, the audio visualizer (bass left, treble right) and the screen sampler '
-		                  '(needs grim: Hyprland, Sway). Your colours come back when it is off.',
-		                  ['muted', 'small'], wrap=True))
-		effects = [(None, None, 'Off'), ('audio', None, 'Audio visualizer'), ('screen', None, 'Screen sampler'),
-		           ('starlight', None, 'Starlight'), ('cycle', None, 'Colour cycle'), ('echo', None, 'Echo press')]
-		cached = os.path.join(softlight.CACHE, os.path.basename(softlight.PREFABS))
-		try:
-			with open(cached) as f:
-				effects += [('keyframe', file, name) for name, file in softlight.keyboard_effects(json.load(f))]
-		except (OSError, ValueError):
-			threading.Thread(target=softlight.load_prefabs, daemon=True).start()   # there next time
-		chosen = next((i for i, (k, f, _n) in enumerate(effects)
-		               if k == settings.get('effect') and f == settings.get('file')), 0)
-		effect = Gtk.DropDown.new_from_strings([name for _k, _f, name in effects])
-		effect.set_selected(chosen)
-		card.append(self._lightsync_row('Effect', effect))
-
-		def color_button(rgb):
-			b = Gtk.ColorDialogButton(dialog=Gtk.ColorDialog(with_alpha=False))
-			rgba = Gdk.RGBA()
-			rgba.red, rgba.green, rgba.blue = (c / 255 for c in rgb)
-			rgba.alpha = 1.0
-			b.set_rgba(rgba)
-			return b
-
-		def rgb(button):
-			c = button.get_rgba()
-			return [round(v * 255) for v in (c.red, c.green, c.blue)]
-
-		def slider(lo, hi, value, unit):
-			sc = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, lo, hi, 1)
-			sc.set_value(value)
-			sc.set_draw_value(True)
-			sc.set_size_request(280, -1)
-			sc.set_format_value_func(lambda _s, v: f'{v:.0f}{unit}')
-			return sc
-
-		color = color_button(settings.get('color', [0, 140, 255]))
-		boost = slider(0, 100, settings.get('color_boost', 0), ' %')          # G HUB's 0-100 %
-		smoothing = Gtk.Switch(active=settings.get('smoothing', False), valign=Gtk.Align.CENTER)
-		star = color_button(settings.get('star', [255, 255, 255]))
-		sky = color_button(settings.get('sky', [0, 0, 40]))
-		count = slider(*softlight.STAR_COUNT, settings.get('count', 50), '')
-		speed = slider(*softlight.STAR_SPEED, settings.get('speed', 2000), ' ms')
-		cycle_speed = slider(*softlight.CYCLE_SPEED, settings.get('speed', 5000), ' ms')
-		echo = color_button(settings.get('echo', [255, 255, 255]))
-		rest = color_button(settings.get('rest', [0, 0, 0]))
-		echo_speed = slider(*softlight.STAR_SPEED, settings.get('speed', 1000), ' ms')
-		rows = {'audio': [('Colour', color)], 'screen': [('Colour boost', boost), ('Smoothing', smoothing)],
-		        'starlight': [('Star colour', star), ('Sky colour', sky), ('Stars', count), ('Speed', speed)],
-		        'cycle': [('Speed', cycle_speed)],
-		        'echo': [('Echo colour', echo), ('Rest colour', rest), ('Fade', echo_speed)]}
-		widgets = {}
-		for kind, items in rows.items():
-			for text, w in items:
-				r = self._lightsync_row(text, w)
-				card.append(r)
-				widgets.setdefault(kind, []).append(r)
-
-		def show():
-			kind = effects[effect.get_selected()][0]
-			for k, rs in widgets.items():
-				for r in rs:
-					r.set_visible(k == kind)
-			return kind
-
-		def changed(*_):
-			kind = show()
-			data = lightsync.load()
-			values = {'audio': lambda: {'color': rgb(color)},
-			          'screen': lambda: {'color_boost': round(boost.get_value()), 'smoothing': smoothing.get_active()},
-			          'starlight': lambda: {'star': rgb(star), 'sky': rgb(sky), 'count': round(count.get_value()),
-			                                'speed': round(speed.get_value())},
-			          'cycle': lambda: {'speed': round(cycle_speed.get_value())},
-			          'echo': lambda: {'echo': rgb(echo), 'rest': rgb(rest), 'speed': round(echo_speed.get_value())},
-			          'keyframe': lambda: {'file': effects[effect.get_selected()][1]}}
-			if kind:
-				data[self.model] = {'effect': kind, **values[kind]()}
-			else:
-				data.pop(self.model, None)
-				self.apply(self.colors)          # the static colours back on
-			lightsync.save(data)
-
-		show()
-		effect.connect('notify::selected', changed)
-		for w in (color, star, sky, echo, rest):
-			w.connect('notify::rgba', changed)
-		for w in (boost, count, speed, cycle_speed, echo_speed):
-			w.connect('value-changed', changed)
-		smoothing.connect('notify::active', changed)
-		return card
-
-	@staticmethod
-	def _lightsync_row(text, widget):
-		r = box(Gtk.Orientation.HORIZONTAL, 16)
-		r.append(label(text, hexpand=True, valign=Gtk.Align.CENTER))
-		r.append(widget)
-		return r
 
 	# --- drawing ------------------------------------------------------------------------
 

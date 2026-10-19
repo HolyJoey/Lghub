@@ -19,6 +19,7 @@ import subprocess
 import threading
 import time
 
+import hidpp
 import perkey
 import store
 
@@ -152,24 +153,104 @@ def ghub_sampler(data):
 	return regions, keys
 
 
+def ghub_zones(path):
+	"""{G HUB zone name: region} from its zonal screen sampler file."""
+	import json
+	with open(path) as f:
+		info = json.load(f).get('screen_sampler_info', {})
+	return {name: slot.get('zone_color', {}).get('tag')
+	        for name, slot in info.get('lighting_slots', {}).get('info_map', {}).items()
+	        if slot.get('zone_color', {}).get('tag')}
+
+
 def sampler_frame(layout, colors):
 	width, height, keys = layout
 	return {f'{group}:{kid}': colors[key_region(x + w / 2, y + h / 2, width, height)]
 	        for group, kid, x, y, w, h in keys if group == 'PERKEY_KEYBOARD'}
 
 
+class PerKeyTarget:
+	"""Where an effect's colours go on a per-key keyboard: every key, not saved in it."""
+
+	def __init__(self, dev, layout):
+		self.dev, self.layout = dev, layout
+		self.keys = [f'{g}:{k}' for g, k, *_r in layout[2]]
+		self.zonal = False
+
+	def send(self, colors):
+		perkey.apply(self.dev, colors, persist=False)
+
+
+# G HUB's zone names (lighting_support Zone.Type) for HID++ 0x8070 / 0x8071 zone locations; which
+# location is which name is ours
+ZONE_NAMES = {0: 'ZONE_PRIMARY', 1: 'ZONE_PRIMARY', 2: 'ZONE_BRANDING', 3: 'ZONE_ONE', 4: 'ZONE_TWO',
+              6: 'ZONE_ONE', 7: 'ZONE_TWO', 8: 'ZONE_THREE', 9: 'ZONE_FOUR', 10: 'ZONE_FIVE'}
+
+
+class ZoneTarget:
+	"""Where an effect's colours go on a device with lighting zones (mice, speakers, headsets):
+	each zone's fixed effect, not saved in it (0x8070 / 0x8071)."""
+
+	def __init__(self, dev):
+		import features
+		self.dev = dev
+		zones = features.zones(dev) if dev.has(features.COLOR_LED_EFFECTS) else features.zones_v2(dev)
+		self.fixed = {}
+		for z in zones:
+			index = next((i for i, eid in z.effects if eid == features.FIXED), None)
+			if index is not None:
+				self.fixed[f'ZONE:{z.index}'] = (z.index, index, z.feature, ZONE_NAMES.get(z.location, 'ZONE_PRIMARY'))
+		self.keys = list(self.fixed)
+		self.zonal = True
+
+	def send(self, colors):
+		import features
+		for key, c in colors.items():
+			zone, index, feature, _name = self.fixed[key]
+			params = features.effect_params(features.FIXED, tuple(c))
+			features.set_effect(self.dev, zone, index, params, persist=False, feature=feature)
+
+
+def restore_zones(dev):
+	"""After an effect on zones: an onboard-memory mouse gets its profile's lighting back by
+	selecting its current profile again (ours); other devices keep the last colour until their
+	lighting is set again."""
+	import mouse
+	try:
+		if dev.has(mouse.ONBOARD):
+			current = dev.call(mouse.ONBOARD, 4)[1]
+			dev.call(mouse.ONBOARD, 3, bytes([0, current]))
+	except (OSError, hidpp.HidppError):
+		pass
+
+
+def make_target(dev, model):
+	layout = perkey.load_layout(model)
+	if layout and (dev.has(perkey.PERKEY) or dev.has(perkey.PERKEY_V1)):
+		return PerKeyTarget(dev, layout)
+	try:
+		import features
+		if dev.has(features.COLOR_LED_EFFECTS) or dev.has(features.RGB_EFFECTS):
+			target = ZoneTarget(dev)
+			return target if target.keys else None
+	except (OSError, hidpp.HidppError):
+		pass
+	return None
+
+
 class Visualizer:
-	"""Streams the audio visualizer to one keyboard (an open hidpp.Device) until stopped."""
+	"""Streams the audio visualizer to one device (an open hidpp.Device) until stopped."""
 
 	def __init__(self, dev, model, color):
 		self.dev, self.model, self.color = dev, model, color
-		self.layout = perkey.load_layout(model)
+		self.target = make_target(dev, model)
+		self.layout = self.target.layout if isinstance(self.target, PerKeyTarget) else None
 		self.stop_event = threading.Event()
 		self.thread = None
 		self.proc = None
 
 	def start(self):
-		if not self.layout:
+		if not self.target:
 			return False
 		self.proc = subprocess.Popen(['pw-record', '--rate', str(RATE), '--channels', '1', '--format', 's16',
 		                              '-P', 'stream.capture.sink=true', '-P', 'node.name=lghub-lightsync', '-'],
@@ -196,10 +277,15 @@ class Visualizer:
 				continue
 			last = time.monotonic()
 			samples = [int.from_bytes(data[i:i + 2], 'little', signed=True) / 32768 for i in range(0, len(data), 2)]
+			levels = band_levels(samples, freqs)
+			if self.layout:
+				frame = frame_colors(self.layout, levels, self.color)
+			else:                                   # zones: the whole device follows the loudness (ours)
+				level = max(levels)
+				frame = {k: [round(c * (0.08 + 0.92 * level)) for c in self.color] for k in self.target.keys}
 			try:
-				perkey.apply(self.dev, frame_colors(self.layout, band_levels(samples, freqs), self.color),
-				             persist=False)
-			except OSError:
+				self.target.send(frame)
+			except (OSError, hidpp.HidppError):
 				return
 
 
@@ -212,30 +298,37 @@ class ScreenSampler(Visualizer):
 		self.smoothing = settings.get('smoothing', False)
 
 	def start(self):
-		if not self.layout:
+		if not self.target:
 			return False
 		self.thread = threading.Thread(target=self._run, daemon=True)
 		self.thread.start()
 		return True
 
 	def _ghub_regions(self):
-		"""G HUB's regions and key map for keyboards, or (None, None) to use ours."""
+		"""G HUB's regions and key (or zone) map, or (None, None) to use ours."""
 		import json
 		import softlight
-		path = softlight.fetch(softlight.EFFECTS_DIR + 'screen_sampler-kb.json')
+		name = 'screen_sampler.json' if self.target.zonal else 'screen_sampler-kb.json'
+		path = softlight.fetch(softlight.EFFECTS_DIR + name)
 		try:
 			with open(path) as f:
 				regions, keys = ghub_sampler(json.load(f))
 		except (OSError, TypeError, ValueError):
 			return None, None
-		present = {f'{g}:{k}' for g, k, *_r in self.layout[2]}
-		keys = {k: r for k, r in keys.items() if k in present}
+		if self.target.zonal:
+			by_name = ghub_zones(path)
+			keys = {k: by_name[z[3]] for k, z in self.target.fixed.items() if z[3] in by_name}
+		else:
+			present = set(self.target.keys)
+			keys = {k: r for k, r in keys.items() if k in present}
 		return (regions, keys) if regions and keys else (None, None)
 
 	def _frame(self, colors, keys):
 		if keys:
 			return {k: colors[r] for k, r in keys.items() if r in colors}
-		return sampler_frame(self.layout, colors)
+		if self.layout:
+			return sampler_frame(self.layout, colors)
+		return {k: colors['BOTTOM_CENTER'] for k in self.target.keys}
 
 	def _run(self):
 		shown = None
@@ -254,8 +347,8 @@ class ScreenSampler(Visualizer):
 				continue
 			shown = colors
 			try:
-				perkey.apply(self.dev, self._frame(colors, keys), persist=False)
-			except OSError:
+				self.target.send(self._frame(colors, keys))
+			except (OSError, hidpp.HidppError):
 				return
 
 
@@ -272,7 +365,7 @@ class Animated(Visualizer):
 		import json
 		import softlight
 		s = self.settings
-		keys = softlight.layout_keys(self.layout)
+		keys = self.target.keys if self.target.zonal else softlight.layout_keys(self.layout)
 		if s['effect'] == 'starlight':
 			return softlight.Starlight(keys, s.get('star', (255, 255, 255)), s.get('sky', (0, 0, 40)),
 			                           s.get('count', 50), s.get('speed', 2000))
@@ -289,7 +382,7 @@ class Animated(Visualizer):
 		return softlight.Keyframes(frames, speed, direction) if frames else None
 
 	def start(self):
-		if not self.layout:
+		if not self.target:
 			return False
 		self.thread = threading.Thread(target=self._run, daemon=True)
 		self.thread.start()
@@ -326,8 +419,8 @@ class Animated(Visualizer):
 			if not changed:
 				continue
 			try:
-				perkey.apply(self.dev, changed, persist=False)
-			except OSError:
+				self.target.send(changed)
+			except (OSError, hidpp.HidppError):
 				return
 
 
@@ -380,6 +473,8 @@ class Runner:
 		if device:
 			import restore
 			restore.apply_saved(visualizer.dev, device.model.key)
+			if getattr(visualizer.target, 'zonal', False):
+				restore_zones(visualizer.dev)
 
 	def _start(self, dev_id, device, settings):
 		try:

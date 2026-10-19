@@ -10,6 +10,7 @@ import device_settings
 import devices
 import features
 import hidpp_panel
+import lightsync_ui
 import macros_ui
 import mouse
 import surface_tuning
@@ -563,6 +564,8 @@ class MouseView(Gtk.Box):
 				page.append(label('This mouse has no lighting Lghub can set.', ['muted']))
 			for zone in zones:
 				page.append(hidpp_panel.zone_card(zone, lambda: self.loading, self._live, lambda: self.mouse.dev))
+			if zones:
+				page.append(lightsync_ui.card(self.device.model.key, lambda: None, per_key=False))
 			return
 		zones = self.device.model.lighting
 		if not zones and self.device.model.key != 'unknown':
@@ -571,6 +574,8 @@ class MouseView(Gtk.Box):
 		self._profile_picker(page)
 		for i, zone in enumerate((zones or ('primary', 'branding'))[:mouse.LED_SLOTS]):
 			page.append(self._led_card(i, ZONE_NAMES.get(zone, zone.replace('_', ' ').capitalize())))
+		if features.COLOR_LED_EFFECTS in self.mouse.features or features.RGB_EFFECTS in self.mouse.features:
+			page.append(lightsync_ui.card(self.device.model.key, lambda: None, per_key=False))
 
 	def _led_card(self, i, title):
 		p = self.profile

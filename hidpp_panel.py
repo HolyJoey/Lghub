@@ -8,6 +8,7 @@ import battery_model
 import device_settings
 import features
 import headset
+import lightsync_ui
 import mouse
 import perkey
 import perkey_ui
@@ -274,6 +275,8 @@ class SettingsPanel(Gtk.Box):
 		self.loading = True
 		self.on_status(info['name'] or self.device.name, self._status_text(info))
 		cards = [self._zone_card(zone) for zone in info.get('zones', [])]
+		if info.get('zones') and not (perkey.PERKEY in info['features'] or perkey.PERKEY_V1 in info['features']):
+			cards.append(lightsync_ui.card(self.device.model.key, lambda: None, per_key=False))
 		for key, build in (('brightness', self._brightness_card), ('rates', self._rate_card),
 		                   ('sidetone', self._sidetone_card), ('patterns', self._pattern_card),
 		                   ('angle_snapping', self._angle_card), ('fn_inversion', self._fn_card),

@@ -145,7 +145,8 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   Red White and Blue: its keyframe files, downloaded at first use), Starlight, Colour cycle
   and Echo press (key presses read from the keyboard's own reports: ours) with G HUB's settings.
   Not yet: Smooth star / wave and G HUB's
-  other "signature" effects, the keyframe editor (Freestyle), effects on zonal devices.
+  other "signature" effects, the keyframe editor (Freestyle). Effects on zonal devices done
+  (starlight, colour cycle, audio, screen sampler with G HUB's zone regions).
 
 ### App
 - Low-battery notifications done (G HUB's LOW 30 % / CRITICAL 15 %; checking every 5 minutes is

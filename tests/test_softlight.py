@@ -33,6 +33,20 @@ class EchoTest(unittest.TestCase):
 		self.assertEqual(keypress.keys_down(fields, bytes([0x02, 0, 0x04, 0x1A, 0, 0, 0, 0])), {0xE1, 0x04, 0x1A})
 
 
+class ZoneTargetTest(unittest.TestCase):
+	def test_effect_on_zones(self):
+		import hidpp
+		import simulate
+		fake = simulate.FakeRgbMouse()
+		target = lightsync.make_target(hidpp.Device(fake), 'g502_x')
+		self.assertTrue(target.zonal)
+		self.assertEqual(target.keys, ['ZONE:0', 'ZONE:1'])
+		cycle = softlight.ColorCycle(target.keys, speed=1000)
+		target.send(cycle.frame(0.0))
+		self.assertEqual(fake.set[0], (0, bytes([255, 0, 0, 0]).ljust(10, b'\0'), 0))   # fixed, not saved
+		self.assertEqual(fake.set[1][1][:3], bytes([255, 0, 0]))
+
+
 class EasingTest(unittest.TestCase):
 	def test_curves(self):
 		for name in ('LINEAR', 'INQUAD', 'OUTCUBIC', 'INOUTSINE', 'OUTINEXPO', 'INCIRC', 'OUTBACK', 'INOUTBOUNCE',
