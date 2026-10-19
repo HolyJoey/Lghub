@@ -2,6 +2,7 @@
 the tests. They follow the protocol as hidpp.py and mouse.py use it; they are not a record of
 any real device's answers."""
 import struct
+import zlib
 
 import features
 import hidpp
@@ -168,7 +169,7 @@ class FakeWheelMouse(FakeMouse):
 	"""A mouse with SmartShift and ratchet force (0x2111), button swap (0x2005) and hybrid
 	tracking (0x2400), like the G502 X."""
 	FEATURES = ([f for f in FakeMouse.FEATURES if f not in (mouse.REPORT_RATE, mouse.DPI)]
-	            + [0x2111, 0x2005, 0x2400, 0x8061, 0x2202, 0x80E0, 0x2240])
+	            + [0x2111, 0x2005, 0x2400, 0x8061, 0x2202, 0x80E0, 0x2240, 0x8103])
 
 	def __init__(self):
 		super().__init__('G502 X')
@@ -178,33 +179,62 @@ class FakeWheelMouse(FakeMouse):
 		self.ext_dpi = (1600, 1600, 2)
 		self.bhop = 0
 		self.surface = None
+		self.tags = {1: struct.pack('>H', 300), 2: struct.pack('>H', 600)}   # 5 and 10 minutes
+		self.session = False
+		self.pending = None
 		self.tuning = []                        # surface tuning functions called, in order
 
 	def handle(self, feature, fn, p):
-		if feature == 0x2202:
-			return self._ext_dpi(fn, p)
-		if feature == 0x80E0:
-			return self._bunny_hop(fn, p)
-		if feature == 0x2240:
-			return self._surface_tuning(fn, p)
-		if feature == 0x8061:
-			return self._rates(fn, p)
-		if feature == 0x2005:
-			if fn == 1:
-				self.swap = p[0]
-			return bytes([self.swap])
-		if feature == 0x2400:
-			if fn == 3:
-				self.hybrid = p[0]
-			return bytes([1 if fn == 0 else self.hybrid])
-		if feature != 0x2111:
-			return super().handle(feature, fn, p)
+		own = {0x2202: self._ext_dpi, 0x80E0: self._bunny_hop, 0x2240: self._surface_tuning,
+		       0x8103: self._global_settings, 0x8061: self._rates, 0x2005: self._swap,
+		       0x2400: self._hybrid, 0x2111: self._wheel}.get(feature)
+		return own(fn, p) if own else super().handle(feature, fn, p)
+
+	def _swap(self, fn, p):
+		if fn == 1:
+			self.swap = p[0]
+		return bytes([self.swap])
+
+	def _hybrid(self, fn, p):
+		if fn == 3:
+			self.hybrid = p[0]
+		return bytes([1 if fn == 0 else self.hybrid])
+
+	def _wheel(self, fn, p):
 		if fn == 0:
 			return bytes([1, 10, 50, 100])
 		if fn == 1:
 			return bytes(self.wheel)
 		self.wheel = list(p[:3])
 		return bytes(self.wheel)
+
+	def _global_settings(self, fn, p):
+		"""0x8103's tag protocol: sessions, tag reads and writes with a CRC-32 commit."""
+		if fn == 5:
+			self.session = p[0] == 0
+			return bytes([0])
+		if not self.session:
+			raise KeyError('no session')
+		if fn == 3:
+			tag = struct.unpack('>H', p[:2])[0]
+			self.reading = self.tags[tag]
+			return bytes([7]) + struct.pack('>H', len(self.reading))
+		if fn == 4:
+			chunk, self.reading = self.reading[:15], self.reading[15:]
+			return bytes([p[0]]) + chunk
+		if fn == 6:
+			tag, size = struct.unpack('>HH', p[:4])
+			self.pending = (tag, size, bytearray(p[4:4 + min(size, 12)]))
+			return bytes([9])
+		if fn == 7:
+			self.pending[2].extend(p[1:16])
+			return bytes([p[0]])
+		tag, size, data = self.pending
+		data = bytes(data[:size])
+		ok = struct.unpack('>I', p[:4])[0] == zlib.crc32(data)
+		if ok:
+			self.tags[tag] = data
+		return bytes([0 if ok else 1, 0, 0])
 
 	def _surface_tuning(self, fn, p):
 		self.tuning.append(fn)

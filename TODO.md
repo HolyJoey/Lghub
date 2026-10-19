@@ -20,7 +20,7 @@ measurements.
 | Headsets (other than the voice chain) | 50% | see "Headsets" below |
 | Yeti controls | 100% | check on a Yeti |
 | Webcams | 90% | check on the C920 |
-| Wireless (receivers, power) | 50% | see "Wireless and power" below |
+| Wireless (receivers, power) | 65% | see "Wireless and power" below |
 | Lighting | 90% | screen sampler on GNOME / KDE; per-key on mice |
 | App features | 70% | see "App" below |
 | Background service | 90% | re-measure CPU and memory with the current version installed |
@@ -112,13 +112,9 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 - **Pairing a device to a receiver**: newer LIGHTSPEED receivers pair through 0x1894
   (LightspeedDevicePairing, async in G HUB: function numbers not read yet); older ones through
   receiver registers.
-- **Sleep / power-off timers**: 0x8103 GlobalDeviceSettings is G HUB's tag protocol, shared with
-  the 0x8102 onboard profiles (FeatureTagManager):
-  - Functions mapped: fn 0 capabilities, fn 1 supported tag list, fn 2 tag capability,
-    fn 3 / fn 4 read a tag and its fragments, fn 5 sessions, fn 6 / fn 7 write a tag and its
-    fragments, fn 8 commit with a 32-bit check.
-  - Tags 1-3 and 16-19 cover power-off / power-saving timeouts and the screen settings.
-  - Left: each tag's byte format.
+- **Sleep / power-off timers** (0x8103 GlobalDeviceSettings tags 1 / 2): done with G HUB's tag
+  protocol (sessions, tag read / write, CRC-32 commit) and its minute choices. Ours: first data
+  bytes in the start-write call. The screen tags (16-19) aren't used (no device with a screen).
 - 0x0108 AutoSleep (Centurion headsets). 0x1010 charging control done.
 - Reconnection: Lghub checks every 60 s instead of listening for 0x1D4B (fine for settings;
   not instant).

@@ -5,6 +5,7 @@ keeps working without Lghub running (like G HUB's on-board memory mode).
 """
 from gi.repository import Gdk, Gtk
 
+import device_settings
 import devices
 import features
 import hidpp_panel
@@ -156,6 +157,8 @@ class MouseView(Gtk.Box):
 			state['swap'] = features.button_swap(m.dev)
 		if features.HYBRID_TRACKING in m.features:
 			state['hybrid'] = features.hybrid_mode(m.dev)
+		if device_settings.GLOBAL_SETTINGS in m.features:
+			state['power'] = device_settings.power_timers(m.dev)
 		if features.BUNNY_HOPPING in m.features:
 			state['bhop'] = features.bunny_hopping(m.dev)
 		if m.onboard:
@@ -262,6 +265,7 @@ class MouseView(Gtk.Box):
 			self._bhop_card(page)
 			self._surface_card(page)
 			self._tracking_card(page)
+			self._power_card(page)
 			return
 		self._profile_picker(page)
 		p = self.profile
@@ -314,6 +318,7 @@ class MouseView(Gtk.Box):
 		self._bhop_card(page)
 		self._surface_card(page)
 		self._tracking_card(page)
+		self._power_card(page)
 
 	def _edit(self, change):
 		if self.loading:
@@ -384,6 +389,10 @@ class MouseView(Gtk.Box):
 				lambda mode=modes[w.get_selected()][0]: features.set_hybrid_mode(self.mouse.dev, mode)))
 			c.append(row('Hybrid tracking', dd))
 		page.append(c)
+
+	def _power_card(self, page):
+		if self.state.get('power'):
+			page.append(hidpp_panel.power_card(self.state['power'], self._live, self.mouse.dev, card, row))
 
 	def _surface_card(self, page):
 		if surface_tuning.SURFACE_TUNING in self.mouse.features:

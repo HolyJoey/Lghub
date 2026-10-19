@@ -4,6 +4,7 @@ the generic device page and on the headset page."""
 from gi.repository import Gdk, Gtk
 
 import devices
+import device_settings
 import features
 import headset
 import mouse
@@ -54,6 +55,30 @@ def slider(low, high, value, width=280):
 	s.set_draw_value(True)
 	s.set_size_request(width, -1)
 	return s
+
+
+def _minutes_text(m):
+	if not m:
+		return 'Never'
+	return '1 minute' if m == 1 else f'{m} minutes'
+
+
+def power_card(timers, do, dev, card=card, row=row):
+	"""Power saving and power off timers (0x8103 tags 1 and 2) with G HUB's choices; a value not
+	in the list is added, as G HUB does. card / row: the page's own builders."""
+	c = card('Power', 'When the device goes into power saving, and when it turns itself off.')
+	for tag, title, choices in ((device_settings.POWER_SAVING, 'Power saving after', device_settings.POWER_SAVING_MINUTES),
+	                            (device_settings.POWER_OFF, 'Turn off after', device_settings.POWER_OFF_MINUTES)):
+		if tag not in timers:
+			continue
+		current = round(timers[tag] / 60)
+		minutes = sorted(set(choices) | {current})
+		dd = Gtk.DropDown.new_from_strings([_minutes_text(m) for m in minutes])
+		dd.set_selected(minutes.index(current))
+		dd.connect(NOTIFY_SELECTED, lambda w, _p, t=tag, ms=minutes: do(
+			lambda m=ms[w.get_selected()]: device_settings.set_timeout(dev, t, m * 60)))
+		c.append(row(title, dd))
+	return c
 
 
 def zone_card(zone, loading, do, dev):
@@ -148,6 +173,8 @@ class SettingsPanel(Gtk.Box):
 				info[key] = read(dev)
 		self._read_keyboard(dev, have, info)
 		self._read_mic(dev, have, info)
+		if device_settings.GLOBAL_SETTINGS in have:
+			info['power'] = device_settings.power_timers(dev) or None
 		if features.ONBOARD in have:
 			info['mode'] = dev.call(features.ONBOARD, 2)[0]
 			info['profiles'] = (dev.call(features.ONBOARD, 0)[3], dev.call(features.ONBOARD, 4)[1])
@@ -217,6 +244,7 @@ class SettingsPanel(Gtk.Box):
 		                   ('game_mode', self._game_mode_card), ('hosts', self._hosts_card),
 		                   ('device_eq', self._device_eq_card), ('charging', self._charging_card),
 		                   ('bass_tone', self._bass_card), ('mic', self._mic_card),
+		                   ('power', lambda i: power_card(i['power'], self._do, self.dev)),
 		                   ('mode', self._mode_card)):
 			if info.get(key) not in (None, []) or key in ('charging', 'bass_tone') and key in info:
 				cards.append(build(info))
