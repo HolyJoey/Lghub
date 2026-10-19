@@ -25,6 +25,7 @@ def card(model, restore, per_key=True):
 	card.append(_row('Effect', effect))
 
 	color = _color_button(settings.get('color', [0, 140, 255]))
+	audio_rows, audio_values, audio_widgets = _audio_controls(settings)
 	boost = _slider(0, 100, settings.get('color_boost', 0), ' %')          # G HUB's 0-100 %
 	smoothing = Gtk.Switch(active=settings.get('smoothing', False), valign=Gtk.Align.CENTER)
 	star = _color_button(settings.get('star', [255, 255, 255]))
@@ -42,7 +43,7 @@ def card(model, restore, per_key=True):
 		region_editor.RegionEditor(regions.get_root(), model, per_key).present()
 
 	regions.connect('clicked', edit_regions)
-	rows = {'audio': [('Colour', color)],
+	rows = {'audio': [('Colour', color)] + audio_rows,
 	        'screen': [('Colour boost', boost), ('Smoothing', smoothing), ('Screen regions', regions)],
 	        'starlight': [('Star colour', star), ('Sky colour', sky), ('Stars', count), ('Speed', speed)],
 	        'cycle': [('Speed', cycle_speed)],
@@ -57,7 +58,7 @@ def card(model, restore, per_key=True):
 	def changed(*_):
 		kind = show()
 		data = lightsync.load()
-		values = {'audio': lambda: {'color': _rgb(color)},
+		values = {'audio': lambda: {'color': _rgb(color), **audio_values()},
 		          'screen': lambda: {'color_boost': round(boost.get_value()), 'smoothing': smoothing.get_active(),
 		                             'regions': data.get(model, {}).get('regions', {})},
 		          'starlight': lambda: {'star': _rgb(star), 'sky': _rgb(sky), 'count': round(count.get_value()),
@@ -75,6 +76,8 @@ def card(model, restore, per_key=True):
 
 	show()
 	effect.connect('notify::selected', changed)
+	for w in audio_widgets:
+		w.connect(_signal(w), changed)
 	for w in (color, star, sky, echo, rest):
 		w.connect('notify::rgba', changed)
 	for w in (boost, count, speed, cycle_speed, echo_speed):
@@ -98,6 +101,44 @@ def _show(widgets, kind):
 	for k, rows in widgets.items():
 		for r in rows:
 			r.set_visible(k == kind)
+
+
+SIGNALS = ((Gtk.ColorDialogButton, 'notify::rgba'), (Gtk.Scale, 'value-changed'), (Gtk.DropDown, 'notify::selected'))
+
+
+def _signal(widget):
+	"""The signal a setting widget sends when it changes."""
+	return next((sig for kind, sig in SIGNALS if isinstance(widget, kind)), 'notify::active')
+
+
+MODES = (('fixed', 'Fixed'), ('reactive', 'Reactive (to the second colour when loud)'),
+         ('gradient', 'Gradient (bottom to top)'))
+
+
+def _audio_controls(settings):
+	"""G HUB's audio visualizer settings: colour mode, second and background colour, boost, max
+	amplitude (adaptive or set), noise thresholds, smooth animation (ranges as G HUB's sliders)."""
+	mode = Gtk.DropDown.new_from_strings([text for _k, text in MODES])
+	mode.set_selected(next((i for i, (k, _t) in enumerate(MODES) if k == settings.get('mode')), 0))
+	high = _color_button(settings.get('color_high', [255, 40, 40]))
+	background = _color_button(settings.get('background', [0, 0, 0]))
+	boost = _slider(0, 100, settings.get('boost', 0), ' %')
+	adaptive = Gtk.Switch(active=settings.get('adaptive', True), valign=Gtk.Align.CENTER)
+	top = _slider(0, 100, settings.get('max_amplitude', 100), ' %')
+	bass = _slider(0, 100, settings.get('bass_noise', 0), ' %')
+	mid = _slider(0, 100, settings.get('mid_high_noise', 0), ' %')
+	smooth = Gtk.Switch(active=settings.get('smooth', False), valign=Gtk.Align.CENTER)
+	rows = [('Colour mode', mode), ('Second colour', high), ('Background', background), ('Audio boost', boost),
+	        ('Adaptive max amplitude', adaptive), ('Max amplitude', top), ('Bass noise threshold', bass),
+	        ('Mid / high noise threshold', mid), ('Smooth animation', smooth)]
+
+	def values():
+		return {'mode': MODES[mode.get_selected()][0], 'color_high': _rgb(high), 'background': _rgb(background),
+		        'boost': round(boost.get_value()), 'adaptive': adaptive.get_active(),
+		        'max_amplitude': round(top.get_value()), 'bass_noise': round(bass.get_value()),
+		        'mid_high_noise': round(mid.get_value()), 'smooth': smooth.get_active()}
+
+	return rows, values, [w for _t, w in rows]
 
 
 def _chosen(effects, settings):

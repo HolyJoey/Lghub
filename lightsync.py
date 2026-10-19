@@ -109,16 +109,55 @@ def ghub_columns(data):
 	return out
 
 
-def column_frame(columns, level_of, color, present):
+def _key_color(n, keys, lit, level, color, back, mode, high):
+	if n >= lit:
+		return list(back)
+	if mode == 'reactive' and high:
+		return [round(a + (b - a) * level) for a, b in zip(color, high)]
+	if mode == 'gradient' and high:
+		f = n / max(1, len(keys) - 1)
+		return [round(a + (b - a) * f) for a, b in zip(color, high)]
+	return list(color)
+
+
+def column_frame(columns, level_of, color, present, background=None, mode='fixed', high=None):
 	"""As G HUB's visualizer: each column lights its keys from the bottom up to its range's level;
-	the rest of its keys stay dim (8 %, ours)."""
+	the rest show the background colour (8 % of the colour when none is set: ours). Colour modes
+	(G HUB's): fixed; reactive, from colour to `high` with the level; gradient, from colour at the
+	bottom to `high` at the top."""
+	back = background or [round(c * 0.08) for c in color]
 	out = {}
-	for low, high, keys in columns:
-		lit = round(level_of(low, high) * len(keys))
+	for low, top, keys in columns:
+		level = level_of(low, top)
+		lit = round(level * len(keys))
 		for n, key in enumerate(keys):
 			if key and key in present:
-				scale = 1.0 if n < lit else 0.08
-				out[key] = [round(c * scale) for c in color]
+				out[key] = _key_color(n, keys, lit, level, color, back, mode, high)
+	return out
+
+
+def shape_levels(levels, freqs, options, state):
+	"""G HUB's audio options on raw 0-1 levels (their meaning is ours): noise thresholds (bass below
+	310 Hz, mid / high above; 0-100 %) cut quiet bands, boost (0-100 %) raises, the max amplitude
+	(adaptive: the recent peak; or custom 0-100 %) is full scale, smooth animation lets bars fall
+	slowly. state keeps the peak and the last levels between frames."""
+	bass_cut = options.get('bass_noise', 0) / 100
+	mid_cut = options.get('mid_high_noise', 0) / 100
+	out = []
+	for level, f in zip(levels, freqs):
+		cut = bass_cut if f < 310 else mid_cut
+		out.append(0.0 if level <= cut else (level - cut) / (1 - cut))
+	if options.get('adaptive', True):
+		state['peak'] = max(max(out, default=0), state.get('peak', 0.3) * 0.995, 0.05)
+		top = state['peak']
+	else:
+		top = max(0.05, options.get('max_amplitude', 100) / 100)
+	boost = 1 + options.get('boost', 0) / 100
+	out = [min(1.0, level / top * boost) for level in out]
+	if options.get('smooth', False):
+		last = state.get('last') or out
+		out = [max(new, old * 0.85) for new, old in zip(out, last)]
+	state['last'] = out
 	return out
 
 
@@ -289,8 +328,9 @@ def make_target(dev, model):
 class Visualizer:
 	"""Streams the audio visualizer to one device (an open hidpp.Device) until stopped."""
 
-	def __init__(self, dev, model, color):
+	def __init__(self, dev, model, color, options=None):
 		self.dev, self.model, self.color = dev, model, color
+		self.options = options or {}                 # G HUB's visualizer settings (lightsync.json)
 		self.target = make_target(dev, model)
 		self.layout = self.target.layout if isinstance(self.target, PerKeyTarget) else None
 		self.stop_event = threading.Event()
@@ -334,6 +374,9 @@ class Visualizer:
 		ranges = sorted({(low, high) for low, high, _k in columns}) if columns else []
 		freqs = [math.sqrt(max(1, low) * max(1, high)) for low, high in ranges] if columns else band_freqs()
 		present = set(self.target.keys)
+		state = {}
+		background = self.options.get('background')
+		mode, high = self.options.get('mode', 'fixed'), self.options.get('color_high')
 		last = 0.0
 		while not self.stop_event.is_set():
 			data = self.proc.stdout.read(FRAME * 2)
@@ -343,10 +386,11 @@ class Visualizer:
 				continue
 			last = time.monotonic()
 			samples = [int.from_bytes(data[i:i + 2], 'little', signed=True) / 32768 for i in range(0, len(data), 2)]
-			levels = band_levels(samples, freqs)
+			levels = shape_levels(band_levels(samples, freqs), freqs, self.options, state)
 			if columns:
 				by_range = dict(zip(ranges, levels))
-				frame = column_frame(columns, lambda lo, hi, levels=by_range: levels[(lo, hi)], self.color, present)
+				frame = column_frame(columns, lambda lo, hi, levels=by_range: levels[(lo, hi)], self.color, present,
+				                     background, mode, high)
 			elif self.layout:
 				frame = frame_colors(self.layout, levels, self.color)
 			else:                                   # zones: the whole device follows the loudness (ours)
@@ -573,7 +617,7 @@ class Runner:
 		elif settings['effect'] in ANIMATED:
 			visualizer = Animated(dev, device.model.key, settings, device.port)
 		else:
-			visualizer = Visualizer(dev, device.model.key, settings.get('color', [0, 140, 255]))
+			visualizer = Visualizer(dev, device.model.key, settings.get('color', [0, 140, 255]), settings)
 		if visualizer.start():
 			self.running[dev_id] = (visualizer, settings)
 			print(f'engine: {settings["effect"]} LIGHTSYNC on {device.name}', flush=True)

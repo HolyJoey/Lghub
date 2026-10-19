@@ -70,6 +70,25 @@ class GhubVisualizerTest(unittest.TestCase):
 		self.assertEqual(frame['PERKEY_KEYBOARD:20'], [8, 8, 8])
 
 
+class AudioOptionsTest(unittest.TestCase):
+	def test_shape_levels(self):
+		state = {}
+		opts = {'adaptive': False, 'max_amplitude': 50, 'bass_noise': 20, 'boost': 0}
+		self.assertEqual(lightsync.shape_levels([0.1, 0.4], [100, 1000], opts, state), [0.0, 0.8])
+		self.assertEqual(lightsync.shape_levels([0.3], [1000], {'adaptive': False, 'boost': 100}, {}), [0.6])
+
+	def test_colour_modes(self):
+		cols = [(60, 170, ['a', 'b'])]
+		reactive = lightsync.column_frame(cols, lambda lo, hi: 1.0, [0, 0, 0], {'a', 'b'}, mode='reactive',
+		                                  high=[200, 0, 0])
+		self.assertEqual(reactive['b'], [200, 0, 0])
+		gradient = lightsync.column_frame(cols, lambda lo, hi: 1.0, [0, 0, 0], {'a', 'b'}, mode='gradient',
+		                                  high=[200, 0, 0])
+		self.assertEqual((gradient['a'], gradient['b']), ([0, 0, 0], [200, 0, 0]))
+		dark = lightsync.column_frame(cols, lambda lo, hi: 0.0, [100, 0, 0], {'a', 'b'}, background=[0, 0, 9])
+		self.assertEqual(dark['a'], [0, 0, 9])
+
+
 class ScreenSamplerTest(unittest.TestCase):
 	def test_regions_and_keys(self):
 		# 6x6 picture: left third red, right third blue, middle green
