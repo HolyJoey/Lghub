@@ -147,6 +147,13 @@ sudo udevadm control --reload && sudo udevadm trigger
 
 Then open **Lghub** from your menu (or run `lghub`).
 
+## Tray
+
+Like G HUB, the background service puts an icon in the tray (waybar, KDE, GNOME with the
+AppIndicator extension): your devices with their battery, switches for Blue VO!CE, the equalizer
+and surround, and Open Lghub. `"tray": false` in `~/.config/lghub-bluevoice/config.json` turns
+it off.
+
 ## Is it heavy?
 
 No. Measured on a laptop (Intel Alder Lake), as a share of one CPU core:

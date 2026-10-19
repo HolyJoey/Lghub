@@ -41,16 +41,19 @@ class Watch:
 		self.send = send
 		self.last = 0.0
 		self.warned = {}        # device id -> level last warned about
+		self.readings = {}      # device id -> (name, reading), for the tray
 
 	def due(self, now):
 		return now - self.last >= CHECK_EVERY
 
 	def check(self, now=None):
 		self.last = now if now is not None else time.monotonic()
-		if not store.load_config().get('battery_warnings', True):
-			return
+		readings = {}
 		for device, reading in self._readings():
-			self.update(device, reading)
+			readings[device.id] = (device.name, reading)
+			if store.load_config().get('battery_warnings', True):
+				self.update(device, reading)
+		self.readings = readings
 
 	def update(self, device, reading):
 		"""One battery reading (percent, text) for a device; warns when it fell to a new level."""

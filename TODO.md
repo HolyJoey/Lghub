@@ -160,6 +160,8 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   OSD_DPI_CHANGED / OSD_PROFILE_CHANGED from 0x8100 events) done. Not yet: G HUB's equalizer /
   surround notices from a headset button. Report-rate notices (0x8061 event) done.
 - Game scan done (G HUB scans for installed games): Steam, Heroic / Legendary (Epic), Lutris.
+- Tray icon done (G HUB's system tray: devices with battery, Blue VO!CE / equalizer / surround
+  switches, Open Lghub; StatusNotifierItem + dbusmenu). config.json "tray": false turns it off.
 - **Firmware updates**: not planned (a mistake can brick a device).
 - **Discord / OBS integrations**: not planned.
 - **Racing wheels and pedals** (0x8123-0x8140): nobody here owns one.

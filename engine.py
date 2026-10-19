@@ -25,6 +25,7 @@ import restore
 import pw
 import store
 import surround
+import tray
 import webcam
 
 POLL = 0.25          # config / status interval while an app records, seconds
@@ -66,6 +67,7 @@ class Engine:
 		self.lightsync = lightsync.Runner()
 		self.battery = battery_watch.Watch()
 		self.osd = osd.Watch()
+		self.tray = tray.Tray(self.tray_devices) if store.load_config().get('tray', True) else None
 		self.game = None
 		self.mic_gain = None         # (mic, gain) last set for Blue VO!CE 2
 
@@ -309,13 +311,29 @@ class Engine:
 			self.lightsync.check(now)
 		if self.battery.due(now):
 			self.battery.check(now)
+			if self.tray:
+				self.tray.refresh()
 		if self.osd.due(now):
 			self.osd.check(now)
+
+	def tray_devices(self):
+		"""[(name, battery reading or None)] for the tray: what's plugged in, and the wireless devices
+		the battery watch last read."""
+		import devices
+		readings = dict(self.battery.readings)
+		out = []
+		for d in devices.discover():
+			if d.model.type != 'receiver':
+				out.append((d.name, readings.pop(d.id, (None, None))[1]))
+		out += list(readings.values())
+		return out
 
 	def run(self):
 		signal.signal(signal.SIGTERM, lambda *_: self.stop.set())
 		signal.signal(signal.SIGINT, lambda *_: self.stop.set())
 		threading.Thread(target=self.watch_links, daemon=True).start()
+		if self.tray:
+			self.tray.start()
 		while not self.stop.is_set():
 			self.reload_config()
 			self.check_bridge()
@@ -327,6 +345,8 @@ class Engine:
 		self.inputs.stop()
 		self.lightsync.stop()
 		self.osd.stop()
+		if self.tray:
+			self.tray.stop()
 		self.surround.stop()
 		self.eq.stop()
 		store.write_status({'state': 'stopped', 'error': '', 'updated': time.time()})
