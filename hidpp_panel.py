@@ -206,9 +206,10 @@ class SettingsPanel(Gtk.Box):
 		if features.FN_INVERSION in have:
 			info['fn_inversion'] = features.fn_inversion(dev, host)
 			self.host = host
-		if features.DISABLE_KEYS in have:
-			info['game_mode'] = (features.max_disabled_keys(dev), features.game_mode_keys(self.device.model.key))
-			features.set_disabled_keys(dev, info['game_mode'][1])   # ours: the chosen keys stay off
+		if features.DISABLE_KEYS in have or features.DISABLE_KEYS_V1 in have:
+			most, keys = features.game_mode_choices(dev)
+			info['game_mode'] = (most, features.game_mode_keys(self.device.model.key), keys)
+			features.apply_game_mode(dev, info['game_mode'][1])   # ours: the chosen keys stay off
 
 	def _do(self, job, done=None):
 		self.worker.submit(job, done, lambda e: self.win.toast(f'The device refused: {e}'))
@@ -320,9 +321,9 @@ class SettingsPanel(Gtk.Box):
 		return c
 
 	def _game_mode_card(self, info):
-		most, chosen = info['game_mode']
+		most, chosen, keys = info['game_mode']
 		c = card('Game mode', f'Keys to turn off so they can’t interrupt a game (up to {most}).')
-		for usage, name in features.GAME_MODE_KEYS:
+		for usage, name in keys:
 			sw = Gtk.Switch(active=usage in chosen, valign=Gtk.Align.CENTER)
 			sw.connect(NOTIFY_ACTIVE, lambda w, _p, u=usage: self.loading or self._game_key(u, w.get_active()))
 			c.append(row(f'Turn off {name}', sw))
@@ -407,7 +408,7 @@ class SettingsPanel(Gtk.Box):
 	def _game_key(self, usage, off):
 		keys = [k for k in features.game_mode_keys(self.device.model.key) if k != usage] + ([usage] if off else [])
 		features.save_game_mode_keys(self.device.model.key, keys)
-		self._do(lambda: features.set_disabled_keys(self.dev, keys))
+		self._do(lambda: features.apply_game_mode(self.dev, keys))
 
 	def _mode_card(self, info):
 		c = card('On-board memory', 'On: the device runs the settings stored in it. Off: it follows software; '

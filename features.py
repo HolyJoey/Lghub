@@ -19,6 +19,7 @@ POLAR_PATTERN = 0x8330
 ANGLE_SNAPPING = 0x2230
 FN_INVERSION = 0x40A3
 DISABLE_KEYS = 0x4522
+DISABLE_KEYS_V1 = 0x4521
 CHANGE_HOST = 0x1814
 HOSTS_INFO = 0x1815
 DEVICE_EQ = 0x8310
@@ -384,6 +385,31 @@ def save_game_mode_keys(model, keys):
 	data = store._read_json(path, {})
 	data[model] = keys
 	store._write_json(path, data)
+
+
+# Older keyboards (0x4521 DisableKeys): five fixed keys, one bit each; fn 0 = the ones the keyboard
+# has, fn 1 = the ones off now, fn 2 = set (G HUB's Feature4521DisableKeys: bits 4..0). Which key
+# each bit is comes from Logitech's HID++ 0x4521 spec, not G HUB.
+KEYS_V1 = ((0x01, 0x39, 'Caps Lock'), (0x02, 0x53, 'Num Lock'), (0x04, 0x47, 'Scroll Lock'),
+           (0x08, 0x49, 'Insert'), (0x10, 0xE3, 'Windows'))
+
+
+def game_mode_choices(dev):
+	"""(how many keys can be off, [(usage, name)]) for the keyboard's game mode."""
+	if dev.has(DISABLE_KEYS):
+		return max_disabled_keys(dev), list(GAME_MODE_KEYS)
+	have = dev.call(DISABLE_KEYS_V1, 0)[0]
+	keys = [(usage, name) for bit, usage, name in KEYS_V1 if have & bit]
+	return len(keys), keys
+
+
+def apply_game_mode(dev, usages):
+	"""Turn these keys off (and the others back on), on either kind of keyboard."""
+	if dev.has(DISABLE_KEYS):
+		set_disabled_keys(dev, usages)
+	elif dev.has(DISABLE_KEYS_V1):
+		mask = sum(bit for bit, usage, _n in KEYS_V1 if usage in usages)
+		dev.call(DISABLE_KEYS_V1, 2, bytes([mask]))
 
 
 def max_disabled_keys(dev):

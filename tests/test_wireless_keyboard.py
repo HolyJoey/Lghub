@@ -168,6 +168,16 @@ class PerKeyTest(unittest.TestCase):
 		self.assertTrue(kb.persisted)
 
 
+class GameModeV1Test(unittest.TestCase):
+	def test_older_keyboard(self):
+		fake = simulate.FakeKeyboardV1()
+		dev = hidpp.Device(fake)
+		most, keys = features.game_mode_choices(dev)
+		self.assertEqual((most, [n for _u, n in keys]), (3, ['Caps Lock', 'Scroll Lock', 'Windows']))
+		features.apply_game_mode(dev, [0x39, 0xE3])
+		self.assertEqual(fake.disabled, 0x11)
+
+
 class PerKeyV1Test(unittest.TestCase):
 	def test_apply_8080(self):
 		kb = simulate.FakeKeyboardV1()

@@ -86,8 +86,8 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 - **Analog keyboards**: 0x1B08 / 0x1B0C analog keys, 0x80A3 / 0x80A4 actuation curves.
 - **0x1B05 full key customization** (G HUB's "FKC": remap any key, per layer, with presets):
   large; needs a keyboard that has it. Not started.
-- **Not started**: 0x4521 / 0x4523 disable keys / controls (older), 0x8051 Logi modifiers,
-  0x8088 multi-lightbar.
+- 0x4521 game mode on older keyboards done (bits from G HUB, key names from Logitech's HID++
+  spec). **Not started**: 0x4523 disable controls, 0x8051 Logi modifiers, 0x8088 multi-lightbar.
 - Left out on purpose: 0x4540 layout, 0x4530 / 0x4531 multi-platform, 0x4220 lock-key state;
   G HUB's app has no setting for them.
 

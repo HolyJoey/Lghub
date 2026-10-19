@@ -383,13 +383,18 @@ class FakeMultiHostKeyboard(FakeKeyboard):
 
 class FakeKeyboardV1(FakeKeyboard):
 	"""A G810-like keyboard: per-key lighting over 0x8080 (keyboard keys, media keys, logo)."""
-	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, 0x8080]
+	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, 0x8080, 0x4521]
 
 	def __init__(self):
 		super().__init__()
 		self.keys, self.pending, self.persisted = {}, {}, None
+		self.disabled = 0
 
 	def handle(self, feature, fn, p):
+		if feature == 0x4521:                   # Caps Lock, Scroll Lock, Windows
+			if fn == 2:
+				self.disabled = p[0]
+			return bytes([0x15 if fn == 0 else self.disabled])
 		if feature != 0x8080:
 			return super().handle(feature, fn, p)
 		if fn == 0:
