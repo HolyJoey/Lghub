@@ -45,5 +45,18 @@ class GameScanTest(unittest.TestCase):
 			self.assertEqual(game_scan.lutris_games((db,), (os.path.join(d, 'games'),)), [('Diablo II', 'Game.exe')])
 
 
+	def test_heroic_gog(self):
+		with tempfile.TemporaryDirectory() as d:
+			game = os.path.join(d, 'Witcher')
+			write(os.path.join(game, 'goggame-1207664643.info'),
+			      '{"playTasks": [{"isPrimary": true, "path": "bin\\\\x64\\\\witcher3.exe"}]}')
+			store = os.path.join(d, 'gog_store')
+			write(os.path.join(store, 'installed.json'),
+			      '{"installed": [{"appName": "1207664643", "install_path": "%s", "is_dlc": false}]}' % game)
+			cache = os.path.join(d, 'gog_library.json')
+			write(cache, '{"games": [{"app_name": "1207664643", "title": "The Witcher 3"}]}')
+			self.assertEqual(game_scan.gog_games((store,), (cache,)), [('The Witcher 3', 'witcher3.exe')])
+
+
 if __name__ == '__main__':
 	unittest.main()

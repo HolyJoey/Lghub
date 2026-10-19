@@ -164,7 +164,7 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   ours). Game-profile notifications and DPI / profile notices for onboard mice (G HUB's
   OSD_DPI_CHANGED / OSD_PROFILE_CHANGED from 0x8100 events) done. Not yet: G HUB's equalizer /
   surround notices from a headset button. Report-rate notices (0x8061 event) done.
-- Game scan done (G HUB scans for installed games): Steam, Heroic / Legendary (Epic), Lutris.
+- Game scan done (G HUB scans for installed games): Steam, Heroic (Epic, GOG), Legendary, Lutris.
 - Tray icon done (G HUB's system tray: devices with battery, Blue VO!CE / equalizer / surround
   switches, Open Lghub; StatusNotifierItem + dbusmenu). config.json "tray": false turns it off.
 - Settings page done (G HUB's general settings: notifications, tray, persistent profile). Not

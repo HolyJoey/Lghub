@@ -2,6 +2,8 @@
 - Steam: libraryfolders.vdf and each library's appmanifest_<id>.acf; Steam's own tools (Proton,
   runtimes, redistributables) are left out by name (that list is ours).
 - Heroic / Legendary (Epic): installed.json, title and executable.
+- Heroic (GOG): gog_store/installed.json, titles from its library cache, the executable from the
+  game's goggame-<id>.info (its primary play task).
 - Lutris: pga.db (installed games) and each game's YAML (its exe).
 Steam games are matched by App ID, the others by their executable's name.
 """
@@ -104,10 +106,59 @@ def _lutris_exe(configpath, dirs):
 	return None
 
 
+HEROIC_GOG = ('~/.config/heroic/gog_store', '~/.var/app/com.heroicgameslauncher.hgl/config/heroic/gog_store')
+HEROIC_CACHE = ('~/.config/heroic/store_cache/gog_library.json',
+                '~/.var/app/com.heroicgameslauncher.hgl/config/heroic/store_cache/gog_library.json')
+
+
+def _gog_titles(caches):
+	titles = {}
+	for path in caches:
+		try:
+			with open(os.path.expanduser(path)) as f:
+				data = json.load(f)
+		except (OSError, ValueError):
+			continue
+		games = data.get('games', data.get('library', [])) if isinstance(data, dict) else data
+		for g in games if isinstance(games, list) else []:
+			if isinstance(g, dict) and g.get('app_name') and g.get('title'):
+				titles[str(g['app_name'])] = g['title']
+	return titles
+
+
+def _gog_exe(install_path, app):
+	try:
+		with open(os.path.join(install_path, f'goggame-{app}.info')) as f:
+			tasks = json.load(f).get('playTasks', [])
+	except (OSError, ValueError, AttributeError):
+		return None
+	task = next((t for t in tasks if t.get('isPrimary')), tasks[0] if tasks else {})
+	path = task.get('path', '')
+	return os.path.basename(path.replace('\\', '/')) or None
+
+
+def gog_games(stores=HEROIC_GOG, caches=HEROIC_CACHE):
+	"""[(name, executable)] of the GOG games installed through Heroic."""
+	titles = _gog_titles(caches)
+	games = {}
+	for store in stores:
+		try:
+			with open(os.path.join(os.path.expanduser(store), 'installed.json')) as f:
+				entries = json.load(f).get('installed', [])
+		except (OSError, ValueError, AttributeError):
+			continue
+		for e in entries:
+			app = str(e.get('appName', ''))
+			exe = _gog_exe(e.get('install_path', ''), app) if app else None
+			if exe and not e.get('is_dlc'):
+				games[titles.get(app, app)] = exe
+	return sorted(games.items(), key=lambda g: g[0].lower())
+
+
 def installed():
 	"""[(name, steam id or '', executable or '')] from every launcher, by name."""
 	games = [(n, i, '') for i, n in steam_games()]
-	games += [(n, '', exe) for n, exe in epic_games() + lutris_games()]
+	games += [(n, '', exe) for n, exe in epic_games() + gog_games() + lutris_games()]
 	return sorted(games, key=lambda g: g[0].lower())
 
 
