@@ -26,6 +26,9 @@ class GamesPage(Gtk.Box):
 		for e in (self.name, self.exe, self.steam):
 			add.append(e)
 		add.append(button_widget('Add with current settings', ['suggested-action'], self._add))
+		add.append(button_widget('Find installed Steam games', ['ghost'], self._scan))
+		self.found = box(spacing=8)
+		add.append(self.found)
 		self.append(add)
 
 		note = box(Gtk.Orientation.HORIZONTAL, 16, ['card'])
@@ -78,6 +81,28 @@ class GamesPage(Gtk.Box):
 		profiles.save(data)
 		for e in (self.name, self.exe, self.steam):
 			e.set_text('')
+		self.refresh()
+
+	def _scan(self):
+		"""G HUB's game scan: installed Steam games not added yet, each with an Add button."""
+		import game_scan
+		while (child := self.found.get_first_child()):
+			self.found.remove(child)
+		have = {p['application'].get('game', {}).get('steam', {}).get('id') for p in profiles.load()['profiles']}
+		games = [(i, n) for i, n in game_scan.steam_games() if i not in have]
+		if not games:
+			self.found.append(label('No installed Steam games that aren’t here already.', ['muted', 'small']))
+		for appid, name in games:
+			r = box(Gtk.Orientation.HORIZONTAL, 12)
+			r.append(label(name, hexpand=True, valign=Gtk.Align.CENTER))
+			r.append(button_widget('Add', ['ghost'], lambda i=appid, n=name, w=r: self._add_found(i, n, w)))
+			self.found.append(r)
+
+	def _add_found(self, appid, name, widget):
+		data = profiles.load()
+		data['profiles'].append(profiles.new_profile(name, steam_id=appid))
+		profiles.save(data)
+		self.found.remove(widget)
 		self.refresh()
 
 	def _update(self, pid):

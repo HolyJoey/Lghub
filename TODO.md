@@ -144,7 +144,8 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 - **Software effects done**: G HUB's own animations (Verticool, Contrastic, Ocean Wave, Lightning,
   Red White and Blue: its keyframe files, downloaded at first use), Starlight, Colour cycle
   and Echo press (key presses read from the keyboard's own reports: ours) with G HUB's settings.
-  Not yet: Smooth star / wave and G HUB's
+  Not yet: Smooth star / wave (G HUB's players are ~2000 lines of vector maths each; newer
+  keyboards only), the rest of and G HUB's
   other "signature" effects, the keyframe editor (Freestyle). Effects on zonal devices done
   (starlight, colour cycle, audio, screen sampler with G HUB's zone regions). Per-key frames use
   G HUB's single-value call for shared colours; its delta-compressed calls (0x8081 fn 3 / 4) aren't
@@ -155,6 +156,7 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   ours). Game-profile notifications and DPI / profile notices for onboard mice (G HUB's
   OSD_DPI_CHANGED / OSD_PROFILE_CHANGED from 0x8100 events) done. Not yet: G HUB's equalizer /
   surround notices from a headset button. Report-rate notices (0x8061 event) done.
+- Game scan done for Steam libraries (G HUB scans for installed games); Heroic / Lutris not yet.
 - **Firmware updates**: not planned (a mistake can brick a device).
 - **Discord / OBS integrations**: not planned.
 - **Racing wheels and pedals** (0x8123-0x8140): nobody here owns one.
