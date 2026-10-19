@@ -199,12 +199,22 @@ class FakeKeyboard(FakeMouse):
 		self.persisted = None
 		self.disabled = set()
 		self.fn_inverted = False
+		self.gkeys_software = False
+		self.m_led = 0
 
 	def handle(self, feature, fn, p):
 		if feature == features.COLOR_LED_EFFECTS:
 			return self._lighting(fn, p)
 		if feature == features.DISABLE_KEYS:
 			return self._disable_keys(fn, p)
+		if feature == 0x8010:                  # G-keys: fn 2 = software control
+			if fn == 2:
+				self.gkeys_software = bool(p[0])
+			return bytes([5])
+		if feature == 0x8020:                  # M-keys: fn 0 count, fn 1 lit key
+			if fn == 1:
+				self.m_led = p[0]
+			return bytes([3])
 		if feature == features.CHANGE_HOST:
 			return bytes([3, 1, 0]) if fn == 0 else b''
 		if feature == features.FN_INVERSION:
@@ -226,6 +236,11 @@ class FakeKeyboard(FakeMouse):
 			return bytes([p[0], p[1]]) + struct.pack('>H', self.ZONE_EFFECTS[p[1]])
 		self.effects[p[0]] = (p[1], bytes(p[2:12]))
 		return b''
+
+	def event(self, feature, payload):
+		"""A notification (event 0) from one of the keyboard's features."""
+		idx = self.FEATURES.index(feature)
+		self.outbox.append(bytes([hidpp.LONG, 0xFF, idx, 0x00]) + bytes(payload).ljust(16, b'\0'))
 
 	def _disable_keys(self, fn, p):
 		if fn == 0:

@@ -2,7 +2,7 @@
 are recorded from the keyboard, with their timing, like G HUB's macro recorder."""
 import time
 
-from gi.repository import Gdk, Gtk
+from gi.repository import GLib, Gdk, Gtk
 
 import macros
 from ui import box, button_widget, label, page_header
@@ -49,6 +49,7 @@ class MacrosPage(Gtk.Box):
 		self.win = win
 		self.device = device
 		self.buttons = list(buttons)
+		self.bank = 1           # M-key set shown for G-keys (G HUB's M1-M3)
 		self.append(page_header('Macros', 'Keystrokes, recorded sequences, text, apps and more, ready to put on a '
 		                        'button.', button_widget('New macro', ['apply'], lambda: self._edit(None))))
 		self.list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
@@ -92,7 +93,17 @@ class MacrosPage(Gtk.Box):
 		ids = [None] + sorted(lib, key=lambda i: lib[i].get('name', '').lower())
 		names = [OWN_ACTION] + [lib[i].get('name') or 'Macro' for i in ids[1:]]
 		current = macros.assignments().get(inputd.ident(self.device), {})
+		if any(key.startswith('gkey:') for key, _text in self.buttons):
+			sets = Gtk.DropDown.new_from_strings(['M1', 'M2', 'M3'])
+			sets.set_selected(self.bank - 1)
+			sets.connect('notify::selected', lambda w, _p: self._show_bank(w.get_selected() + 1, lib))
+			r = box(Gtk.Orientation.HORIZONTAL, 16)
+			r.append(label('G-key set (switched with the M-keys)', ['muted'], hexpand=True, valign=Gtk.Align.CENTER))
+			r.append(sets)
+			self.assign_card.append(r)
 		for key, text in self.buttons:
+			if key.startswith('gkey:'):
+				key = inputd.gkey_name(self.bank, int(key.split(':')[1]))
 			dd = Gtk.DropDown.new_from_strings(names)
 			dd.set_selected(ids.index(current.get(key)) if current.get(key) in ids else 0)
 			dd.connect('notify::selected', lambda w, _p, k=key: self._assign(k, ids[w.get_selected()]))
@@ -100,6 +111,10 @@ class MacrosPage(Gtk.Box):
 			r.append(label(text, ['muted'], hexpand=True, valign=Gtk.Align.CENTER))
 			r.append(dd)
 			self.assign_card.append(r)
+
+	def _show_bank(self, bank, lib):
+		self.bank = bank
+		GLib.idle_add(lambda: self._assignments(lib) and False)
 
 	def _assign(self, key, mid):
 		import inputd

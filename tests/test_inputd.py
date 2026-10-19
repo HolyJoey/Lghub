@@ -105,3 +105,29 @@ class DeviceActionTest(unittest.TestCase):
 		runner.release('button:6', m)
 		self.assertEqual(calls, [('MOUSE', 'DPI_SHIFT', True), ('MOUSE', 'DPI_SHIFT', False)])
 		self.assertTrue(macros.is_device_action(m))
+
+
+class MKeyTest(unittest.TestCase):
+	def test_g_keys_follow_the_m_set(self):
+		kb = simulate.FakeKeyboard()
+		dev = hidpp.Device(kb)
+		runner = Recorder()
+		m1, m2 = {'type': 'TEXT_BLOCK', 'text_block': {'text': 'one'}}, {'type': 'TEXT_BLOCK', 'text_block': {'text': 'two'}}
+		calls = []
+		runner_obj = macros.Runner(out=runner)
+		runner_obj.press = lambda key, macro: calls.append(('press', key, macro['text_block']['text']))
+		runner_obj.release = lambda key, macro: calls.append(('release', key, macro['text_block']['text']))
+		di = inputd.DeviceInput(dev, {'gkey:1': m1, 'm2:gkey:1': m2}, runner_obj)
+		self.assertTrue(di.start())
+		self.assertTrue(kb.gkeys_software)
+		self.assertEqual(kb.m_led, 1)
+		kb.event(0x8020, [2])          # M2 pressed
+		kb.event(0x8010, [1])          # G1 down
+		kb.event(0x8010, [0])          # G1 up
+		deadline = time.time() + 2
+		while len(calls) < 2 and time.time() < deadline:
+			time.sleep(0.02)
+		di.stop()
+		self.assertEqual(kb.m_led, 2)
+		self.assertEqual(calls, [('press', 'm2:gkey:1', 'two'), ('release', 'm2:gkey:1', 'two')])
+		self.assertFalse(kb.gkeys_software)

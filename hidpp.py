@@ -18,6 +18,7 @@ import time
 SHORT, LONG, VERY_LONG = 0x10, 0x11, 0x12
 SIZES = {SHORT: 7, LONG: 20, VERY_LONG: 64}
 CORDED = 0xFF
+BACKLOG = 64            # notifications kept while a request waits (nobody may be listening)
 SW_ID = 0x0A           # ours; notifications from the device carry 0
 TIMEOUT = 1.0
 
@@ -87,6 +88,7 @@ class Device:
 		self.index = index
 		self.reports = set(reports) or {LONG}
 		self._features = {ROOT: 0}
+		self._backlog = []      # notifications that came in while waiting for an answer
 		if not hasattr(transport, 'lock'):
 			transport.lock = threading.Lock()
 
@@ -105,6 +107,10 @@ class Device:
 			while (left := deadline - time.monotonic()) > 0:
 				reply = self.transport.read(left)
 				if not reply or len(reply) < 5 or reply[0] not in SIZES or reply[1] != self.index:
+					continue
+				if reply[2] not in (0xFF, 0x8F) and not reply[3] & 0x0F:
+					if len(self._backlog) < BACKLOG:
+						self._backlog.append(reply)    # a notification: next_event gets it
 					continue
 				if reply[2] in (0xFF, 0x8F) and reply[3] == feature_index and reply[4] == func_sw:
 					raise HidppError(reply[5] if len(reply) > 5 else 0)
@@ -126,7 +132,7 @@ class Device:
 		deadline = time.monotonic() + timeout
 		while (left := deadline - time.monotonic()) > 0:
 			with self.transport.lock:
-				report = self.transport.read(left)
+				report = self._backlog.pop(0) if self._backlog else self.transport.read(left)
 			if not report or len(report) < 4 or report[0] not in SIZES or report[1] != self.index:
 				continue
 			if report[2] in (0xFF, 0x8F) or report[3] & 0x0F:

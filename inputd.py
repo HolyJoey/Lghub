@@ -6,16 +6,25 @@ button no longer clicks by itself and is reported in a 16-bit big-endian event i
 other buttons keep working natively. Stopping restores the table and stops spying (function 2).
 
 Keyboards (HID++ 0x8010 G-keys): software control on (function 2, 1), G-keys reported as a bit
-mask (G1 = bit 0 of the first byte), off again when done.
+mask (G1 = bit 0 of the first byte), off again when done. With M-keys (0x8020) the G-keys have
+three sets, M1 to M3, as in G HUB: an M-key press (event 0) picks the set and lights its key
+(function 1: M1 = 1, M2 = 2, M3 = 4).
 
-assignments.json: {device ident: {"button:N" or "gkey:N": macro id}}, N counted from 1.
+assignments.json: {device ident: {"button:N", "gkey:N" (M1), "m2:gkey:N" or "m3:gkey:N": macro
+id}}, N counted from 1.
 """
 import threading
 
 import hidpp
 import macros
 
-SPY, GKEY = 0x8110, 0x8010
+SPY, GKEY, MKEYS = 0x8110, 0x8010, 0x8020
+M_LEDS = {1: 1, 2: 2, 3: 4}          # M-key -> its bit, in 0x8020's LED setting and its events
+
+
+def gkey_name(bank, n):
+	"""The assignment key of G-key n in M-set bank (1-3)."""
+	return f'gkey:{n}' if bank == 1 else f'm{bank}:gkey:{n}'
 
 
 def ident(device):
@@ -34,6 +43,9 @@ class DeviceInput:
 		self.kind = None
 		self.held = 0
 		self.thread = None
+		self.bank = 1                     # M-key set for G-keys
+		self.mkeys = None                 # 0x8020's feature index, when the keyboard has M-keys
+		self.pressed = {}                 # bit -> (key, macro) while down: releases what was pressed
 
 	def start(self):
 		if self.dev.has(SPY) and any(k.startswith('button:') for k in self.assigned):
@@ -46,9 +58,12 @@ class DeviceInput:
 				if key.startswith('button:') and 1 <= n <= 16:
 					remap[n - 1] = 0          # handled here, not by the mouse
 			self.dev.call(SPY, 4, bytes(remap))
-		elif self.dev.has(GKEY) and any(k.startswith('gkey:') for k in self.assigned):
+		elif self.dev.has(GKEY) and any('gkey:' in k for k in self.assigned):
 			self.kind = GKEY
 			self.dev.call(GKEY, 2, b'\x01')
+			if self.dev.has(MKEYS):
+				self.mkeys = self.dev.feature_index(MKEYS)
+				self.dev.call(MKEYS, 1, bytes([M_LEDS[self.bank]]))
 		else:
 			return False
 		self.thread = threading.Thread(target=self._run, daemon=True)
@@ -76,6 +91,9 @@ class DeviceInput:
 				event = self.dev.next_event(0.5)
 			except OSError:
 				return   # the device went away
+			if event and self.mkeys is not None and event[0] == self.mkeys and event[1] == 0:
+				self._m_key(event[2][0])
+				continue
 			if not event or event[0] != index or event[1] != 0:
 				continue
 			p = event[2]
@@ -84,18 +102,36 @@ class DeviceInput:
 			else:
 				self._changed('gkey', int.from_bytes(p[:4], 'little'))
 
+	def _m_key(self, mask):
+		bank = next((b for b, bit in M_LEDS.items() if mask & bit), None)
+		if bank and bank != self.bank:
+			self.bank = bank
+			try:
+				self.dev.call(MKEYS, 1, bytes([M_LEDS[bank]]))
+			except hidpp.HidppError:
+				pass
+
 	def _changed(self, prefix, mask):
 		diff = mask ^ self.held
 		self.held = mask
 		bit = 0
 		while diff:
 			if diff & 1:
-				key = f'{prefix}:{bit + 1}'
-				macro = self.assigned.get(key)
-				if macro:
-					(self.runner.press if mask >> bit & 1 else self.runner.release)(key, macro)
+				self._edge(prefix, bit, bool(mask >> bit & 1))
 			diff >>= 1
 			bit += 1
+
+	def _edge(self, prefix, bit, down):
+		if not down:
+			key, macro = self.pressed.pop(bit, (None, None))
+			if macro:
+				self.runner.release(key, macro)
+			return
+		key = gkey_name(self.bank, bit + 1) if prefix == 'gkey' else f'{prefix}:{bit + 1}'
+		macro = self.assigned.get(key)
+		if macro:
+			self.pressed[bit] = (key, macro)
+			self.runner.press(key, macro)
 
 
 class DeviceActions:
