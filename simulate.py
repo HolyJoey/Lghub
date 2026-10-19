@@ -167,15 +167,19 @@ class FakeMouse:
 class FakeWheelMouse(FakeMouse):
 	"""A mouse with SmartShift and ratchet force (0x2111), button swap (0x2005) and hybrid
 	tracking (0x2400), like the G502 X."""
-	FEATURES = [f for f in FakeMouse.FEATURES if f != mouse.REPORT_RATE] + [0x2111, 0x2005, 0x2400, 0x8061]
+	FEATURES = ([f for f in FakeMouse.FEATURES if f not in (mouse.REPORT_RATE, mouse.DPI)]
+	            + [0x2111, 0x2005, 0x2400, 0x8061, 0x2202])
 
 	def __init__(self):
 		super().__init__('G502 X')
 		self.wheel = [2, 10, 50]
 		self.swap, self.hybrid = 0, 0
 		self.rate_n = 3
+		self.ext_dpi = (1600, 1600, 2)
 
 	def handle(self, feature, fn, p):
+		if feature == 0x2202:
+			return self._ext_dpi(fn, p)
 		if feature == 0x8061:
 			if fn == 1:
 				return bytes([0, 0x7F])                 # 125 Hz to 8 kHz
@@ -201,6 +205,21 @@ class FakeWheelMouse(FakeMouse):
 			return bytes(self.wheel)
 		self.wheel = list(p[:3])
 		return bytes(self.wheel)
+
+
+	def _ext_dpi(self, fn, p):
+		if fn == 1:
+			return bytes([0, 0, 0b11])
+		if fn == 2:                             # 100 to 32000 in steps of 50, one page
+			return bytes([0, 0, p[2]]) + struct.pack('>HHHH', 100, 0xE032, 32000, 0) if p[2] == 0 else bytes(16)
+		if fn == 5:
+			x, y, lod = self.ext_dpi
+			return b'\0' + struct.pack('>HHHH', x, 800, y, 800) + bytes([lod])
+		if fn == 6:
+			x, y = struct.unpack('>HH', p[1:5])
+			self.ext_dpi = (x, y, p[5])
+			return bytes([0])
+		return b''
 
 
 class FakeKeyboard(FakeMouse):

@@ -16,6 +16,7 @@ import store
 
 DPI = 0x2201
 REPORT_RATE = 0x8060
+EXT_DPI = 0x2202
 EXTENDED_RATE = 0x8061
 # 0x8061's rate numbers, as G HUB maps them (Feature8061AdjustableReportRate): n -> Hz
 EXTENDED_RATES = (125, 250, 500, 1000, 2000, 4000, 8000)
@@ -301,6 +302,14 @@ class Sensor:
 		return self.low + round((dpi - self.low) / self.step) * self.step
 
 
+def _ext_sensor(values, steps):
+	if not values:
+		return Sensor()
+	if steps:
+		return Sensor([], min(values), max(values), max(1, steps[0]))
+	return Sensor(sorted(values), min(values), max(values), 1)
+
+
 def parse_dpi_list(words):
 	"""0x2201 lists DPI values; a word 0xE0nn means 'every nn DPI from the previous to the next'."""
 	values, ranges = [], []
@@ -332,7 +341,7 @@ class Mouse:
 		self.features = dev.feature_list()
 		self.name = dev.name()
 		self.firmware = dev.firmware()
-		self.sensor = self._read_sensor() if DPI in self.features else None
+		self.sensor = self._read_sensor() if DPI in self.features or EXT_DPI in self.features else None
 		self.rates = self._read_rates() if REPORT_RATE in self.features or EXTENDED_RATE in self.features else []
 		self.onboard = ONBOARD in self.features
 		self.profiles = []
@@ -344,16 +353,44 @@ class Mouse:
 
 	# --- live (host mode) -----------------------------------------------------------------
 
+	# 0x2202 (newer mice), as G HUB's Feature2202ExtendedAdjustableDPI: fn 1 GetSensorCapabilities
+	# (byte 2: bit 0 = its own Y DPI, bit 1 = lift-off setting), fn 2 GetSensorDpiRanges (sensor,
+	# axis, page -> the same three bytes, then 16-bit words: 0xE0nn = step nn, others DPI values,
+	# 0 = end), fn 5 GetSensorDpiParameters (sensor, DPI X, default X, DPI Y, default Y, lift-off),
+	# fn 6 SetSensorDpiParameters (sensor, DPI X, DPI Y or 0, lift-off or 0). Sensor 0, X axis;
+	# Y follows X (ours).
+
 	def _read_sensor(self):
+		if EXT_DPI in self.features:
+			return self._read_ext_sensor()
 		r = self.dev.call(DPI, 1, b'\0')
 		words = [struct.unpack('>H', r[1 + 2 * i:3 + 2 * i])[0] for i in range(7)]
 		return parse_dpi_list(words)
 
+	def _read_ext_sensor(self):
+		values, steps = [], []
+		for page in range(16):
+			r = self.dev.call(EXT_DPI, 2, bytes([0, 0, page]))
+			words = [struct.unpack('>H', r[i:i + 2])[0] for i in range(3, 15, 2)]
+			for w in words:
+				if w == 0:
+					return _ext_sensor(values, steps)
+				(steps if w >> 8 == 0xE0 else values).append(w & 0xFF if w >> 8 == 0xE0 else w)
+		return _ext_sensor(values, steps)
+
 	def current_dpi(self):
+		if EXT_DPI in self.features:
+			return struct.unpack('>H', self.dev.call(EXT_DPI, 5, b'\0')[1:3])[0]
 		r = self.dev.call(DPI, 2, b'\0')
 		return struct.unpack('>H', r[1:3])[0]
 
 	def set_dpi(self, value):
+		if EXT_DPI in self.features:
+			caps = self.dev.call(EXT_DPI, 1, b'\0')[2]
+			lod = self.dev.call(EXT_DPI, 5, b'\0')[9] if caps & 2 else 0
+			y = value if caps & 1 else 0
+			self.dev.call(EXT_DPI, 6, b'\0' + struct.pack('>HH', value, y) + bytes([lod]))
+			return
 		self.dev.call(DPI, 3, b'\0' + struct.pack('>H', value))
 
 	# --- scroll wheel (SmartShift, 0x2110 / 0x2111), as G HUB's Feature2111SmartShiftAndTorque

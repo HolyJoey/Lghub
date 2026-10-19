@@ -110,6 +110,14 @@ class WheelTest(unittest.TestCase):
 		self.assertEqual(fake.rate_n, 6)
 		self.assertEqual(m.current_rate(), 8000)
 
+	def test_extended_dpi(self):
+		fake = simulate.FakeWheelMouse()
+		m = mouse.Mouse(hidpp.Device(fake), 'test')
+		self.assertEqual((m.sensor.low, m.sensor.high, m.sensor.step), (100, 32000, 50))
+		self.assertEqual(m.current_dpi(), 1600)
+		m.set_dpi(3200)
+		self.assertEqual(fake.ext_dpi, (3200, 3200, 2))     # Y follows X, lift-off kept
+
 	def test_swap_and_hybrid(self):
 		import features
 		fake = simulate.FakeWheelMouse()
