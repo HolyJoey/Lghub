@@ -222,15 +222,21 @@ class Starlight:
 
 
 class ColorCycle:
-	def __init__(self, keys, colors=CYCLE_COLORS, speed=5000):
+	"""As G HUB's colour cycle player: from one colour to the next over `speed` ms on its curve,
+	then holding it for `delay` ms, through the colours in order."""
+
+	def __init__(self, keys, colors=CYCLE_COLORS, speed=5000, delay=0, curve='LINEAR'):
 		self.keys, self.colors = list(keys), [list(c) for c in colors] or [[255, 255, 255]]
 		self.speed = max(CYCLE_SPEED[0], min(CYCLE_SPEED[1], speed)) / 1000
+		self.delay = max(0, delay) / 1000
+		self.curve = easing(curve)
 
 	def frame(self, t):
 		n = len(self.colors)
-		pos = (t / self.speed) % n
-		i = int(pos)
-		c = mix(self.colors[i], self.colors[(i + 1) % n], pos - i)
+		step = self.speed + self.delay
+		i = int(t // step) % n
+		f = min(1.0, (t % step) / self.speed)
+		c = mix(self.colors[i], self.colors[(i + 1) % n], self.curve(f))
 		return dict.fromkeys(self.keys, c)
 
 
