@@ -66,7 +66,8 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   event, fn 6; fn 1 sets the three values). Left: G HUB's factory / hard / soft presets (fn 0's
   9 bytes, not confirmed) and a check on a mouse that has it. Lghub reads the movement from the
   mouse's own reports instead of the pointer (ours).
-- **Not started**: 0x8111 latency monitoring, 0x8120 gaming attachments.
+- Left out on purpose: 0x8111 latency monitoring (no setting in G HUB's app), 0x8120 gaming
+  attachments (pedals / shifter on racing wheels, not planned).
 - Done: 0x2005 left-handed, 0x2400 hybrid tracking, 0x2202 extended DPI, 0x8061 extended report
   rates, 0x80E0 bunny hopping, 0x2240 surface tuning.
 - Left out on purpose: 0x2006 pointer orientation, 0x2205 motion scaling and 0x2150 thumbwheel;
@@ -87,7 +88,8 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 - **0x1B05 full key customization** (G HUB's "FKC": remap any key, per layer, with presets):
   large; needs a keyboard that has it. Not started.
 - 0x4521 game mode on older keyboards done (bits from G HUB, key names from Logitech's HID++
-  spec). **Not started**: 0x4523 disable controls, 0x8051 Logi modifiers, 0x8088 multi-lightbar.
+  spec). **Not started**: 0x4523 disable controls, 0x8088 multi-lightbar. Left out: 0x8051 Logi
+  modifiers (G HUB uses it inside its key remapping, no setting of its own).
 - Left out on purpose: 0x4540 layout, 0x4530 / 0x4531 multi-platform, 0x4220 lock-key state;
   G HUB's app has no setting for them.
 
