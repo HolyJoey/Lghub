@@ -110,7 +110,10 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 
 ### Wireless and power
 - **Pairing a device to a receiver**: newer LIGHTSPEED receivers pair through 0x1894
-  (LightspeedDevicePairing, async in G HUB: function numbers not read yet); older ones through
+  (LightspeedDevicePairing). Found: fn 0 capabilities, fn 1 receiver info, fn 2 open lock (3 bytes,
+  meaning not found), fn 3 close lock, fn 4 / 5 pairing info / extended info [slot], fn 6 device
+  name [slot], fn 7 unpair [slot]. Left: the open-lock bytes and the pairing events (G HUB's
+  AccessoryBus::open_lock_LS2), then a receiver to try it on. Older receivers pair through
   receiver registers.
 - **Sleep / power-off timers** (0x8103 GlobalDeviceSettings tags 1 / 2): done with G HUB's tag
   protocol (sessions, tag read / write, CRC-32 commit) and its minute choices. Ours: first data
