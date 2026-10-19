@@ -48,7 +48,7 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 | Per-key lighting | 95% | 0x8081 and 0x8080 done; hardware check |
 | Blue VO!CE 2 (Yetis, G735) | 95% | presets, every setting, voice effects, mic gain done; Wine check, hardware check |
 | Yeti controls | 50% | polar pattern (0x8330) done; mic monitoring 0x8350, headphone 0x8360, gain/mute 0x8370 over HID++ (gain and headphone volume work through the sound card) |
-| Keyboard onboard profiles | 5% | format from G HUB's agent |
+| Keyboard onboard profiles | 30% | switching the active stored profile done; editing them needs G HUB's tag format (OnboardTagConfigurations / 0x8102 SimpleProfileTag) decoded, then a keyboard to test on |
 | 5-band "PRO" equalizer | 20% | runs on the headset's Conexant chip: write sequence found; HID report layout; G Pro X check |
 
 Details:

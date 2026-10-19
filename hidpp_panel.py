@@ -147,6 +147,7 @@ class SettingsPanel(Gtk.Box):
 		self._read_keyboard(dev, have, info)
 		if features.ONBOARD in have:
 			info['mode'] = dev.call(features.ONBOARD, 2)[0]
+			info['profiles'] = (dev.call(features.ONBOARD, 0)[3], dev.call(features.ONBOARD, 4)[1])
 		saved = perkey_ui.load_colors(self.device.model.key)
 		if (perkey.PERKEY in have or perkey.PERKEY_V1 in have) and saved:
 			perkey.apply(dev, saved)   # ours: the saved colours go back on when the keyboard connects
@@ -332,6 +333,13 @@ class SettingsPanel(Gtk.Box):
 			lambda on=w.get_active(): self.dev.call(features.ONBOARD, 1,
 			                                        bytes([mouse.MODE_ONBOARD if on else mouse.MODE_HOST]))))
 		c.append(row('Use on-board memory', sw))
+		count, active = info.get('profiles', (0, 0))
+		if count > 1:
+			dd = Gtk.DropDown.new_from_strings([f'Profile {n}' for n in range(1, count + 1)])
+			dd.set_selected(active - 1 if 1 <= active <= count else 0)
+			dd.connect(NOTIFY_SELECTED, lambda w, _p: self.loading or self._do(
+				lambda n=w.get_selected() + 1: self.dev.call(features.ONBOARD, 3, bytes([0, n]))))
+			c.append(row('Active profile (stored in the device)', dd))
 		return c
 
 	@staticmethod
