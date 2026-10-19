@@ -54,6 +54,22 @@ class RunnerTest(unittest.TestCase):
 			self.assertEqual(runner.running, {})
 
 
+class GhubVisualizerTest(unittest.TestCase):
+	def test_columns_light_from_the_bottom(self):
+		data = {'audioVisualizerInfo': {'frequencyLayout': [
+			{'range': {'start': 'LOW_60HZ', 'end': 'LOW_170HZ'}, 'slots': [
+				{'lightingType': 'PER_KEY', 'perKeyType': 'PERKEY_KEYBOARD', 'slotCode': 224},
+				{'lightingType': 'INVALID_LIGHTING', 'perKeyType': 'PERKEY_KEYBOARD'},
+				{'lightingType': 'PER_KEY', 'perKeyType': 'PERKEY_KEYBOARD', 'slotCode': 4},
+				{'lightingType': 'PER_KEY', 'perKeyType': 'PERKEY_KEYBOARD', 'slotCode': 20}]}]}}
+		cols = lightsync.ghub_columns(data)
+		self.assertEqual(cols, [(60, 170, ['PERKEY_KEYBOARD:224', None, 'PERKEY_KEYBOARD:4', 'PERKEY_KEYBOARD:20'])])
+		present = {'PERKEY_KEYBOARD:224', 'PERKEY_KEYBOARD:4', 'PERKEY_KEYBOARD:20'}
+		frame = lightsync.column_frame(cols, lambda lo, hi: 0.75, [100, 100, 100], present)
+		self.assertEqual(frame['PERKEY_KEYBOARD:4'], [100, 100, 100])         # 3 of 4 slots lit
+		self.assertEqual(frame['PERKEY_KEYBOARD:20'], [8, 8, 8])
+
+
 class ScreenSamplerTest(unittest.TestCase):
 	def test_regions_and_keys(self):
 		# 6x6 picture: left third red, right third blue, middle green

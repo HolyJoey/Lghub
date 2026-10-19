@@ -2,9 +2,9 @@
 Audio Visualizer and Screen Sampler effects. The background service streams the colours to the
 keyboard without saving them in it (per-key lighting, 0x8081 / 0x8080).
 
-- Audio visualizer: the sound going to the default output (PipeWire's monitor of it), split into
-  frequency bands, one per stretch of keyboard columns left (bass) to right (treble). How the
-  bands map onto keys is ours.
+- Audio visualizer: the sound going to the default output (PipeWire's monitor of it), on G HUB's
+  own per-key layout (audio-visualizer-kb-per-key.json: columns of keys, each with a frequency
+  range, lit from the bottom); ours (bands across the keyboard) when that file isn't there.
 - Screen sampler: the average colour of screen regions (G HUB's ScreenSamplerEffect: regions by
   G HUB's names, average colour, colour boost 0-3 shown as 0-100 %, smoothing). The rectangles,
   which key takes which region, and what boost and smoothing do to a colour are ours. Screens
@@ -87,6 +87,38 @@ def frame_colors(layout, levels, color):
 		on = levels[band] >= row
 		scale = 1.0 if on else 0.08
 		out[f'{group}:{kid}'] = [round(c * scale) for c in color]
+	return out
+
+
+def _hz(name):
+	"""G HUB's Frequency.Value name (LOW_60HZ, MID_1500HZ, ...) as a number."""
+	digits = ''.join(c for c in (name or '') if c.isdigit())
+	return int(digits) if digits else 0
+
+
+def ghub_columns(data):
+	"""[(low Hz, high Hz, [key or None, bottom to top])] from G HUB's per-key audio visualizer file
+	(audio-visualizer-kb-per-key.json: each entry a frequency range and its keys, gaps included)."""
+	info = data.get('audioVisualizerInfo', data)
+	out = []
+	for entry in info.get('frequencyLayout', []):
+		r = entry.get('range', {})
+		keys = [f"{s['perKeyType']}:{s['slotCode']}" if s.get('lightingType') == 'PER_KEY' and 'slotCode' in s else None
+		        for s in entry.get('slots', [])]
+		out.append((_hz(r.get('start')), _hz(r.get('end')), keys))
+	return out
+
+
+def column_frame(columns, level_of, color, present):
+	"""As G HUB's visualizer: each column lights its keys from the bottom up to its range's level;
+	the rest of its keys stay dim (8 %, ours)."""
+	out = {}
+	for low, high, keys in columns:
+		lit = round(level_of(low, high) * len(keys))
+		for n, key in enumerate(keys):
+			if key and key in present:
+				scale = 1.0 if n < lit else 0.08
+				out[key] = [round(c * scale) for c in color]
 	return out
 
 
@@ -282,8 +314,26 @@ class Visualizer:
 		if self.thread:
 			self.thread.join(2)
 
+	def _columns(self):
+		"""G HUB's visualizer columns for this keyboard, or None to use ours."""
+		import json
+		import softlight
+		if not self.layout:
+			return None
+		path = softlight.fetch(softlight.EFFECTS_DIR + 'audio-visualizer-kb-per-key.json')
+		try:
+			with open(path) as f:
+				columns = ghub_columns(json.load(f))
+		except (OSError, TypeError, ValueError):
+			return None
+		present = set(self.target.keys)
+		return columns if any(k in present for _l, _h, keys in columns for k in keys) else None
+
 	def _run(self):
-		freqs = band_freqs()
+		columns = self._columns()
+		ranges = sorted({(low, high) for low, high, _k in columns}) if columns else []
+		freqs = [math.sqrt(max(1, low) * max(1, high)) for low, high in ranges] if columns else band_freqs()
+		present = set(self.target.keys)
 		last = 0.0
 		while not self.stop_event.is_set():
 			data = self.proc.stdout.read(FRAME * 2)
@@ -294,7 +344,10 @@ class Visualizer:
 			last = time.monotonic()
 			samples = [int.from_bytes(data[i:i + 2], 'little', signed=True) / 32768 for i in range(0, len(data), 2)]
 			levels = band_levels(samples, freqs)
-			if self.layout:
+			if columns:
+				by_range = dict(zip(ranges, levels))
+				frame = column_frame(columns, lambda lo, hi, levels=by_range: levels[(lo, hi)], self.color, present)
+			elif self.layout:
 				frame = frame_colors(self.layout, levels, self.color)
 			else:                                   # zones: the whole device follows the loudness (ours)
 				level = max(levels)
