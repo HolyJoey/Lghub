@@ -199,6 +199,10 @@ class SettingsPanel(Gtk.Box):
 			level = read(dev) if feature in have else None
 			if level is not None:
 				mic[key] = level
+		if features.JACK_DETECTION in have:
+			plugged = features.headphones_plugged(dev)
+			if plugged is not None:
+				mic['plugged'] = plugged
 		if mic:
 			info['mic'] = mic
 
@@ -357,6 +361,8 @@ class SettingsPanel(Gtk.Box):
 			s.connect('value-changed', lambda w: self.loading or self._do(
 				lambda v=int(w.get_value()): features.set_mic_gain(self.dev, v, mic['gain_type'])))
 			c.append(row('Gain (%)', s))
+		if 'plugged' in mic:
+			c.append(row('Headphones', label('Plugged in' if mic['plugged'] else 'Not plugged in', ['muted'])))
 		if 'headphones' in mic:
 			h = slider(0, 100, mic['headphones'])
 			h.connect('value-changed', lambda w: self.loading or self._do(

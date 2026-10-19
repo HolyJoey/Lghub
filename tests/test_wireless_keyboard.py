@@ -137,6 +137,7 @@ class YetiTest(unittest.TestCase):
 		self.assertEqual(features.mic_monitoring(dev), 30)
 		features.set_mic_monitoring(dev, 55)
 		self.assertEqual(features.mic_monitoring(dev), 55)
+		self.assertTrue(features.headphones_plugged(dev))
 
 
 class PerKeyTest(unittest.TestCase):

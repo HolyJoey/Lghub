@@ -31,6 +31,7 @@ BUNNY_HOPPING = 0x80E0
 MIC_GAIN_ADJUST = 0x8370
 HEADPHONE_ADJUST = 0x8360
 MIC_BLEND = 0x8350
+JACK_DETECTION = 0x8320
 MUTE_INVERTED = ('046d:0ad1', '046d:0ad2')   # G HUB: on these 1 = muted, elsewhere 1 = mic on
 BHOP_MIN, BHOP_MAX, BHOP_STEP = 100, 1000, 100     # G HUB's slider, ms
 
@@ -347,6 +348,14 @@ def mic_monitoring(dev):
 
 def set_mic_monitoring(dev, percent):
 	dev.call(MIC_BLEND, 2, bytes([0, 1, max(0, min(100, int(percent)))]))
+
+
+# Jack detection (0x8320, G HUB's Feature8320JackDetection::getJackStatus): fn 0 = [jacks in use,
+# jacks there], one bit per jack. Bit 0 taken as the headphone jack (ours).
+
+def headphones_plugged(dev):
+	r = dev.call(JACK_DETECTION, 0)
+	return bool(r[0] & r[1] & 1) if r[1] & 1 else None
 
 
 # Easy-Switch (0x1814 ChangeHost): fn 0 = host count, current host; fn 1 = switch to a host. The
