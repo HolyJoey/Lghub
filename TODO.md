@@ -4,7 +4,7 @@ Only what is still open. What works is in the README; how things were found is i
 comments. Checked against the device features G HUB's agent knows (its 212 `Feature####`
 classes, G HUB 2026.6) and its app features.
 
-## Progress (overall about 75%)
+## Progress (overall about 80%)
 
 The percentages are rough estimates of how much of each area's G HUB features Lghub has, not
 measurements.
@@ -16,13 +16,13 @@ measurements.
 | Surround, equalizer | 100% | check on the G Pro X |
 | PRO 5-band equalizer | 20% | runs on the headset's Conexant chip (see below); needs the G Pro X |
 | Mice | 90% | see "Mice" below |
-| Keyboards | 75% | see "Keyboards" below |
-| Headsets (other than the voice chain) | 50% | see "Headsets" below |
+| Keyboards | 78% | see "Keyboards" below |
+| Headsets (other than the voice chain) | 55% | see "Headsets" below |
 | Yeti controls | 100% | check on a Yeti |
 | Webcams | 90% | check on the C920 |
-| Wireless (receivers, power) | 65% | see "Wireless and power" below |
+| Wireless (receivers, power) | 75% | see "Wireless and power" below |
 | Lighting | 90% | screen sampler on GNOME / KDE; per-key on mice |
-| App features | 70% | see "App" below |
+| App features | 75% | see "App" below |
 | Background service | 90% | re-measure CPU and memory with the current version installed |
 
 ## 1. Check on the real hardware (G Pro X, G502, C920)
