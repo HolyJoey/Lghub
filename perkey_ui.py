@@ -1,7 +1,6 @@
 """Per-key lighting: the keyboard's picture with every key where G HUB draws it (its metadata.json),
 click keys to select them, pick a colour. The colours are kept per keyboard; apply(colors) sends
 them to the device (set by the page's owner, which knows the protocol)."""
-import json
 import math
 
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
@@ -18,22 +17,7 @@ SHORTCUTS = (('WASD', ('PERKEY_KEYBOARD', (0x1a, 0x04, 0x16, 0x07))),
 
 
 def load_layout(model):
-	"""(width, height, [(group, id, x, y, w, h)]) from G HUB's metadata, or None."""
-	path = depots.metadata_path(model)
-	try:
-		with open(path) as f:
-			image = json.load(f)['images'][0]
-	except (OSError, ValueError, KeyError, IndexError):
-		return None
-	keys = []
-	for zone in image.get('zones', []):
-		for comp in zone.get('components', []):
-			for r in comp.get('renderings', []):
-				if r.get('type') == 'rect':
-					rect = r['rect']
-					keys.append((zone['id'], comp['id'], rect['x'], rect['y'], rect['width'], rect['height']))
-	origin = image.get('origin', {})
-	return origin.get('width', 1), origin.get('height', 1), keys
+	return perkey.load_layout(model)
 
 
 def gkey_count(model):
@@ -99,6 +83,43 @@ class PerKeyPage(Gtk.Box):
 		self.status = label('', ['muted', 'small'])
 		self.append(self.status)
 		self._status()
+		self.append(self._lightsync_card())
+
+	# --- LIGHTSYNC ----------------------------------------------------------------------
+
+	def _lightsync_card(self):
+		"""G HUB's Audio Visualizer: the background service lights the keys to the music."""
+		import lightsync
+		settings = lightsync.load().get(self.model, {})
+		card = box(spacing=10, css=['card'])
+		card.append(label('LIGHTSYNC', ['section-title']))
+		card.append(label('Audio visualizer: the keys light up with what is playing, bass on the left, treble '
+		                  'on the right. Your colours come back when it is off.', ['muted', 'small'], wrap=True))
+		r = box(Gtk.Orientation.HORIZONTAL, 16)
+		r.append(label('Audio visualizer', hexpand=True, valign=Gtk.Align.CENTER))
+		sw = Gtk.Switch(active=settings.get('effect') == 'audio', valign=Gtk.Align.CENTER)
+		color = Gtk.ColorDialogButton(dialog=Gtk.ColorDialog(with_alpha=False))
+		rgba = Gdk.RGBA()
+		rgba.red, rgba.green, rgba.blue = (c / 255 for c in settings.get('color', [0, 140, 255]))
+		rgba.alpha = 1.0
+		color.set_rgba(rgba)
+		r.append(color)
+		r.append(sw)
+		card.append(r)
+
+		def changed(*_):
+			c = color.get_rgba()
+			data = lightsync.load()
+			if sw.get_active():
+				data[self.model] = {'effect': 'audio', 'color': [round(v * 255) for v in (c.red, c.green, c.blue)]}
+			else:
+				data.pop(self.model, None)
+				self.apply(self.colors)          # the static colours back on
+			lightsync.save(data)
+
+		sw.connect('notify::active', changed)
+		color.connect('notify::rgba', changed)
+		return card
 
 	# --- drawing ------------------------------------------------------------------------
 

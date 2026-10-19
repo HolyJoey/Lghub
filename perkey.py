@@ -7,10 +7,31 @@ an id) into a zone number, sends the colours four keys at a time with SetIndivid
 then two 16-bit big-endian numbers it leaves at 0). The zone numbers come from its built-in table
 below; a device's light_map resource can override it, but none of the depots we know ships one.
 """
+import json
 import struct
 
+import depots
 import hidpp
 import store
+
+def load_layout(model):
+	"""(width, height, [(group, id, x, y, w, h)]) from G HUB's metadata, or None."""
+	path = depots.metadata_path(model)
+	try:
+		with open(path) as f:
+			image = json.load(f)['images'][0]
+	except (OSError, ValueError, KeyError, IndexError):
+		return None
+	keys = []
+	for zone in image.get('zones', []):
+		for comp in zone.get('components', []):
+			for r in comp.get('renderings', []):
+				if r.get('type') == 'rect':
+					rect = r['rect']
+					keys.append((zone['id'], comp['id'], rect['x'], rect['y'], rect['width'], rect['height']))
+	origin = image.get('origin', {})
+	return origin.get('width', 1), origin.get('height', 1), keys
+
 
 COLORS_FILE = 'perkey.json'      # in store.CONFIG_DIR: {model: {"<group>:<id>": [r, g, b]}}
 

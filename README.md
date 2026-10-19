@@ -88,7 +88,7 @@ Wireless mice also show their battery.
 Keyboards, other headsets, the G560 speakers, POWERPLAY and anything else Logitech: Lghub
 asks the device what it can do and shows that. Keyboards also get macros on their G-keys (three sets, switched with M1-M3) and a
 per-key lighting page drawn from G HUB's own key layout, sent over HID++ 0x8081 with G HUB's
-key-to-LED table (0x8080 on older keyboards). Lighting zones and effects, brightness, report
+key-to-LED table (0x8080 on older keyboards), with G HUB's LIGHTSYNC audio visualizer. Lighting zones and effects, brightness, report
 rate, Fn keys, game mode, Easy-Switch, angle snapping, sidetone, on-board memory and battery. Devices with a USB sound card (headsets,
 speakers, Yeti mics) also get its controls.
 

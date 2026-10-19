@@ -17,6 +17,7 @@ import eq
 import inputd
 import hotplug
 import presets
+import lightsync
 import profiles
 import restore
 import pw
@@ -60,6 +61,7 @@ class Engine:
 		self.inputs = inputd.Manager()
 		self.games = profiles.Switcher()
 		self.restorer = restore.Restorer()
+		self.lightsync = lightsync.Runner()
 		self.game = None
 		self.mic_gain = None         # (mic, gain) last set for Blue VO!CE 2
 
@@ -299,6 +301,8 @@ class Engine:
 			self.game = self.games.check(now)
 		if self.restorer.due(now):
 			self.restorer.check(now)
+		if self.lightsync.due(now):
+			self.lightsync.check(now)
 
 	def run(self):
 		signal.signal(signal.SIGTERM, lambda *_: self.stop.set())
@@ -313,6 +317,7 @@ class Engine:
 			self.link_event.wait(POLL if self.listening else IDLE_POLL)
 		self.stop_bridge()
 		self.inputs.stop()
+		self.lightsync.stop()
 		self.surround.stop()
 		self.eq.stop()
 		store.write_status({'state': 'stopped', 'error': '', 'updated': time.time()})

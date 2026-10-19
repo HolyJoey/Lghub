@@ -127,7 +127,8 @@ app features. Lghub handles 0x0000-0x0005, battery (0x1000/0x1001/0x1004), 0x220
   colours and game-mode keys when a device appears; G HUB listens for 0x1D4B, we look every 60 s). 0x1815 host names done (which reply
   bytes hold the name is ours; falls back to "Computer N"). 0x1814 Easy-Switch
   done (G HUB's fn 0 host count/current, fn 1 switch without waiting for an answer).
-- [ ] App features: LIGHTSYNC screen and audio lighting, firmware updates, Discord/OBS
+- [ ] App features: LIGHTSYNC screen sampler (Wayland's screen-sharing portal; the audio
+  visualizer is done: lightsync.py, per-key keyboards), firmware updates, Discord/OBS
   integrations. Per-game profiles done (profiles.py, Games page: G HUB's Application fields; the
   settings are Blue VO!CE / Blue VO!CE 2, equalizer, surround; how a game is recognised is ours:
   executable name or Steam's AppId=; checked every 5 s while any game is set up).
