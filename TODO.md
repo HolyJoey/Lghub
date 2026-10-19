@@ -80,8 +80,11 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   functions (0 capabilities, 1 tag list, 6 / 7 read, 9 / 10 write, 11 commit; a profile byte goes
   before the tag) and its tag ids: 0x0003 profile name, 0x0004 key mapping, 0x0100 / 0x0101 report
   rate wired / wireless, 0x0102 game-mode keys, 0x0110-0x0112 base / Fn / G-Shift assignments,
-  0x0113 macros, 0x0120-0x0130 analog keys, 0xFF01 profile checksum. Left: each tag's byte
-  format, then a keyboard to test.
+  0x0113 macros, 0x0120-0x0130 analog keys, 0xFF01 profile checksum. Formats found: 0x0003 name =
+  32 UTF-16BE characters (64 bytes, zero-padded, "…" at 32 when longer, all 0xFF when empty);
+  0x0100 report rate = 1 byte, log2(Hz / 125). fn 6 start read = [profile, tag u16]; fn 9 start
+  write = [u16, u16, data]. Left: the other tags' formats, G HUB's v1 / v2 session paths, then a
+  keyboard to test.
 - **0x8030 MR key** (record a macro on the keyboard): needs the keystrokes, which Lghub can't
   read without input-device access.
 - **Analog keyboards**: 0x1B08 / 0x1B0C analog keys, 0x80A3 / 0x80A4 actuation curves.
