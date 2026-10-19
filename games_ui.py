@@ -26,7 +26,7 @@ class GamesPage(Gtk.Box):
 		for e in (self.name, self.exe, self.steam):
 			add.append(e)
 		add.append(button_widget('Add with current settings', ['suggested-action'], self._add))
-		add.append(button_widget('Find installed Steam games', ['ghost'], self._scan))
+		add.append(button_widget('Find installed games (Steam, Heroic, Lutris)', ['ghost'], self._scan))
 		self.found = box(spacing=8)
 		add.append(self.found)
 		self.append(add)
@@ -88,19 +88,20 @@ class GamesPage(Gtk.Box):
 		import game_scan
 		while (child := self.found.get_first_child()):
 			self.found.remove(child)
-		have = {p['application'].get('game', {}).get('steam', {}).get('id') for p in profiles.load()['profiles']}
-		games = [(i, n) for i, n in game_scan.steam_games() if i not in have]
+		apps = [p['application'] for p in profiles.load()['profiles']]
+		have = {a.get('game', {}).get('steam', {}).get('id') for a in apps} | {a.get('application_path') for a in apps}
+		games = [g for g in game_scan.installed() if (g[1] or g[2]) not in have]
 		if not games:
-			self.found.append(label('No installed Steam games that aren’t here already.', ['muted', 'small']))
-		for appid, name in games:
+			self.found.append(label('No installed games that aren’t here already.', ['muted', 'small']))
+		for name, appid, exe in games:
 			r = box(Gtk.Orientation.HORIZONTAL, 12)
 			r.append(label(name, hexpand=True, valign=Gtk.Align.CENTER))
-			r.append(button_widget('Add', ['ghost'], lambda i=appid, n=name, w=r: self._add_found(i, n, w)))
+			r.append(button_widget('Add', ['ghost'], lambda n=name, i=appid, e=exe, w=r: self._add_found(n, i, e, w)))
 			self.found.append(r)
 
-	def _add_found(self, appid, name, widget):
+	def _add_found(self, name, appid, exe, widget):
 		data = profiles.load()
-		data['profiles'].append(profiles.new_profile(name, steam_id=appid))
+		data['profiles'].append(profiles.new_profile(name, exe, appid))
 		profiles.save(data)
 		self.found.remove(widget)
 		self.refresh()

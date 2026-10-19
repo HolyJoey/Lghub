@@ -1,9 +1,15 @@
-"""Finds installed games to add as profiles, like G HUB's game scan: on Linux, the Steam libraries
-(libraryfolders.vdf and each library's appmanifest_<id>.acf). Steam's own tools (Proton, the
-runtimes, redistributables) are left out by name; that list is ours.
+"""Finds installed games to add as profiles, like G HUB's game scan, from the Linux launchers:
+- Steam: libraryfolders.vdf and each library's appmanifest_<id>.acf; Steam's own tools (Proton,
+  runtimes, redistributables) are left out by name (that list is ours).
+- Heroic / Legendary (Epic): installed.json, title and executable.
+- Lutris: pga.db (installed games) and each game's YAML (its exe).
+Steam games are matched by App ID, the others by their executable's name.
 """
+import contextlib
+import json
 import os
 import re
+import sqlite3
 
 STEAM_ROOTS = ('~/.steam/steam', '~/.local/share/Steam', '~/.var/app/com.valvesoftware.Steam/.local/share/Steam')
 TOOLS = re.compile(r'^(Proton|Steam Linux Runtime|Steamworks Common|Steamworks SDK|SteamVR)', re.I)
@@ -55,3 +61,70 @@ def steam_games(roots=STEAM_ROOTS):
 			if appid and title and not TOOLS.match(title):
 				games[appid] = title
 	return sorted(games.items(), key=lambda g: g[1].lower())
+
+
+LEGENDARY = ('~/.config/heroic/legendaryConfig/legendary/installed.json', '~/.config/legendary/installed.json')
+LUTRIS_DB = ('~/.local/share/lutris/pga.db', '~/.var/app/net.lutris.Lutris/data/lutris/pga.db')
+LUTRIS_CONFIGS = ('~/.config/lutris/games', '~/.local/share/lutris/games',
+                  '~/.var/app/net.lutris.Lutris/config/lutris/games', '~/.var/app/net.lutris.Lutris/data/lutris/games')
+
+
+def epic_games(paths=LEGENDARY):
+	"""[(name, executable)] of the Epic games installed through Heroic or Legendary."""
+	games = {}
+	for path in paths:
+		try:
+			with open(os.path.expanduser(path)) as f:
+				data = json.load(f)
+		except (OSError, ValueError):
+			continue
+		for app in data.values() if isinstance(data, dict) else []:
+			if isinstance(app, dict) and app.get('title') and app.get('executable'):
+				games[app['title']] = os.path.basename(app['executable'].replace('\\', '/'))
+	return sorted(games.items(), key=lambda g: g[0].lower())
+
+
+def _yaml_game_exe(text):
+	"""The exe under the top-level "game:" of a Lutris game file, or None."""
+	in_game = False
+	for line in text.splitlines():
+		if line and not line[0].isspace():
+			in_game = line.rstrip() == 'game:'
+		elif in_game and line.strip().startswith('exe:'):
+			value = line.split(':', 1)[1].strip().strip('\'"')
+			return os.path.basename(value.replace('\\', '/')) or None
+	return None
+
+
+def _lutris_exe(configpath, dirs):
+	for d in dirs:
+		exe = _yaml_game_exe(_read(os.path.join(os.path.expanduser(d), f'{configpath}.yml')))
+		if exe:
+			return exe
+	return None
+
+
+def installed():
+	"""[(name, steam id or '', executable or '')] from every launcher, by name."""
+	games = [(n, i, '') for i, n in steam_games()]
+	games += [(n, '', exe) for n, exe in epic_games() + lutris_games()]
+	return sorted(games, key=lambda g: g[0].lower())
+
+
+def lutris_games(dbs=LUTRIS_DB, dirs=LUTRIS_CONFIGS):
+	"""[(name, executable)] of the installed Lutris games that name an executable."""
+	games = {}
+	for db in dbs:
+		path = os.path.expanduser(db)
+		if not os.path.exists(path):
+			continue
+		try:
+			with contextlib.closing(sqlite3.connect(f'file:{path}?mode=ro', uri=True)) as conn:
+				rows = conn.execute('SELECT name, configpath FROM games WHERE installed = 1').fetchall()
+		except sqlite3.Error:
+			continue
+		for name, configpath in rows:
+			exe = _lutris_exe(configpath, dirs) if configpath else None
+			if name and exe:
+				games[name] = exe
+	return sorted(games.items(), key=lambda g: g[0].lower())

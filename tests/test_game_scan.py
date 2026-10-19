@@ -29,5 +29,21 @@ class GameScanTest(unittest.TestCase):
 			self.assertEqual(game_scan.steam_games((root,)), [('730', 'Counter-Strike 2'), ('1245620', 'ELDEN RING')])
 
 
+	def test_epic_and_lutris(self):
+		import sqlite3
+		with tempfile.TemporaryDirectory() as d:
+			legendary = os.path.join(d, 'installed.json')
+			write(legendary, '{"Fortnite": {"title": "Fortnite", "executable": "FortniteGame/Binaries/Win64/FortniteLauncher.exe"}}')
+			self.assertEqual(game_scan.epic_games((legendary,)), [('Fortnite', 'FortniteLauncher.exe')])
+			db = os.path.join(d, 'pga.db')
+			conn = sqlite3.connect(db)
+			conn.execute('CREATE TABLE games (name TEXT, configpath TEXT, installed INTEGER)')
+			conn.executemany('INSERT INTO games VALUES (?, ?, ?)', [('Diablo II', 'diablo-ii-123', 1), ('Gone', 'gone-1', 0)])
+			conn.commit()
+			conn.close()
+			write(os.path.join(d, 'games', 'diablo-ii-123.yml'), 'game:\n  exe: /home/x/Games/d2/Game.exe\n  prefix: /x\nsystem: {}\n')
+			self.assertEqual(game_scan.lutris_games((db,), (os.path.join(d, 'games'),)), [('Diablo II', 'Game.exe')])
+
+
 if __name__ == '__main__':
 	unittest.main()

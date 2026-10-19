@@ -40,7 +40,7 @@ Plus G HUB's voice effects (Robot, Helium Chipmunk, Demon, ...: voice changer, c
 reverb, delay, ring modulator). Untested on a real Yeti.
 
 **Games.** Settings that switch on while a game runs, like G HUB's game profiles: add a game by
-its executable (Proton games too) or Steam App ID, or pick from the installed Steam games, and its Blue VO!CE, equalizer and surround
+its executable (Proton games too) or Steam App ID, or pick from the installed games (Steam, Heroic, Lutris), and its Blue VO!CE, equalizer and surround
 settings come on when it starts and go back when it closes, with a desktop notification each
 time (can be turned off).
 
