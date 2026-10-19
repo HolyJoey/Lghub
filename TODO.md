@@ -18,7 +18,7 @@ measurements.
 | Mice | 85% | see "Mice" below |
 | Keyboards | 75% | see "Keyboards" below |
 | Headsets (other than the voice chain) | 50% | see "Headsets" below |
-| Yeti controls | 75% | see "Mics" below |
+| Yeti controls | 90% | see "Mics" below |
 | Webcams | 90% | check on the C920 |
 | Wireless (receivers, power) | 50% | see "Wireless and power" below |
 | Lighting | 90% | screen sampler on GNOME / KDE; per-key on mice |
@@ -102,7 +102,7 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 ### Mics (Yeti)
 - 0x8370 mic mute and gain done (G HUB: channel 0, gain x 100, mute flipped on 0AD1 / 0AD2).
 - 0x8360 headphone level done (type 2, x 100, the only control G HUB writes).
-- 0x8350 mic monitoring (G HUB runs it from its sidetone code): not read yet.
+- 0x8350 mic monitoring done (G HUB's sidetone code: read fn 1 (i, i), write fn 2 (0, 1, level)).
 - Yeti LED meter (0x0B01).
 
 ### Wireless and power

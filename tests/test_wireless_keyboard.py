@@ -134,6 +134,9 @@ class YetiTest(unittest.TestCase):
 		self.assertEqual(features.headphone_level(dev), 40)
 		features.set_headphone_level(dev, 90)
 		self.assertEqual(fake.phones[2], 90)
+		self.assertEqual(features.mic_monitoring(dev), 30)
+		features.set_mic_monitoring(dev, 55)
+		self.assertEqual(features.mic_monitoring(dev), 55)
 
 
 class PerKeyTest(unittest.TestCase):

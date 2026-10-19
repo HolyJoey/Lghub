@@ -27,6 +27,7 @@ BASS_TONE = 0x8305
 BUNNY_HOPPING = 0x80E0
 MIC_GAIN_ADJUST = 0x8370
 HEADPHONE_ADJUST = 0x8360
+MIC_BLEND = 0x8350
 MUTE_INVERTED = ('046d:0ad1', '046d:0ad2')   # G HUB: on these 1 = muted, elsewhere 1 = mic on
 BHOP_MIN, BHOP_MAX, BHOP_STEP = 100, 1000, 100     # G HUB's slider, ms
 
@@ -316,6 +317,22 @@ def headphone_level(dev):
 
 def set_headphone_level(dev, percent):
 	dev.call(HEADPHONE_ADJUST, 3, bytes([0, 2, max(0, min(100, int(percent)))]))
+
+
+# Mic monitoring (0x8350 MicrophoneBlendAdjust, Yetis: how much of the mic goes to the
+# headphones), as G HUB's sidetone code: fn 0 = count; fn 1 (i, i) = [?, ?, active, level];
+# fn 2 (0, 1, level) sets it. Level = G HUB's 0-1 x 100.
+
+def mic_monitoring(dev):
+	for i in range(dev.call(MIC_BLEND, 0)[0]):
+		r = dev.call(MIC_BLEND, 1, bytes([i, i]))
+		if r[2]:
+			return r[3]
+	return None
+
+
+def set_mic_monitoring(dev, percent):
+	dev.call(MIC_BLEND, 2, bytes([0, 1, max(0, min(100, int(percent)))]))
 
 
 # Easy-Switch (0x1814 ChangeHost): fn 0 = host count, current host; fn 1 = switch to a host. The

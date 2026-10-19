@@ -147,12 +147,7 @@ class SettingsPanel(Gtk.Box):
 			if feature in have:
 				info[key] = read(dev)
 		self._read_keyboard(dev, have, info)
-		if features.MIC_GAIN_ADJUST in have:
-			info['mic'] = features.mic_gain_adjust(dev, self.device.usb_id) or None
-		if features.HEADPHONE_ADJUST in have:
-			level = features.headphone_level(dev)
-			if level is not None:
-				info['mic'] = {**(info.get('mic') or {}), 'headphones': level}
+		self._read_mic(dev, have, info)
 		if features.ONBOARD in have:
 			info['mode'] = dev.call(features.ONBOARD, 2)[0]
 			info['profiles'] = (dev.call(features.ONBOARD, 0)[3], dev.call(features.ONBOARD, 4)[1])
@@ -161,6 +156,17 @@ class SettingsPanel(Gtk.Box):
 			perkey.apply(dev, saved)   # ours: the saved colours go back on when the keyboard connects
 		self.dev = dev
 		return info
+
+	def _read_mic(self, dev, have, info):
+		"""The Yeti's own mute, gain, headphone level and mic monitoring (0x8370 / 0x8360 / 0x8350)."""
+		mic = features.mic_gain_adjust(dev, self.device.usb_id) if features.MIC_GAIN_ADJUST in have else {}
+		for feature, key, read in ((features.HEADPHONE_ADJUST, 'headphones', features.headphone_level),
+		                           (features.MIC_BLEND, 'monitoring', features.mic_monitoring)):
+			level = read(dev) if feature in have else None
+			if level is not None:
+				mic[key] = level
+		if mic:
+			info['mic'] = mic
 
 	def _read_keyboard(self, dev, have, info):
 		"""Easy-Switch hosts, Fn keys (per host) and game mode."""
@@ -304,7 +310,7 @@ class SettingsPanel(Gtk.Box):
 
 	def _mic_card(self, info):
 		mic = info['mic']
-		c = card('Microphone', 'The mic\'s own mute, gain and headphone level (its knob does the same).')
+		c = card('Microphone', 'The mic\'s own mute, gain, headphone level and how much of the mic you hear (its knob does the same).')
 		if 'muted' in mic:
 			sw = Gtk.Switch(active=mic['muted'], valign=Gtk.Align.CENTER)
 			sw.connect(NOTIFY_ACTIVE, lambda w, _p: self.loading or self._do(
@@ -320,6 +326,11 @@ class SettingsPanel(Gtk.Box):
 			h.connect('value-changed', lambda w: self.loading or self._do(
 				lambda v=int(w.get_value()): features.set_headphone_level(self.dev, v)))
 			c.append(row('Headphones (%)', h))
+		if 'monitoring' in mic:
+			m = slider(0, 100, mic['monitoring'])
+			m.connect('value-changed', lambda w: self.loading or self._do(
+				lambda v=int(w.get_value()): features.set_mic_monitoring(self.dev, v)))
+			c.append(row('Mic monitoring (%)', m))
 		return c
 
 	def _charging_card(self, info):
