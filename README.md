@@ -39,6 +39,10 @@ noise gate, compressor, equalizer, de-popper, de-esser, limiter, each with G HUB
 Plus G HUB's voice effects (Robot, Helium Chipmunk, Demon, ...: voice changer, chorus, flanger,
 reverb, delay, ring modulator). Untested on a real Yeti.
 
+**Games.** Settings that switch on while a game runs, like G HUB's game profiles: add a game by
+its executable (Proton games too) or Steam App ID, and its Blue VO!CE, equalizer and surround
+settings come on when it starts and go back when it closes.
+
 **Surround.** G HUB's DTS Headphone:X 2.0 virtual 7.1, running Logitech's own DTS processing
 with your headset's tuning (G Pro X, G Pro X Wireless, G733 and more), on a new output
 *… (Surround 7.1)*. Games set to 7.1 get every speaker placed around you. G HUB's rooms

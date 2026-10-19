@@ -37,7 +37,7 @@ camera). Mice, keyboards and receivers are tested against `simulate.py` only.
 - **HID++ lighting (0x8070)**: effect parameter bytes and the persist flag; the current effect
   isn't read back (the page starts at the first effect).
 
-## Progress on the open work (overall about 73%)
+## Progress on the open work (overall about 75%)
 
 | Item | Done | What's left |
 | --- | --- | --- |
@@ -117,8 +117,10 @@ app features. Lghub handles 0x0000-0x0005, battery (0x1000/0x1001/0x1004), 0x220
   0x0604, ANC 0x0605, mic gain 0x0611, onboard EQ 0x0636) for G735 / PRO X 2.
 - [ ] Mics: 0x8350/0x8360/0x8370 (Yeti, see above); 0x8330 done.
 - [ ] Wireless: 0x1814/0x1815 host switching, 0x1D4B wireless status, receiver pairing.
-- [ ] App features: per-game profiles (switch settings when a game starts), LIGHTSYNC screen
-  and audio lighting, firmware updates, Discord/OBS integrations.
+- [ ] App features: LIGHTSYNC screen and audio lighting, firmware updates, Discord/OBS
+  integrations. Per-game profiles done (profiles.py, Games page: G HUB's Application fields; the
+  settings are Blue VO!CE / Blue VO!CE 2, equalizer, surround; how a game is recognised is ours:
+  executable name or Steam's AppId=; checked every 5 s while any game is set up).
 - [ ] Racing wheels and pedals (0x8123+): G HUB supports them; nobody here owns one.
 - [ ] Re-check this list against a newer G HUB now and then (agent strings: `Feature####`).
 

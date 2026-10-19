@@ -17,6 +17,7 @@ import eq
 import inputd
 import hotplug
 import presets
+import profiles
 import pw
 import store
 import surround
@@ -56,6 +57,8 @@ class Engine:
 		self.surround = surround.Runner()
 		self.sound_cards = hotplug.Watch(hotplug.SOUND)
 		self.inputs = inputd.Manager()
+		self.games = profiles.Switcher()
+		self.game = None
 
 	# --- configuration -------------------------------------------------------------------
 
@@ -244,6 +247,7 @@ class Engine:
 			'enabled': self.config.get('enabled', True),
 			'input': self.input,
 			'voice': self.kind,
+			'game': self.game,
 			'listening': self.listening,
 			'meter_in': self.meter[0] if self.ready and self.listening else -120.0,
 			'meter_out': self.meter[1] if self.ready and self.listening else -120.0,
@@ -282,6 +286,8 @@ class Engine:
 				self.webcams.check()
 			if self.inputs.due():
 				self.inputs.check()
+			if self.games.due(now):
+				self.game = self.games.check(now)
 			self.link_event.wait(POLL if self.listening else IDLE_POLL)
 		self.stop_bridge()
 		self.inputs.stop()

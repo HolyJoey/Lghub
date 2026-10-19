@@ -13,13 +13,14 @@ gi.require_version('Adw', '1')
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango  # noqa: E402
 
 import bluevoice_ui  # noqa: E402
+import games_ui  # noqa: E402
 import devices  # noqa: E402
 import hidpp_ui  # noqa: E402
 import depots  # noqa: E402
 import mouse_ui  # noqa: E402
 import webcam_ui  # noqa: E402
 from worker import Worker  # noqa: E402
-from ui import (CSS, box, device_icon, device_sidebar, forget_image, label, nav_button,  # noqa: E402
+from ui import (CSS, box, button_widget, device_icon, device_sidebar, forget_image, label, nav_button,  # noqa: E402
                 page_header, scrolled)
 
 APP_ID = 'dev.local.LghubBlueVoice'
@@ -57,7 +58,8 @@ class HomePage(Gtk.Box):
 	def __init__(self, win):
 		super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=24, css_classes=['page'])
 		self.win = win
-		self.append(page_header('Devices', 'Your connected Logitech G gear. Pick one to set it up.'))
+		self.append(page_header('Devices', 'Your connected Logitech G gear. Pick one to set it up.',
+		                        button_widget('Games', ['ghost'], win.show_games)))
 		self.flow = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, column_spacing=16, row_spacing=16,
 		                        min_children_per_line=1, max_children_per_line=5, homogeneous=True,
 		                        valign=Gtk.Align.START)
@@ -207,6 +209,12 @@ class MainWindow(Adw.ApplicationWindow):
 	def show_home(self):
 		self.current = None
 		self.stack.set_visible_child_name('home')
+
+	def show_games(self):
+		self.current = None
+		if not self.stack.get_child_by_name('games'):
+			self.stack.add_named(scrolled(games_ui.GamesPage(self)), 'games')
+		self.stack.set_visible_child_name('games')
 
 	def show_device(self, device):
 		"""Open a device's page (None: the headset view without a headset, for --page)."""
