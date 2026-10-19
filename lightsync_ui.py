@@ -115,8 +115,9 @@ def _intro(per_key):
 		return ('Effects the background service plays on the keys: G HUB’s own animations, starlight, colour '
 		        'cycle, echo press, the audio visualizer (bass left, treble right) and the screen sampler (needs '
 		        'grim: Hyprland, Sway). Your colours come back when it is off.')
-	return ('Effects the background service plays on the lighting zones: starlight, colour cycle, the audio '
-	        'visualizer and the screen sampler (needs grim: Hyprland, Sway). When it is off, a mouse with '
+	return ('Effects the background service plays on the lighting zones: starlight, colour cycle, echo press '
+	        '(clicks), the audio visualizer and the screen sampler (needs grim: Hyprland, Sway). When it is off, a '
+	        'mouse with '
 	        'onboard memory gets its profile’s lighting back; on others set the zones again.')
 
 
@@ -126,7 +127,7 @@ def _effects(per_key):
 	           ('starlight', None, 'Starlight'), ('cycle', None, 'Colour cycle'), ('echo', None, 'Echo press')]
 	if per_key:
 		return effects + _keyframe_effects() + [('custom', file, name) for name, file in softlight.custom_effects()]
-	return [e for e in effects if e[0] != 'echo']      # G HUB: no echo press or animations on zones
+	return effects                                     # G HUB: no keyframe animations on zones
 
 
 def _color_button(rgb):

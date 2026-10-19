@@ -12,11 +12,13 @@ import threading
 import surface_tuning
 
 KEYBOARD_PAGE = 0x07
+BUTTON_PAGE = 0x09           # mouse buttons: usage n = button n
 
 
-def key_fields(desc):
-	"""{report id (0 = none): [(kind, offset, size, count, first usage)]} for the keyboard-page
-	inputs of a HID report descriptor; kind 'bits' (one bit per usage) or 'array'."""
+def key_fields(desc, page=KEYBOARD_PAGE):
+	"""{report id (0 = none): [(kind, offset, size, count, first usage)]} for the inputs of one
+	usage page (keyboard keys, or mouse buttons) of a HID report descriptor; kind 'bits' (one bit
+	per usage) or 'array'."""
 	state = {'page': 0, 'size': 0, 'count': 0, 'id': 0, 'min': 0, 'max': 0}
 	offsets, fields = {}, {}
 	for tag, data, _size in surface_tuning._items(desc):
@@ -30,7 +32,7 @@ def key_fields(desc):
 			rid = state['id']
 			start = offsets.get(rid, 0)
 			offsets[rid] = start + state['size'] * state['count']
-			if state['page'] == KEYBOARD_PAGE and not data & 1:
+			if state['page'] == page and not data & 1:
 				kind = 'array' if not data & 2 else 'bits'
 				fields.setdefault(rid, []).append((kind, start, state['size'], state['count'], state['min']))
 			state['min'] = state['max'] = 0
@@ -52,13 +54,15 @@ def keys_down(fields, report):
 			v = body >> (offset + i * size) & ((1 << size) - 1)
 			if kind == 'bits' and v:
 				down.add(first + i)
-			elif kind == 'array' and v > 3:            # 0-3: none / rollover errors
+			elif kind == 'array' and v > 3 and first == 0:      # keys: 0-3 are none / rollover errors
+				down.add(v)
+			elif kind == 'array' and v and first:
 				down.add(v)
 	return down
 
 
-def key_nodes(usb_port):
-	"""[(path, fields)] of a USB device's hidraw nodes that report keys."""
+def key_nodes(usb_port, page=KEYBOARD_PAGE):
+	"""[(path, fields)] of a USB device's hidraw nodes that report keys (or mouse buttons)."""
 	found = []
 	try:
 		names = sorted(os.listdir(surface_tuning.SYS_HIDRAW))
@@ -70,7 +74,7 @@ def key_nodes(usb_port):
 			continue
 		try:
 			with open(os.path.join(surface_tuning.SYS_HIDRAW, name, 'device', 'report_descriptor'), 'rb') as f:
-				fields = key_fields(f.read())
+				fields = key_fields(f.read(), page)
 		except OSError:
 			continue
 		if fields:

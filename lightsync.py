@@ -467,6 +467,26 @@ class Animated(Visualizer):
 		if self.keys:
 			self.keys.stop()
 
+	def _follow_presses(self, effect):
+		"""Echo press: key presses (keyboards) or clicks (mice, every zone echoes: ours) reach the
+		effect; False if they can't be read."""
+		import keypress
+		if self.target.zonal:
+			def echo_all(_button):
+				for k in self.target.keys:
+					effect.press(k)
+
+			self.keys = keypress.Keys(keypress.key_nodes(self.port or '', keypress.BUTTON_PAGE), echo_all)
+		else:
+			self.keys = keypress.Keys(keypress.key_nodes(self.port or ''),
+			                          lambda usage: effect.press(f'PERKEY_KEYBOARD:{usage}'))
+		try:
+			self.keys.start()
+		except OSError as e:
+			print(f'lightsync: {e}', flush=True)
+			return False
+		return True
+
 	def _run(self):
 		try:
 			effect = self.make()
@@ -475,15 +495,8 @@ class Animated(Visualizer):
 		if effect is None:
 			print('lightsync: effect not available', flush=True)
 			return
-		if hasattr(effect, 'press'):
-			import keypress
-			self.keys = keypress.Keys(keypress.key_nodes(self.port or ''),
-			                          lambda usage: effect.press(f'PERKEY_KEYBOARD:{usage}'))
-			try:
-				self.keys.start()
-			except OSError as e:
-				print(f'lightsync: {e}', flush=True)
-				return
+		if hasattr(effect, 'press') and not self._follow_presses(effect):
+			return
 		start = time.monotonic()
 		shown = None
 		while not self.stop_event.wait(1 / FPS):
