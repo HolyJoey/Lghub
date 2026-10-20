@@ -28,8 +28,8 @@ measurements.
 
 ## 0. Next, in this order
 
-1. Update button: release 0.9.0, then the small items (receiver ids, "Pair a device",
-   pre-release cleanup), release 0.9.1 and test updating 0.9.0 -> 0.9.1 in the app.
+1. Update button: 0.9.0 released; receiver ids and "Pair a device" done; release 0.9.1 and
+   test updating 0.9.0 -> 0.9.1 in the app.
 2. The G502 X tile showed the generic icon instead of its product photo (seen in a screenshot of
    the simulated G502 X); find out why and fix.
 
@@ -159,15 +159,11 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   G HUB's public channel, probably unreleased products). All its mice, keyboards, headsets,
   webcams, mics and lights are in the catalog, with pictures and layouts from their (encrypted)
   depots; racing gear is left out.
-- **Pairing a device to a receiver**: found (G HUB's HPP10Command, HID++ 1.0 register 0xB2 on
-  the receiver): open lock `10 FF 80 B2 01 00 00` on LS1 receivers (c539, c53f, c53d),
-  `10 FF 80 B2 07 00 00` on LS2 (c541, c545, c547, c54d, c543), close lock `10 FF 80 B2 02 00 00`.
-  Receiver types from G HUB's (decrypted) receivers list; LSX (c54f) and LS_HYBRID (POWERPLAY c53a)
-  probably pair over 0x1894 (fn 0 capabilities, 1 receiver info, 2 open lock (3 bytes, meaning
-  not found), 3 close lock, 4 / 5 pairing info [slot], 6 device name [slot], 7 unpair [slot]).
-  G HUB's AccessoryBus::unpair is a stub (logs a failure). Left: build "Pair a device" on the
-  receiver page (open lock, wait for the 0x41 connection notice, close), add receivers c53d,
-  c543, c54d, c54f to devices.RECEIVERS, and a receiver to try it on.
+- **Pairing a device to a receiver**: done for LS1 / LS2 LIGHTSPEED receivers ("Pair a device"
+  on the receiver's page and in Settings; G HUB's HPP10Command lock on register 0xB2: open 1 on
+  LS1, 7 on LS2, close 2; which receiver is which from G HUB's receivers list). Check on a
+  receiver. Left: LSX (c54f) and the POWERPLAY hybrid, probably over 0x1894 (fn 2 open lock,
+  3 bytes not found); unpairing (G HUB's own unpair is a stub for these receivers).
 - **Sleep / power-off timers** (0x8103 GlobalDeviceSettings tags 1 / 2): done with G HUB's tag
   protocol (sessions, tag read / write, CRC-32 commit) and its minute choices. Ours: first data
   bytes in the start-write call. The screen tags (16-19) aren't used (no device with a screen).

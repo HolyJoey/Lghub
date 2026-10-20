@@ -163,6 +163,11 @@ RECEIVERS = {
 	'046d:c545': LIGHTSPEED,
 	'046d:c547': LIGHTSPEED,
 	'046d:c548': 'Bolt Receiver',
+	# more from G HUB's receivers list
+	'046d:c53d': LIGHTSPEED,
+	'046d:c543': LIGHTSPEED,
+	'046d:c54d': LIGHTSPEED,
+	'046d:c54f': LIGHTSPEED,
 }
 
 TYPE_NAMES = {
@@ -333,6 +338,11 @@ def discover():
 		model = _BY_USB_ID.get(usb_id) or match_model(name or f'Logitech device {usb_id}', 'other')
 		devices.append(Device(f'bt:{hid_name}', usb_id, model, address))
 	return devices
+
+
+def receiver_transport(receiver):
+	"""(transport, report ids) of a receiver's HID++ interface (simulated ones too)."""
+	return _transport(receiver)
 
 
 def _transport(device):

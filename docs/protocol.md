@@ -199,6 +199,9 @@ Levels are G HUB's 0-1 values × 100.
 
 ## Wireless, power and battery
 
+- **Pairing** (G HUB's HPP10Command): HID++ 1.0 set register 0xB2 on the receiver (index 0xFF):
+  `10 FF 80 B2 01 00 00` opens the lock on LS1 receivers, `… 07 …` on LS2, `… 02 …` closes it. A
+  device that pairs sends the connection notice 0x41; the lock state comes as 0x4A (bit 0 = open).
 - **Bluetooth** (ours, not from G HUB): Logitech devices connected over Bluetooth are HID devices
   on bus 0005 (`/sys/bus/hid/devices/0005:046D:<pid>.*`); their hidraw node takes HID++ with
   device index 0xFF, as a corded device does. G HUB lists the Bluetooth product ids (046d:bxxx).

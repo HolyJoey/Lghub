@@ -577,8 +577,12 @@ class FakeReceiver:
 	def __init__(self):
 		self.slots = {1: FakeMouse('G502 LIGHTSPEED Wireless Gaming Mouse')}
 		self.outbox = []
+		self.lock_actions = []          # register 0xB2 actions received (pairing)
 
 	def write(self, msg):
+		if msg[1:4] == bytes([0xFF, 0x80, 0xB2]):
+			self._lock(msg[4])
+			return
 		slot = self.slots.get(msg[1])
 		if slot:
 			slot.write(msg)
@@ -586,6 +590,18 @@ class FakeReceiver:
 			slot.outbox.clear()
 		else:
 			self.outbox.append(bytes([hidpp.SHORT, msg[1], 0x8F, msg[2], msg[3], 0x08, 0]))
+
+	def _lock(self, action):
+		"""Pairing lock: opening it pairs a keyboard into the next free slot (0x41 notice)."""
+		self.lock_actions.append(action)
+		self.outbox.append(bytes([hidpp.SHORT, 0xFF, 0x80, 0xB2, 0, 0, 0]))
+		if action == 2:
+			self.outbox.append(bytes([hidpp.SHORT, 0xFF, 0x4A, 0, 0, 0, 0]))
+			return
+		self.outbox.append(bytes([hidpp.SHORT, 0xFF, 0x4A, 1, 0, 0, 0]))
+		slot = next(i for i in range(1, 7) if i not in self.slots)
+		self.slots[slot] = FakeMouse('G915 WIRELESS RGB MECHANICAL GAMING KEYBOARD')
+		self.outbox.append(bytes([hidpp.SHORT, slot, 0x41, 0x04, 0x00, 0x7C, 0x40]))
 
 	def read(self, _timeout):
 		return self.outbox.pop(0) if self.outbox else None

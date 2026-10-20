@@ -5,7 +5,8 @@ Logitech G headsets, mice, keyboards and webcams, running natively (no Wine). Wh
 features are Logitech's own code, like Blue VO!CE and DTS surround, Lghub runs that same code
 from G HUB's packages; everything else talks to the devices directly, the way G HUB does.
 Devices show up as you plug them in, including wireless ones behind a LIGHTSPEED, Unifying or
-Bolt receiver and ones connected over Bluetooth; pick one to change its settings.
+Bolt receiver and ones connected over Bluetooth; pick one to change its settings. New
+mice and keyboards pair to a LIGHTSPEED receiver from the app (Settings).
 
 ![Devices](docs/screenshots/home.png)
 

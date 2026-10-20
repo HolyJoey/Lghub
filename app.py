@@ -14,6 +14,8 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango  # noqa: E402
 
 import bluevoice_ui  # noqa: E402
 import games_ui  # noqa: E402
+import pairing  # noqa: E402
+import pairing_ui  # noqa: E402
 import settings_ui  # noqa: E402
 import update_ui  # noqa: E402
 import devices  # noqa: E402
@@ -146,6 +148,8 @@ class DeviceView(Gtk.Box):
 			text = f'Lghub recognises this {device.type_name.lower()}, but can’t change its settings yet.'
 		card.append(label(text, ['muted'], wrap=True))
 		page.append(card)
+		if device.model.type == 'receiver' and pairing.can_pair(device):
+			page.append(pairing_ui.pair_card(device))
 		self.append(scrolled(page))
 
 	@staticmethod
