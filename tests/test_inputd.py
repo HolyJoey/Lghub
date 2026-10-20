@@ -1,8 +1,10 @@
 """Software buttons over 0x8110, against the simulated mouse."""
 import os
 import sys
+import tempfile
 import time
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
@@ -54,6 +56,72 @@ class SpyTest(unittest.TestCase):
 	def test_resolve_skips_deleted_macros(self):
 		lib = {'m1': {'name': 'A'}}
 		self.assertEqual(inputd.resolve({'button:4': 'm1', 'button:5': 'gone'}, lib), {'button:4': {'name': 'A'}})
+
+
+class ManagerTest(unittest.TestCase):
+	def test_starts_restarts_and_stops_device_inputs(self):
+		mouse_dev = mock.Mock(id='usb:1', serial='S1', model=mock.Mock(type='mouse', key='g502'))
+		mouse_dev.name = 'G502'
+		receiver = mock.Mock(id='usb:2', model=mock.Mock(type='receiver'))
+		devices = mock.Mock()
+		devices.discover.return_value = [mouse_dev, receiver]
+		devices.scan_receiver.side_effect = OSError('asleep')
+		library = {'m1': {'type': 'MEDIA', 'media': {'usage': 'STOP'}}, 'm2': {'type': 'MOUSE', 'mouse': {'action': 'DPI_UP'}}}
+		data = {'g502:S1': {'button:4': 'm1'}}
+		with mock.patch('hotplug.Watch'):
+			manager = inputd.Manager()
+		inputs = []
+
+		def device_input(dev, wanted, runner):
+			di = mock.Mock(wanted=wanted, runner=runner)
+			di.start.return_value = True
+			inputs.append(di)
+			return di
+
+		with mock.patch.dict(sys.modules, {'devices': devices}), \
+				mock.patch.object(macros, 'assignments', return_value=data), \
+				mock.patch.object(macros, 'library', return_value=library), \
+				mock.patch.object(inputd, 'DeviceInput', device_input), \
+				mock.patch.object(inputd, 'DeviceActions') as actions, \
+				mock.patch.object(macros, 'Runner') as runner_cls:
+			manager.check()
+			manager.check()                                  # nothing changed: still one
+			data['g502:S1'] = {'button:4': 'm2'}               # now a DPI action: its own runner
+			manager.check()
+			manager.stop()
+		self.assertEqual(len(inputs), 2)
+		inputs[0].stop.assert_called_once()
+		self.assertIs(inputs[0].runner, manager.runner)                          # the shared runner
+		self.assertEqual(runner_cls.call_args_list[0].args, ())
+		self.assertEqual(len(runner_cls.call_args_list[1].args), 2)              # its own, with DPI actions
+		self.assertIs(runner_cls.call_args.args[1], actions.return_value)
+		self.assertEqual(manager.running, {})
+
+	def test_failure_to_open_is_skipped(self):
+		d = mock.Mock(id='usb:1', serial='', model=mock.Mock(type='mouse', key='g502'))
+		devices = mock.Mock()
+		devices.discover.return_value = [d]
+		devices.open_hidpp.side_effect = OSError('busy')
+		with mock.patch('hotplug.Watch'):
+			manager = inputd.Manager()
+		with mock.patch.dict(sys.modules, {'devices': devices}), \
+				mock.patch.object(macros, 'assignments', return_value={'g502:usb:1': {'button:4': 'm1'}}), \
+				mock.patch.object(macros, 'library', return_value={'m1': {'type': 'MEDIA'}}):
+			manager.check()
+		self.assertEqual(manager.running, {})
+
+	def test_due_when_files_change(self):
+		with tempfile.TemporaryDirectory() as d, mock.patch('hotplug.Watch'), \
+				mock.patch.object(macros, 'ASSIGNMENTS_FILE', os.path.join(d, 'a.json')), \
+				mock.patch.object(macros, 'LIBRARY_FILE', os.path.join(d, 'l.json')):
+			manager = inputd.Manager()
+			manager.usb.changed.return_value = False
+			manager.last_check = time.monotonic()
+			self.assertTrue(manager.due())                     # first look
+			self.assertFalse(manager.due())
+			with open(macros.LIBRARY_FILE, 'w') as f:
+				f.write('{}')
+			self.assertTrue(manager.due())
 
 
 if __name__ == '__main__':

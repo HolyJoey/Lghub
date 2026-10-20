@@ -253,8 +253,9 @@ Not implemented in Lghub yet.
 G HUB downloads its data from `https://updates.ghub.logitechg.com/depots/<uuid>/<name>.depot`.
 
 - **Format**: `[magic 0x20170110 u32 LE, header length u32 LE, header JSON]`. The header has a
-  `files` list. Each file follows as a u32 LE length (0xFFFFFFFF = a u64 length follows) and
-  then its bytes, so HTTP range requests can fetch a single file.
+  `files` list. Each file follows as a u32 LE length, then its bytes, so HTTP range requests
+  can fetch a single file. A length of 0xFFFFFFFF is taken to mean a u64 length follows (ours:
+  no file that large has been seen).
 - **Encrypted depots**: newer devices' depots have only `header-sha` and `key-id` in their
   header and are encrypted. Lghub doesn't use them.
 - **Useful files**:

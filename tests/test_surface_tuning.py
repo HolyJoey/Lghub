@@ -1,5 +1,6 @@
 import os
 import sys
+import tempfile
 import threading
 import unittest
 from unittest import mock
@@ -71,6 +72,43 @@ class SurfaceTuningTest(unittest.TestCase):
 		with self.assertRaises(surface_tuning.Cancelled):
 			surface_tuning.tune(dev, motion, lambda *_: None, cancel)
 		self.assertEqual(fake.tuning, [2, 3, 6])
+
+
+class MotionTest(unittest.TestCase):
+	def test_motion_adds_up_distance(self):
+		fields = surface_tuning.motion_fields(MOUSE)
+		read_end, write_end = os.pipe()
+		motion = surface_tuning.Motion([(f'/dev/fd/{read_end}', fields), ('/nonexistent', fields)])
+		motion.start()
+		report = bytes([2, 0, 0]) + (300).to_bytes(2, 'little') + (400).to_bytes(2, 'little') + b'\0\0'
+		os.write(write_end, report)
+		for _ in range(50):
+			if motion.distance:
+				break
+			threading.Event().wait(0.01)
+		motion.stop()
+		os.close(write_end)
+		os.close(read_end)
+		self.assertAlmostEqual(motion.distance, 500 / surface_tuning.COUNTS_PER_UNIT)
+
+	def test_motion_needs_a_node(self):
+		motion = surface_tuning.Motion([])
+		with self.assertRaises(OSError):
+			motion.start()
+
+	def test_motion_nodes(self):
+		with tempfile.TemporaryDirectory() as root:
+			for name, port, desc in (('hidraw1', '1-4', MOUSE), ('hidraw2', '1-4', b''), ('hidraw3', '1-5', MOUSE)):
+				dev = os.path.join(root, 'devices', port + ':1.0', name)
+				os.makedirs(dev)
+				with open(os.path.join(dev, 'report_descriptor'), 'wb') as f:
+					f.write(desc)
+				os.makedirs(os.path.join(root, 'class', name))
+				os.symlink(dev, os.path.join(root, 'class', name, 'device'))
+			with mock.patch.object(surface_tuning, 'SYS_HIDRAW', os.path.join(root, 'class')):
+				self.assertEqual([p for p, _f in surface_tuning.motion_nodes('1-4')], ['/dev/hidraw1'])
+		with mock.patch.object(surface_tuning, 'SYS_HIDRAW', '/nonexistent'):
+			self.assertEqual(surface_tuning.motion_nodes('1-4'), [])
 
 
 if __name__ == '__main__':

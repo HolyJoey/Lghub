@@ -178,12 +178,11 @@ class Device:
 
 	def feature_list(self):
 		"""{feature id: index} for everything the device has."""
-		if not self.has(FEATURE_SET):
-			return dict(self._features)
-		count = self.call(FEATURE_SET, 0)[0]
-		for i in range(1, count + 1):
-			fid = struct.unpack('>H', self.call(FEATURE_SET, 1, bytes([i]))[:2])[0]
-			self._features[fid] = i
+		if self.has(FEATURE_SET):
+			count = self.call(FEATURE_SET, 0)[0]
+			for i in range(1, count + 1):
+				fid = struct.unpack('>H', self.call(FEATURE_SET, 1, bytes([i]))[:2])[0]
+				self._features[fid] = i
 		return {fid: i for fid, i in self._features.items() if i is not None}
 
 	def name(self):

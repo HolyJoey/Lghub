@@ -134,9 +134,9 @@ def _files(url):
 	for entry in header['files']:
 		size = struct.unpack('<I', _get(url, pos, 4))[0]
 		pos += 4
-		if size == 0xFFFFFFFF:        # large file: 64-bit length follows
-			size = struct.unpack('<Q', _get(url, pos - 4, 8))[0]
-			pos += 4
+		if size == 0xFFFFFFFF:        # large file: a 64-bit length follows (ours: none seen yet)
+			size = struct.unpack('<Q', _get(url, pos, 8))[0]
+			pos += 8
 		files[entry['name']] = (pos, size)
 		pos += size
 	return files

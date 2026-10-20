@@ -65,5 +65,37 @@ class SwitcherTest(unittest.TestCase):
 		self.assertIsNone(profiles.persistent({'profiles': [{'id': 'a'}]}))
 
 
+class SnapshotTest(unittest.TestCase):
+	def test_snapshot_and_restore(self):
+		saved = {}
+		cfg = {'enabled': True, 'preset': 'Radio', 'params': {}, 'input': 'mic'}
+		with mock.patch('store.load_config', return_value=dict(cfg)), \
+				mock.patch('store.save_config', lambda c: saved.update(voice=c)), \
+				mock.patch('eq.load', return_value={'enabled': True}), \
+				mock.patch('eq.save', lambda s: saved.update(eq=s)), \
+				mock.patch('surround.load', return_value={'enabled': False}), \
+				mock.patch('surround.save', lambda s: saved.update(surround=s)):
+			snap = profiles.snapshot()
+			self.assertNotIn('input', snap['voice'])                  # the mic choice isn't per game
+			profiles.restore({**snap, 'voice': {'preset': 'Studio'}})
+		self.assertEqual(saved['voice']['preset'], 'Studio')
+		self.assertEqual(saved['voice']['input'], 'mic')
+		self.assertEqual((saved['eq'], saved['surround']), ({'enabled': True}, {'enabled': False}))
+
+	def test_processes_reads_proc(self):
+		with tempfile.TemporaryDirectory() as root:
+			for pid, cmd in (('12', b'/usr/bin/Game.exe\0--appid=440\0'), ('13', None), ('self', b'x\0')):
+				os.makedirs(os.path.join(root, pid))
+				if cmd is not None:
+					with open(os.path.join(root, pid, 'cmdline'), 'wb') as f:
+						f.write(cmd)
+			real_open, real_listdir = open, os.listdir
+			with mock.patch('os.listdir', lambda p: real_listdir(root) if p == '/proc' else real_listdir(p)), \
+					mock.patch('builtins.open', lambda p, *a, **k: real_open(p.replace('/proc', root, 1), *a, **k)):
+				names, lines = profiles._processes()
+		self.assertIn('game.exe', names)
+		self.assertIn('--appid=440', lines[0])
+
+
 if __name__ == '__main__':
 	unittest.main()
