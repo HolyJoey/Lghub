@@ -126,14 +126,14 @@ cd Lghub
 ./install.sh
 ```
 
-You need an x86-64 PC with PipeWire, Python with GTK 4 and libadwaita, and gcc to build the
-Blue VO!CE helper:
+You need an x86-64 PC with PipeWire, Python with GTK 4, libadwaita and cryptography, and gcc to
+build the Blue VO!CE helper:
 
 | Distro | Packages |
 | --- | --- |
-| Debian / Ubuntu | `python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 gcc libpipewire-0.3-dev alsa-utils` |
-| Fedora | `python3-gobject gtk4 libadwaita gcc pipewire-devel alsa-utils` |
-| Arch | `python-gobject gtk4 libadwaita gcc libpipewire alsa-utils` |
+| Debian / Ubuntu | `python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 python3-cryptography gcc libpipewire-0.3-dev alsa-utils` |
+| Fedora | `python3-gobject gtk4 libadwaita python3-cryptography gcc pipewire-devel alsa-utils` |
+| Arch | `python-gobject gtk4 libadwaita python-cryptography gcc libpipewire alsa-utils` |
 
 PipeWire has to be the running sound server (the default on current distributions) and the
 service runs under systemd's user session. The installer checks all of this. On Debian, Ubuntu,
@@ -146,7 +146,9 @@ The installer downloads Logitech's audio effects (Blue VO!CE and DTS Headphone:X
 equalizer presets and G HUB's app icon from G HUB's own update server (none of it is in this
 repo), checks the hashes, builds the helpers, adds a menu entry and starts a user service. `./uninstall.sh` undoes all of it. Later, the first time a device shows up, the
 app fetches its product picture from the same server (and, for the G733, its Blue VO!CE
-presets): just those files, a few hundred KB.
+presets): just those files, a few hundred KB to a few MB. Newer models' packages are
+encrypted; Lghub fetches the keys from the same server, as G HUB does, and decrypts only the
+files it needs.
 
 Mice and keyboards need permission to talk to the device, and macros to type. One udev rule
 file does both; this is the only step that needs root. The installer shows these commands and

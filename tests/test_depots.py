@@ -23,6 +23,38 @@ def depot(files):
 	return out
 
 
+KEY = bytes(range(16))
+KEY_ID = '00000000-1111-2222-3333-444444444444'
+
+
+def seal(data, sha=None):
+	"""data encrypted the way G HUB's capsules are: (sha hex, ciphertext). The IV comes from sha,
+	data's own hash unless given (a sealed file in a capsule uses the hash of the file within)."""
+	import hashlib
+	from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+	sha = sha or hashlib.sha256(data).hexdigest()
+	iv = hashlib.pbkdf2_hmac('sha512', sha.encode(), KEY_ID.encode(), 1000, 32)
+	return sha, Cipher(algorithms.AES(KEY), modes.GCM(iv)).encryptor().update(data)
+
+
+def sealed_file(data):
+	sha, enc = seal(data)
+	header = json.dumps({'key-id': KEY_ID, 'file-sha': sha}).encode()
+	return struct.pack('<II', depots.SEALED, len(header)) + header + struct.pack('<I', len(enc)) + enc
+
+
+def capsule(files):
+	entries, body = [], b''
+	for name, data, inner in files:
+		sha = __import__('hashlib').sha256(data).hexdigest()
+		enc = seal(sealed_file(data) if inner else data, sha)[1]
+		entries.append({'name': name, 'mode': 33206, 'sha': sha})
+		body += struct.pack('<I', len(enc)) + enc
+	header_sha, header = seal(json.dumps({'files': entries}).encode())
+	outer = json.dumps({'header-sha': header_sha, 'key-id': KEY_ID}).encode()
+	return struct.pack('<II', depots.CAPSULE, len(outer)) + outer + struct.pack('<I', len(header)) + header + body
+
+
 class ImagesTest(unittest.TestCase):
 	def setUp(self):
 		manifest = json.dumps({'devices': [{'modelId': 'g502_hero', 'resources': [
@@ -139,6 +171,30 @@ class ImagesTest(unittest.TestCase):
 		self.assertFalse(depots._to_png(b'GIF89a', out))
 		with mock.patch('shutil.which', return_value=None):
 			self.assertFalse(depots._to_png(b'RIFF\0\0\0\0WEBPVP8 ', out))
+
+
+	def test_capsule_depot(self):
+		manifest = json.dumps({'devices': [{'modelId': 'g502_hero', 'resources': [
+			{'key': 'device_image', 'src': 'front.png'}]}]}).encode()
+		self.data = capsule([('manifest.json', manifest, False), ('front.png', PNG, True)])
+		with mock.patch.object(depots, '_keys', return_value=KEY):
+			with open(depots.fetch_picture('g502_hero'), 'rb') as f:
+				self.assertEqual(f.read(), PNG)                        # sealed file inside the capsule
+			files = depots._files('url')
+			self.data = self.data[:files['manifest.json'][0]] + b'\x00' + self.data[files['manifest.json'][0] + 1:]
+			with self.assertRaises(ValueError):
+				depots._read('url', files['manifest.json'])             # tampered: hash check fails
+
+	def test_keys_from_the_pipeline(self):
+		content = {'keys': [{'name': KEY_ID, 'key': __import__('base64').b64encode(KEY).decode()}]}
+		answers = {depots.PIPELINE + depots.CHANNEL + 'details.json': {'keys': {'accessGroup': 'grp'}},
+		           depots.PIPELINE + 'access/grp/content.json': content}
+		with mock.patch.object(depots, '_fetch_json', side_effect=answers.__getitem__) as fetch:
+			self.assertEqual(depots._keys(KEY_ID), KEY)
+			self.assertEqual(depots._keys(KEY_ID), KEY)                  # cached: no second fetch
+			self.assertEqual(fetch.call_count, 2)
+			with self.assertRaises(KeyError):
+				depots._keys('unknown')
 
 
 class RangeRequestTest(unittest.TestCase):

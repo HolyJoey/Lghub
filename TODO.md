@@ -134,11 +134,10 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   (Lghub's meters come from PipeWire). Nothing to do unless a meter source turns out better.
 
 ### Wireless and power
-- **G HUB's device list**: read in full (decrypted locally, 61 of 72 encrypted files; the other
-  11 have keys outside G HUB's public channel, probably unreleased products). All its mice,
-  keyboards, headsets, webcams, mics and lights are in the catalog now; racing gear is left out.
-- **Pictures for the newer models**: their depots are in G HUB's encrypted capsule format, so
-  showing their pictures and button layouts would need decryption in Lghub itself. Not decided.
+- **G HUB's device list**: read in full (61 of 72 encrypted files; the other 11 have keys outside
+  G HUB's public channel, probably unreleased products). All its mice, keyboards, headsets,
+  webcams, mics and lights are in the catalog, with pictures and layouts from their (encrypted)
+  depots; racing gear is left out.
 - **Pairing a device to a receiver**: newer LIGHTSPEED receivers pair through 0x1894
   (LightspeedDevicePairing). Found: fn 0 capabilities, fn 1 receiver info, fn 2 open lock (3 bytes,
   meaning not found), fn 3 close lock, fn 4 / 5 pairing info / extended info [slot], fn 6 device

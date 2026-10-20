@@ -118,7 +118,7 @@ def fetch(name):
 	try:
 		url = depots.SERVER + depots.CORE_DEPOT
 		files = depots.files_cached(url)
-		data = depots._get(url, *files[name])
+		data = depots._read(url, files[name])
 		json.loads(data)
 	except (OSError, ValueError, KeyError) as e:
 		print(f'lghub: no G HUB lighting file {name}: {e}', flush=True)

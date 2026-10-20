@@ -50,6 +50,8 @@ packages() {
     apt:gtk) echo python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 ;;
     dnf:gtk) echo python3-gobject gtk4 libadwaita ;;
     pacman:gtk) echo python-gobject gtk4 libadwaita ;;
+    pacman:crypto) echo python-cryptography ;;
+    *:crypto) echo python3-cryptography ;;
     apt:pwtools) echo pipewire-bin ;;
     dnf:pwtools) echo pipewire-utils ;;
     pacman:pwtools) echo pipewire ;;
@@ -110,6 +112,7 @@ need() { command -v "$1" >/dev/null || { keys+=("$2"); missing+=("$3"); }; }
 need python3 python "Python 3"
 python3 -c "import gi; gi.require_version('Gtk','4.0'); gi.require_version('Adw','1')" 2>/dev/null \
   || { keys+=(gtk); missing+=("GTK 4 and libadwaita for Python"); }
+python3 -c "import cryptography" 2>/dev/null || { keys+=(crypto); missing+=("Python cryptography (newer G HUB packages)"); }
 need pw-dump pwtools "PipeWire tools (pw-dump, pw-link)"
 need pw-link pwtools "PipeWire tools (pw-dump, pw-link)"
 need wpctl wireplumber "WirePlumber (wpctl)"
