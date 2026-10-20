@@ -216,8 +216,9 @@ simulator. The webcam screenshot is a real camera.
 
 ## Not there yet
 
-- Most devices here have only met the simulator. If something doesn't work on yours, open an
-  issue with `journalctl --user -u lghub-bluevoice` and what the device's page says.
+- Most devices here have only met the simulator. If something doesn't work on yours (or does),
+  open an issue with the "Device report" form: it asks for the model, the service log
+  (`journalctl --user -u lghub-bluevoice`) and what the device's page says.
 - Still open, compared with G HUB: the 5-band PRO equalizer, the G735 / PRO X 2 protocol,
   receiver pairing, keyboard onboard-profile editing and a few newer-mouse features. The full list is in [TODO.md](TODO.md).
 

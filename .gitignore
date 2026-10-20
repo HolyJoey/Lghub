@@ -3,6 +3,7 @@
 # and development tools (scanner config, reverse-engineering scripts, test harnesses).
 /*
 !/.gitignore
+!/.github/
 !/README.md
 !/LICENSE
 !/TODO.md

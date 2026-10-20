@@ -1,0 +1,58 @@
+name: Device report
+description: Something doesn't work (or does!) with your Logitech device
+labels: [device report]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing. Most devices have only met Lghub's simulator, so every report helps,
+        including "it works".
+  - type: input
+    id: device
+    attributes:
+      label: Device
+      description: The exact model, as on the box or in Lghub (e.g. "G502 X Plus", "G Pro X Wireless").
+    validations:
+      required: true
+  - type: dropdown
+    id: connection
+    attributes:
+      label: How is it connected?
+      options:
+        - USB cable
+        - LIGHTSPEED receiver
+        - Bluetooth
+        - Other / not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Service log
+      description: Output of `journalctl --user -u lghub-bluevoice -n 200 --no-pager`
+      render: text
+  - type: textarea
+    id: page
+    attributes:
+      label: The device's page
+      description: A screenshot of the device's page in Lghub, or what it says.
+  - type: input
+    id: system
+    attributes:
+      label: System
+      description: Distribution and desktop (e.g. "Debian 13, Hyprland", "Fedora 41, GNOME").
+    validations:
+      required: true
+  - type: checkboxes
+    id: udev
+    attributes:
+      label: Setup
+      options:
+        - label: I added the udev rule the installer prints (needed for mice, keyboards and macros).
