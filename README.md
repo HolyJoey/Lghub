@@ -180,6 +180,8 @@ backs up its own program files, runs the new `install.sh` and puts the backup ba
 fails. If the new version needs something only an administrator can install, it says so and
 shows the command. Copies run from a git checkout or a distribution package only get the notice.
 
+![Update banner](docs/screenshots/update.png)
+
 ## Tray
 
 Like G HUB, the background service puts an icon in the tray (waybar, KDE, GNOME with the

@@ -427,6 +427,7 @@ class FakeAnalogKeyboard(FakeKeyboard):
 
 	def __init__(self):
 		super().__init__()
+		self.device_name = b'PRO X TKL RAPID'
 		self.analog = {1: 0, 4: 0}      # get fn -> bit 0
 
 	def handle(self, feature, fn, p):

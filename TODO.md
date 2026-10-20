@@ -26,12 +26,12 @@ measurements.
 | App features | 85% | see "App" below |
 | Background service | 95% | re-measured 2026-10-20: 0.2% CPU, 28 MB idle |
 
-## 0. Next, in this order
+## 0. Status (2026-10-20)
 
-1. Update button: done and tested (0.9.0 updated itself to 0.9.1 from the live release with
-   the installed copy's own update code). Not seen yet: clicking it in the window (the next release).
-2. The G502 X tile showed the generic icon instead of its product photo (seen in a screenshot of
-   the simulated G502 X); find out why and fix.
+The small high-value items are done: update button (tested 0.9.0 -> 0.9.1), receiver pairing,
+receiver ids, screenshots, scans. The G502 X "no photo" seen in a screenshot wasn't a bug: its
+photo (5 MB, encrypted twice) takes a few seconds the first time, and the screenshot was taken
+before it arrived; the tile updates when it does. From here: fix what testers report.
 
 ## 1. Check on the real hardware (G Pro X, G502, C920, newer models)
 

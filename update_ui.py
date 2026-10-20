@@ -17,7 +17,7 @@ class UpdateBanner:
 	"""The home page's update banner (an Adw.Banner, which can't be subclassed: .widget)."""
 
 	def __init__(self, win):
-		self.widget = Adw.Banner(revealed=False, button_label='What’s new…')
+		self.widget = Adw.Banner(revealed=False, visible=False, button_label='What’s new…')
 		self.win = win
 		self.info = None
 		self.busy = False
@@ -33,6 +33,7 @@ class UpdateBanner:
 			self.info = info
 			if info:
 				self.widget.set_title(f'Lghub {info["version"]} is available')
+			self.widget.set_visible(bool(info))   # hidden, it takes no room in the page's spacing
 			self.widget.set_revealed(bool(info))
 
 	def _details(self):
