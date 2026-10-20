@@ -227,8 +227,9 @@ def ghub_sampler(data):
 
 
 def sampler_regions(per_key):
-	"""{region id: (G HUB's name, (left, top, right, bottom))} from G HUB's sampler file for
-	keyboards or zonal devices; {} if it isn't downloaded. Blocks the first time."""
+	"""({region id: (G HUB's name, (left, top, right, bottom))}, {key or zone: region id}) from
+	G HUB's sampler file for keyboards (keys) or zonal devices (G HUB's zone names); ({}, {}) if it
+	isn't downloaded. Blocks the first time."""
 	import json
 	import softlight
 	path = softlight.fetch(softlight.EFFECTS_DIR + ('screen_sampler-kb.json' if per_key else 'screen_sampler.json'))
@@ -236,10 +237,26 @@ def sampler_regions(per_key):
 		with open(path) as f:
 			data = json.load(f)
 	except (OSError, TypeError, ValueError):
-		return {}
-	regions, _keys = ghub_sampler(data)
+		return {}, {}
+	regions, keys = ghub_sampler(data)
+	if not per_key:
+		keys = ghub_zones(path)
 	names = {rid: r.get('name', rid) for rid, r in data.get('screen_sampler_info', {}).get('region_map', {}).items()}
-	return {rid: (names.get(rid, rid), rect) for rid, rect in regions.items()}
+	return {rid: (names.get(rid, rid), rect) for rid, rect in regions.items()}, keys
+
+
+BACKGROUND = 'BACKGROUND_COLOR'   # G HUB's tag for keys without a region; Lghub turns them off (ours)
+
+
+def edit_sampler(regions, keys, settings):
+	"""G HUB's regions and key (or zone) map with the region editor's changes: settings['regions']
+	holds every region kept (G HUB's and added ones, id -> rect), settings['assign'] the keys (or
+	zones) moved to another region. As in G HUB, keys of a deleted region take BACKGROUND_COLOR."""
+	saved = settings.get('regions')
+	if saved:
+		regions = {rid: tuple(r) for rid, r in saved.items()}
+	keys = {**keys, **settings.get('assign', {})}
+	return regions, {k: r if r in regions else BACKGROUND for k, r in keys.items()}
 
 
 def ghub_zones(path):
@@ -413,7 +430,7 @@ class ScreenSampler(Visualizer):
 		super().__init__(dev, model, None)
 		self.boost = max(0, min(100, settings.get('color_boost', 0))) * 3 / 100
 		self.smoothing = settings.get('smoothing', False)
-		self.custom = settings.get('regions', {})      # region id -> [left, top, right, bottom] (editor)
+		self.edits = settings                          # the region editor's regions and key moves
 
 	def start(self):
 		if not self.target:
@@ -431,12 +448,13 @@ class ScreenSampler(Visualizer):
 		try:
 			with open(path) as f:
 				regions, keys = ghub_sampler(json.load(f))
+			if self.target.zonal:
+				keys = ghub_zones(path)
 		except (OSError, TypeError, ValueError):
 			return None, None
-		regions.update({rid: tuple(r) for rid, r in self.custom.items() if rid in regions})
+		regions, keys = edit_sampler(regions, keys, self.edits)
 		if self.target.zonal:
-			by_name = ghub_zones(path)
-			keys = {k: by_name[z[3]] for k, z in self.target.fixed.items() if z[3] in by_name}
+			keys = {k: keys[z[3]] for k, z in self.target.fixed.items() if z[3] in keys}
 		else:
 			present = set(self.target.keys)
 			keys = {k: r for k, r in keys.items() if k in present}
@@ -444,7 +462,7 @@ class ScreenSampler(Visualizer):
 
 	def _frame(self, colors, keys):
 		if keys:
-			return {k: colors[r] for k, r in keys.items() if r in colors}
+			return {k: colors.get(r, [0, 0, 0]) for k, r in keys.items()}
 		if self.layout:
 			return sampler_frame(self.layout, colors)
 		return {k: colors['BOTTOM_CENTER'] for k in self.target.keys}

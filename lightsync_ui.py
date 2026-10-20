@@ -103,6 +103,8 @@ def _show(widgets, kind):
 			r.set_visible(k == kind)
 
 
+REGION_EDITS = ('regions', 'region_names', 'assign')      # the region editor's saved changes
+
 SIGNALS = ((Gtk.ColorDialogButton, 'notify::rgba'), (Gtk.Scale, 'value-changed'), (Gtk.DropDown, 'notify::selected'))
 
 
