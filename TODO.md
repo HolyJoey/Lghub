@@ -19,6 +19,7 @@ measurements.
 | Keyboards | 80% | analog keys' per-key settings, onboard profiles; see "Keyboards" below |
 | Headsets (other than the voice chain) | 50% | Centurion and the newer headsets; see "Headsets" below |
 | Yeti controls | 100% | check on a Yeti |
+| Litra lights | 90% | check on a Litra Glow / Beam |
 | Webcams | 90% | check on the C920 |
 | Wireless (receivers, Bluetooth, power) | 80% | pairing; see "Wireless and power" below |
 | Device catalog | 100% | 11 of G HUB's device files have keys outside its public channel (unreleased?) |
@@ -29,7 +30,7 @@ measurements.
 ## 0. Status (2026-10-20)
 
 The small high-value items are done: update button (tested 0.9.0 -> 0.9.1), receiver pairing,
-receiver ids, screenshots, scans. The G502 X "no photo" seen in a screenshot wasn't a bug: its
+receiver ids, screenshots, scans, Litra lights (0x1990). The G502 X "no photo" seen in a screenshot wasn't a bug: its
 photo (5 MB, encrypted twice) takes a few seconds the first time, and the screenshot was taken
 before it arrived; the tile updates when it does. From here: fix what testers report.
 
@@ -47,6 +48,8 @@ Everything below has only met the simulator (`simulate.py`) or the DLLs offline.
   up, its page talks HID++ (device index 0xFF), battery in the tray, the new udev line.
 - **Newer models** (from G HUB's device list): a G502 X / PRO X SUPERLIGHT 2 / G515 shows up with
   its picture; analog keyboards' rapid trigger and key priority switches (0x1B08) on a real one.
+- **Litra** (0x1990, from G HUB's Feature1990IlluminationLight): on / off, brightness and colour
+  temperature on a real Litra Glow / Beam; that the third u16 of the info replies is the step is ours.
 - **G502**:
   - profile layout offsets, LED effect bytes (cycle 0x03, breathing 0x0a)
   - LIGHTSYNC on its zones (0x8070 fixed colour, not saved) while it is in onboard mode; the

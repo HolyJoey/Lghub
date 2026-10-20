@@ -22,6 +22,7 @@ ANGLE_SNAPPING = 0x2230
 FN_INVERSION = 0x40A3
 ANALOG_KEYS = 0x1B08
 REPROG_CONTROLS = 0x1B04
+ILLUMINATION = 0x1990
 DISABLE_KEYS = 0x4522
 DISABLE_KEYS_V1 = 0x4521
 CHANGE_HOST = 0x1814
@@ -41,7 +42,7 @@ NAMES = {
 	0x0000: 'Root', 0x0001: 'Feature set', 0x0002: 'Feature info', 0x0003: 'Firmware info',
 	0x0005: 'Name and type', 0x0007: 'Friendly name', 0x0008: 'Keep alive', 0x0020: 'Config change',
 	0x00C2: 'DFU control', 0x00D0: 'DFU', 0x1000: 'Battery', 0x1001: 'Battery voltage',
-	0x1004: 'Battery', 0x1814: 'Change host', 0x1815: 'Hosts info', 0x1B04: 'Special keys and buttons',
+	0x1004: 'Battery', 0x1814: 'Change host', 0x1815: 'Hosts info', 0x1B04: 'Special keys and buttons', 0x1990: 'Light (Litra)',
 	0x1D4B: 'Wireless status', 0x1F20: 'Battery (ADC)', 0x2201: 'Adjustable DPI', 0x2202: 'Extended DPI',
 	0x2230: 'Angle snapping', 0x2250: 'Analysis mode', 0x40A3: 'Fn inversion', 0x4100: 'Encryption', 0x4220: 'Lock key state',
 	0x4521: 'Disable keys', 0x4522: 'Game mode', 0x4540: 'Keyboard layout', 0x8010: 'G-keys',
@@ -237,6 +238,41 @@ def set_diverted(dev, cid, on):
 def diverted_held(params):
 	"""Control ids held, from a 0x1B04 diverted-controls event."""
 	return [c for c in struct.unpack('>4H', bytes(params[:8]).ljust(8, b'\0')) if c]
+
+
+# Litra lights (0x1990), as G HUB's Feature1990IlluminationLight: fn 0 / fn 1 get / set the light
+# on (one byte), fn 2 brightness info and fn 7 colour-temperature info ([flags, minimum u16, maximum
+# u16, step u16, levels]: minimum and maximum in G HUB's RangeUInt order; the third as the step is
+# ours), fn 3 / fn 4 get / set brightness, fn 8 / fn 9 get / set colour temperature (u16 big-endian,
+# lumens and kelvin), fn 12 the effective maximum brightness.
+def _range(r):
+	low, high, step = struct.unpack('>HHH', bytes(r[1:7]))
+	return low, high, step or 1
+
+
+def illumination(dev):
+	"""{'on', 'brightness', 'brightness_range', 'temperature', 'temperature_range'} of a Litra."""
+	brightness_range = _range(dev.call(ILLUMINATION, 2))
+	effective = struct.unpack('>H', bytes(dev.call(ILLUMINATION, 0xC)[:2]))[0]
+	if effective and brightness_range[0] < effective < brightness_range[1]:
+		brightness_range = (brightness_range[0], effective, brightness_range[2])
+	return {'on': bool(dev.call(ILLUMINATION, 0)[0] & 1),
+	        'brightness': struct.unpack('>H', bytes(dev.call(ILLUMINATION, 3)[:2]))[0],
+	        'brightness_range': brightness_range,
+	        'temperature': struct.unpack('>H', bytes(dev.call(ILLUMINATION, 8)[:2]))[0],
+	        'temperature_range': _range(dev.call(ILLUMINATION, 7))}
+
+
+def set_illumination(dev, on):
+	dev.call(ILLUMINATION, 1, bytes([1 if on else 0]))
+
+
+def set_light_brightness(dev, lumens):
+	dev.call(ILLUMINATION, 4, struct.pack('>H', int(lumens)))
+
+
+def set_color_temperature(dev, kelvin):
+	dev.call(ILLUMINATION, 9, struct.pack('>H', int(kelvin)))
 
 
 # Analog keyboards' switches (0x1B08), as G HUB's Feature1B08AnalogKeys: fn 0 capabilities, fn 1 /

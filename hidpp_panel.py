@@ -199,6 +199,8 @@ class SettingsPanel(Gtk.Box):
 			if feature in have:
 				info[key] = read(dev)
 		self._read_keyboard(dev, have, info)
+		if features.ILLUMINATION in have:
+			info['light'] = features.illumination(dev)
 		self._read_mic(dev, have, info)
 		if device_settings.GLOBAL_SETTINGS in have:
 			info['power'] = device_settings.power_timers(dev) or None
@@ -283,7 +285,7 @@ class SettingsPanel(Gtk.Box):
 		for key, build in (('brightness', self._brightness_card), ('rates', self._rate_card),
 		                   ('sidetone', self._sidetone_card), ('patterns', self._pattern_card),
 		                   ('angle_snapping', self._angle_card), ('fn_inversion', self._fn_card),
-		                   ('analog', self._analog_card),
+		                   ('analog', self._analog_card), ('light', self._light_card),
 		                   ('game_mode', self._game_mode_card), ('hosts', self._hosts_card),
 		                   ('device_eq', self._device_eq_card), ('charging', self._charging_card),
 		                   ('bass_tone', self._bass_card), ('mic', self._mic_card),
@@ -315,6 +317,26 @@ class SettingsPanel(Gtk.Box):
 		s.connect('value-changed', lambda w: self.loading or self._do(
 			lambda v=int(w.get_value()): features.set_brightness(self.dev, v)))
 		c.append(row('Lighting brightness', s))
+		return c
+
+	def _light_card(self, info):
+		light = info['light']
+		c = card('Light', 'The Litra’s own settings, as G HUB sets them.')
+		sw = Gtk.Switch(active=light['on'], valign=Gtk.Align.CENTER)
+		sw.connect(NOTIFY_ACTIVE, lambda w, _p: self.loading or self._do(
+			lambda on=w.get_active(): features.set_illumination(self.dev, on)))
+		c.append(row('On', sw))
+		for key, title, unit, setter in (('brightness', 'Brightness', ' lm', features.set_light_brightness),
+		                                 ('temperature', 'Colour temperature', ' K', features.set_color_temperature)):
+			low, high, step = light[key + '_range']
+			s = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, low, high, step)
+			s.set_value(min(max(light[key], low), high))
+			s.set_draw_value(True)
+			s.set_size_request(260, -1)
+			s.set_format_value_func(lambda _s, v, u=unit: f'{v:.0f}{u}')
+			s.connect('value-changed', lambda w, f=setter: self.loading or self._do(
+				lambda v=int(w.get_value()): f(self.dev, v)))
+			c.append(row(title, s))
 		return c
 
 	def _rate_card(self, info):

@@ -324,6 +324,29 @@ class FakeMouseXPlus(FakeMouseX):
 		return super().handle(feature, fn, p)
 
 
+class FakeLitra(FakeMouse):
+	"""A Litra Glow-like light (0x1990): on / off, 20-250 lm, 2700-6500 K (made-up ranges)."""
+	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, features.ILLUMINATION]
+
+	def __init__(self):
+		super().__init__('Litra Glow')
+		self.on, self.lumens, self.kelvin = False, 120, 4500
+
+	def handle(self, feature, fn, p):
+		if feature != features.ILLUMINATION:
+			return super().handle(feature, fn, p)
+		if fn == 1:
+			self.on = bool(p[0])
+		elif fn == 4:
+			self.lumens = struct.unpack('>H', p[:2])[0]
+		elif fn == 9:
+			self.kelvin = struct.unpack('>H', p[:2])[0]
+		answers = {0: bytes([self.on]), 2: struct.pack('>BHHHB', 0, 20, 250, 1, 0), 3: struct.pack('>H', self.lumens),
+		           7: struct.pack('>BHHHB', 0, 2700, 6500, 100, 0), 8: struct.pack('>H', self.kelvin),
+		           0xC: struct.pack('>H', 250)}
+		return answers.get(fn, b'')
+
+
 class FakeKeyboard(FakeMouse):
 	"""A corded G815-like keyboard: two lighting zones, brightness, report rate, onboard mode."""
 	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, features.COLOR_LED_EFFECTS,
@@ -628,6 +651,7 @@ class FakeReceiver:
 MICE = ('c08b', 'c08d', 'c332', 'c07d', 'c084', 'c092')
 MICE_X = ('c099',)               # G502 X
 MICE_X_PLUS = ('c095',)          # G502 X PLUS
+LIGHTS = ('c900',)               # Litra Glow
 KEYBOARDS = ('c33f', 'c339', 'c33c', 'c343', 'c33e')
 ANALOG_KEYBOARDS = ('c35b',)     # PRO X TKL RAPID
 YETIS = ('0aaf',)
@@ -641,7 +665,7 @@ def transport_for(usb_id, port):
 	pid = usb_id.split(':')[1]
 	kinds = {**dict.fromkeys(MICE, FakeMouse), **dict.fromkeys(KEYBOARDS, FakeKeyboard),
 	         **dict.fromkeys(ANALOG_KEYBOARDS, FakeAnalogKeyboard), **dict.fromkeys(MICE_X, FakeMouseX),
-	         **dict.fromkeys(MICE_X_PLUS, FakeMouseXPlus),
+	         **dict.fromkeys(MICE_X_PLUS, FakeMouseXPlus), **dict.fromkeys(LIGHTS, FakeLitra),
 	         **dict.fromkeys(YETIS, FakeYeti),
 	         **dict.fromkeys(RECEIVERS, FakeReceiver)}
 	if pid not in kinds:

@@ -115,6 +115,7 @@ from the mouse's own HID reports rather than the pointer.
 | 0x4523 disable controls (newer) | fn 0 bitmap of control indexes; fn 1 / fn 3 read the game-mode bits; fn 2 `[0, on \| lock << 1]`. G HUB's presets list control ids (CIDs) from the key pictures; which index is which key comes from the keyboard |
 | 0x40A3 Fn inversion | fn 0 `[host]` → state, default, capabilities; fn 1 set |
 | 0x1B08 analog keys | G HUB's Feature1B08AnalogKeys: fn 0 capabilities, fn 1 / fn 2 get / set rapid trigger, fn 3 key-travel events, fn 4 / fn 5 get / set key priority; a set is one byte, bit 0 = on (that a get answers in bit 0 is ours). Actuation points and rapid-trigger sensitivity per key are in the onboard profile (tags 0x0120-0x0130) |
+| 0x1990 illumination light (Litra) | G HUB's Feature1990IlluminationLight: fn 0 / fn 1 get / set on (1 byte), fn 2 brightness info `[flags, minimum u16, maximum u16, step u16, levels]` (that the third is the step is ours), fn 3 / fn 4 get / set brightness (u16, lumens), fn 7 colour-temperature info (same layout), fn 8 / fn 9 get / set colour temperature (u16, kelvin), fn 12 the effective maximum brightness |
 | 0x8010 G-keys | fn 2 `[1]` = report G-keys to software; events carry a bitmask (G1 = bit 0 of byte 0) |
 | 0x8020 M-keys | event 0 = M-key pressed; fn 1 lights them (M1 = 1, M2 = 2, M3 = 4) |
 | 0x8040 brightness | fn 0 info (maximum, u16), fn 1 get, fn 2 set (u16) |

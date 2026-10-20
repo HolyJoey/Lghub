@@ -30,6 +30,17 @@ class ReceiverTest(unittest.TestCase):
 		features.set_rapid_trigger(dev, False)
 		self.assertEqual(features.analog_switches(dev), {'rapid_trigger': False, 'key_priority': True})
 
+	def test_litra(self):
+		light = simulate.transport_for('046d:c900', 'litra')
+		dev = hidpp.Device(light)
+		info = features.illumination(dev)
+		self.assertEqual((info['on'], info['brightness'], info['temperature']), (False, 120, 4500))
+		self.assertEqual((info['brightness_range'], info['temperature_range']), ((20, 250, 1), (2700, 6500, 100)))
+		features.set_illumination(dev, True)
+		features.set_light_brightness(dev, 200)
+		features.set_color_temperature(dev, 3200)
+		self.assertEqual((light.on, light.lumens, light.kelvin), (True, 200, 3200))
+
 	def test_battery(self):
 		receiver = simulate.FakeReceiver()
 		self.assertEqual(features.battery(hidpp.Device(receiver, 1)), (72, 'On battery'))

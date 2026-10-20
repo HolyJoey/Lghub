@@ -108,7 +108,7 @@ portal on GNOME and KDE, which asks once; that needs GStreamer's PipeWire plugin
 rate, Fn keys, game mode, Easy-Switch, power-saving and power-off timers, angle snapping, sidetone, on-board memory and battery. Analog keyboards (PRO X TKL RAPID, G515 RAPID and the
 like) get G HUB's rapid trigger and key priority switches. Devices with a USB sound card (headsets,
 speakers, Yeti mics) also get its controls. Yetis also get their own mute, gain, headphone level and mic monitoring over HID++,
-as G HUB sets them.
+as G HUB sets them. Litra lights get on / off, brightness and colour temperature (HID++ 0x1990, as G HUB sets them).
 
 | Settings | Per-key lighting |
 | --- | --- |
