@@ -408,6 +408,49 @@ def fetch_metadata(model):
 	return path
 
 
+def device_effects_path(model):
+	return os.path.join(store.IMAGE_DIR, f'{model}.lighting_effects.json')
+
+
+def fetch_device_effects(model):
+	"""Path of the model's lighting_effects.json (its own keyframe effects, like the G502 X PLUS's
+	signature animations), downloading it if needed; None if it has none. Blocks."""
+	return _fetch_optional(model, 'lighting_effects.json', device_effects_path(model))
+
+
+def _fetch_optional(model, name, path):
+	"""A JSON file some depots ship (name), kept at path; None when the model's depot has none."""
+	if os.path.exists(path):
+		return path
+	if model not in DEPOTS:
+		return None
+	url = SERVER + DEPOTS[model]
+	try:
+		files = _files(url)
+		if name not in files:
+			return None
+		data = _read(url, files[name])
+		json.loads(data)
+	except (OSError, ValueError, KeyError, struct.error) as e:
+		print(f'lghub: no {name} for {model}: {e}', flush=True)
+		return None
+	os.makedirs(store.IMAGE_DIR, exist_ok=True)
+	with open(path + '.tmp', 'wb') as f:
+		f.write(data)
+	os.replace(path + '.tmp', path)
+	return path
+
+
+def light_map_path(model):
+	return os.path.join(store.IMAGE_DIR, f'{model}.light_map.json')
+
+
+def fetch_light_map(model):
+	"""Path of the model's light_map.json (G HUB's per-device key -> LED overrides; only some newer
+	keyboards ship one), downloading it if needed; None if there is none. Blocks."""
+	return _fetch_optional(model, 'light_map.json', light_map_path(model))
+
+
 def battery_path(model):
 	return os.path.join(store.IMAGE_DIR, f'{model}.battery.xml')
 

@@ -162,6 +162,15 @@ Other tags' formats are still unknown.
   `[type u16, count u16, (key, r, g, b) × up to 14]`; fn 5 flush. Types: keyboard 1,
   consumer 2, G-key 4, button 8, logo 0x10, other keys 0x40.
 
+### Light maps and device effects (newer depots)
+
+- **light_map.json** (newer keyboards, the G502 X PLUS): `perKey` → PerKey type → `mapping`
+  `{id: {"ledIndex": n}}`; it overrides the default key → zone table for the keys it lists (the
+  PRO X TKL moves its media keys: Play/Pause 205 → 152, the table says 155).
+- **metadata.json** LEDs on mice are `circle` renderings: `rect: {x, y, r}` (centre and radius).
+- **lighting_effects.json** (G502 X PLUS): `effects: [{name, keyframeInfo}]`, the same keyframe
+  format as the core depot's effects; SIGNATURE_FRAME_ACTIVE / _INACTIVE on PERKEY_COSMETIC.
+
 ### Software effects (what G HUB's player does)
 
 - **Keyframe animations** (G HUB's prefab effects and Freestyle): a list of frames, each with a

@@ -310,6 +310,20 @@ class FakeMouseX(FakeMouse):
 		self.outbox.append(bytes([hidpp.LONG, 0xFF, idx, 0x00]) + payload.ljust(16, b'\0'))
 
 
+class FakeMouseXPlus(FakeMouseX):
+	"""A G502 X PLUS-like mouse: FakeMouseX plus per-LED lighting on its light strip (0x8081)."""
+	FEATURES = FakeMouseX.FEATURES + [0x8081]
+
+	def __init__(self):
+		super().__init__('G502 X PLUS')
+		self.keys, self.pending, self.persisted = {}, {}, None
+
+	def handle(self, feature, fn, p):
+		if feature == 0x8081:
+			return FakeKeyboard._perkey(self, fn, p)
+		return super().handle(feature, fn, p)
+
+
 class FakeKeyboard(FakeMouse):
 	"""A corded G815-like keyboard: two lighting zones, brightness, report rate, onboard mode."""
 	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, features.COLOR_LED_EFFECTS,
@@ -613,6 +627,7 @@ class FakeReceiver:
 
 MICE = ('c08b', 'c08d', 'c332', 'c07d', 'c084', 'c092')
 MICE_X = ('c099',)               # G502 X
+MICE_X_PLUS = ('c095',)          # G502 X PLUS
 KEYBOARDS = ('c33f', 'c339', 'c33c', 'c343', 'c33e')
 ANALOG_KEYBOARDS = ('c35b',)     # PRO X TKL RAPID
 YETIS = ('0aaf',)
@@ -626,6 +641,7 @@ def transport_for(usb_id, port):
 	pid = usb_id.split(':')[1]
 	kinds = {**dict.fromkeys(MICE, FakeMouse), **dict.fromkeys(KEYBOARDS, FakeKeyboard),
 	         **dict.fromkeys(ANALOG_KEYBOARDS, FakeAnalogKeyboard), **dict.fromkeys(MICE_X, FakeMouseX),
+	         **dict.fromkeys(MICE_X_PLUS, FakeMouseXPlus),
 	         **dict.fromkeys(YETIS, FakeYeti),
 	         **dict.fromkeys(RECEIVERS, FakeReceiver)}
 	if pid not in kinds:

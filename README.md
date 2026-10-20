@@ -67,7 +67,8 @@ that have them.
 ## Mice
 
 DPI levels (and the default and DPI-shift level), report rate, what every button does
-(including keystrokes and a G-Shift layer), lighting, and the profiles stored in the mouse.
+(including keystrokes and a G-Shift layer), lighting, and the profiles stored in the mouse. The
+G502 X PLUS gets its light strip LED by LED, with G HUB's signature effects.
 Lghub knows the models G HUB 2026.6 lists (mice, keyboards, headsets, webcams, mics, Litra
 lights), with G HUB's own ids, lighting zones and capabilities. Models it doesn't know yet show
 under the name they give.

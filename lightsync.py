@@ -278,13 +278,13 @@ def sampler_frame(layout, colors):
 class PerKeyTarget:
 	"""Where an effect's colours go on a per-key keyboard: every key, not saved in it."""
 
-	def __init__(self, dev, layout):
-		self.dev, self.layout = dev, layout
+	def __init__(self, dev, layout, light_map=None):
+		self.dev, self.layout, self.light_map = dev, layout, light_map
 		self.keys = [f'{g}:{k}' for g, k, *_r in layout[2]]
 		self.zonal = False
 
 	def send(self, colors):
-		perkey.apply(self.dev, colors, persist=False)
+		perkey.apply(self.dev, colors, persist=False, light_map=self.light_map)
 
 
 # G HUB's zone names (lighting_support Zone.Type) for HID++ 0x8070 / 0x8071 zone locations; which
@@ -333,7 +333,7 @@ def restore_zones(dev):
 def make_target(dev, model):
 	layout = perkey.load_layout(model)
 	if layout and (dev.has(perkey.PERKEY) or dev.has(perkey.PERKEY_V1)):
-		return PerKeyTarget(dev, layout)
+		return PerKeyTarget(dev, layout, perkey.load_light_map(model))
 	try:
 		import features
 		if dev.has(features.COLOR_LED_EFFECTS) or dev.has(features.RGB_EFFECTS):
@@ -543,12 +543,18 @@ class Animated(Visualizer):
 			                           s.get('speed', 1000))
 		if s['effect'] == 'cycle':
 			return softlight.ColorCycle(keys, s.get('colors') or softlight.CYCLE_COLORS, s.get('speed', 5000))
-		if s.get('custom'):
-			path = os.path.join(softlight.CUSTOM_DIR, os.path.basename(s['custom']))
+		if s['effect'] == 'device':                  # the model's own effect (lighting_effects.json)
+			effect = dict(softlight.device_effects(self.model)).get(s.get('file'))
+			if not effect:
+				return None
+			frames, speed, direction = softlight.parse_keyframes(effect)
 		else:
-			path = softlight.fetch(softlight.EFFECTS_DIR + s.get('file', ''))
-		with open(path) as f:
-			frames, speed, direction = softlight.parse_keyframes(json.load(f))
+			if s.get('custom'):
+				path = os.path.join(softlight.CUSTOM_DIR, os.path.basename(s['custom']))
+			else:
+				path = softlight.fetch(softlight.EFFECTS_DIR + s.get('file', ''))
+			with open(path) as f:
+				frames, speed, direction = softlight.parse_keyframes(json.load(f))
 		present = set(keys)
 		frames = [(n, c, {k: v for k, v in colors.items() if k in present}) for n, c, colors in frames]
 		return softlight.Keyframes(frames, speed, direction) if frames else None
@@ -609,7 +615,7 @@ class Animated(Visualizer):
 				return
 
 
-ANIMATED = ('keyframe', 'starlight', 'cycle', 'echo')
+ANIMATED = ('keyframe', 'device', 'starlight', 'cycle', 'echo')
 
 
 def devices_open(device):

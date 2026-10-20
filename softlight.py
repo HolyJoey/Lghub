@@ -139,6 +139,16 @@ def load_prefabs():
 		return {}
 
 
+def device_effects(model):
+	"""[(name, effect)] of the model's own keyframe effects (its lighting_effects.json), [] if none."""
+	import depots
+	try:
+		with open(depots.device_effects_path(model)) as f:
+			return [(e['name'], e) for e in json.load(f).get('effects', []) if e.get('name')]
+	except (OSError, ValueError, KeyError, TypeError):
+		return []
+
+
 def parse_keyframes(data):
 	"""(frames, speed, direction) from a G HUB keyframe file; frames = [(length, curve, colours)]
 	in order, colours = {"<group>:<id>": [r, g, b]}."""

@@ -13,6 +13,8 @@ import hidpp_panel
 import lightsync_ui
 import macros_ui
 import mouse
+import perkey
+import perkey_ui
 import surface_tuning
 import surface_ui
 from ui import box, button_widget, device_icon, device_sidebar, label, nav_button, page_header, scrolled
@@ -25,7 +27,15 @@ PAGES = (('sensitivity', 'Sensitivity', 'input-mouse-symbolic'),
          ('macros', 'Macros', 'media-record-symbolic'))
 BUTTON_NAMES = ('Left button', 'Right button', 'Middle button (wheel click)', 'Back', 'Forward')
 ZONE_NAMES = {'primary': 'DPI indicator / main', 'branding': 'Logo'}
+# Mice whose G HUB layout draws single LEDs (the G502 X PLUS's light strip: PERKEY_COSMETIC) get a
+# page like a keyboard's per-key lighting, sent over 0x8081 through the model's light map.
+LED_PAGE = ('leds', 'Light strip', 'weather-clear-symbolic')
 NOTIFY_SELECTED = 'notify::selected'
+
+
+def has_led_strip(model):
+	layout = perkey_ui.load_layout(model)
+	return bool(layout and layout[2])
 NOTIFY_ACTIVE = 'notify::active'
 
 # GDK key names -> HID keyboard usage names in mouse.KEY_NAMES.
@@ -108,7 +118,8 @@ class MouseView(Gtk.Box):
 		side = device_sidebar(win.show_home, icon, device.name, device.type_name)
 		nav = box(spacing=4)
 		self.nav_buttons = {}
-		for key, text, icon_name in PAGES:
+		self.page_list = PAGES[:3] + ((LED_PAGE,) if has_led_strip(device.model.key) else ()) + PAGES[3:]
+		for key, text, icon_name in self.page_list:
 			b = nav_button(text, icon_name, lambda k=key: self.show_page(k))
 			nav.append(b)
 			self.nav_buttons[key] = b
@@ -135,8 +146,10 @@ class MouseView(Gtk.Box):
 		right.append(self.save_bar)
 		self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE, vexpand=True)
 		self.pages = {}
-		for key, _text, _icon in PAGES:
-			if key == 'macros':
+		for key, _text, _icon in self.page_list:
+			if key == 'leds':
+				page = perkey_ui.PerKeyPage(win, device, self._apply_leds)
+			elif key == 'macros':
 				page = macros_ui.MacrosPage(win, device, [(f'button:{i + 1}', BUTTON_NAMES[i] if i < len(BUTTON_NAMES)
 				                                           else f'Button {i + 1}') for i in range(1, 11)])
 				# not the left button: the mouse must always keep a primary click
@@ -218,6 +231,12 @@ class MouseView(Gtk.Box):
 	def changed(self):
 		if not self.loading:
 			self.save_bar.set_visible(any(p.dirty for p in self.profiles))
+
+	def _apply_leds(self, colors):
+		"""Per-LED colours ({"group:id": [r, g, b]}) to the mouse, when it has per-key lighting."""
+		if self.mouse is not None and self.mouse.dev.has(perkey.PERKEY):
+			light_map = perkey.load_light_map(self.device.model.key)
+			self._live(lambda: perkey.apply(self.mouse.dev, colors, light_map=light_map))
 
 	def rebuild(self):
 		self.loading = True

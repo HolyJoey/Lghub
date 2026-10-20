@@ -177,7 +177,8 @@ class SettingsPanel(Gtk.Box):
 		"""Per-key colours ({"group:id": [r, g, b]}) to the device, if it has per-key lighting."""
 		dev = self.dev
 		if dev is not None:
-			self._do(lambda: perkey.apply(dev, colors))
+			light_map = perkey.load_light_map(self.device.model.key)
+			self._do(lambda: perkey.apply(dev, colors, light_map=light_map))
 
 	# --- talking to the device ------------------------------------------------------------
 
@@ -206,7 +207,7 @@ class SettingsPanel(Gtk.Box):
 			info['profiles'] = (dev.call(features.ONBOARD, 0)[3], dev.call(features.ONBOARD, 4)[1])
 		saved = perkey_ui.load_colors(self.device.model.key)
 		if (perkey.PERKEY in have or perkey.PERKEY_V1 in have) and saved:
-			perkey.apply(dev, saved)   # ours: the saved colours go back on when the keyboard connects
+			perkey.apply(dev, saved, light_map=perkey.load_light_map(self.device.model.key))   # ours: the saved colours go back on when the keyboard connects
 		self.dev = dev
 		return info
 

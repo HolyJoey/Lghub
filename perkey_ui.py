@@ -50,8 +50,10 @@ class PerKeyPage(Gtk.Box):
 		self.picture = None
 		self.editing = None                         # freestyle_ui.FreestyleCard while an animation is edited
 		self.preview = None                         # colours of the animation preview, while it plays
-		self.append(page_header('Per-key lighting', 'Click keys (or drag across them) to pick them, then '
-		                        'choose a colour.'))
+		self.keyboard = device.model.type == 'keyboard'      # else a mouse's light strip: LEDs, not keys
+		self.noun = 'key' if self.keyboard else 'LED'
+		self.append(page_header('Per-key lighting' if self.keyboard else 'Light strip',
+		                        f'Click {self.noun}s (or drag across them) to pick them, then choose a colour.'))
 		if not self.layout:
 			self.append(label('The key layout for this keyboard isn’t downloaded yet. Plug it in once while '
 			                  'online.', ['muted'], wrap=True))
@@ -72,8 +74,8 @@ class PerKeyPage(Gtk.Box):
 		self.append(self.area)
 
 		tools = box(Gtk.Orientation.HORIZONTAL, 8)
-		tools.append(button_widget('All keys', ['ghost'], self._select_all))
-		for name, (group, ids) in SHORTCUTS:
+		tools.append(button_widget(f'All {self.noun}s', ['ghost'], self._select_all))
+		for name, (group, ids) in SHORTCUTS if self.keyboard else ():
 			tools.append(button_widget(name, ['ghost'], lambda g=group, i=ids: self._select(g, i)))
 		tools.append(button_widget('None', ['ghost'], self._select_none))
 		tools.append(box(hexpand=True))
@@ -171,7 +173,7 @@ class PerKeyPage(Gtk.Box):
 
 	def _status(self):
 		n = len(self.selected)
-		self.status.set_text(f'{n} key{"s" if n != 1 else ""} selected · {len(self.colors)} coloured')
+		self.status.set_text(f'{n} {self.noun}{"s" if n != 1 else ""} selected · {len(self.colors)} coloured')
 
 	def _paint(self):
 		if not self.selected:

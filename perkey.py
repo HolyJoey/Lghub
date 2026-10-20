@@ -5,7 +5,8 @@ G HUB (feature_8081_led_lighting) turns each key of its layout (metadata.json: a
 an id) into a zone number, sends the colours four keys at a time with SetIndividualRgbZones
 (function 1: zone, r, g, b per key) and closes the frame with FrameEnd (function 7: persistence,
 then two 16-bit big-endian numbers it leaves at 0). The zone numbers come from its built-in table
-below; a device's light_map resource can override it, but none of the depots we know ships one.
+below; a device's light_map resource (light_map.json in its depot, which newer keyboards ship)
+overrides it key by key: perKey -> PerKey type -> mapping {id: {"ledIndex": zone}}.
 """
 import json
 import struct
@@ -26,11 +27,28 @@ def load_layout(model):
 	for zone in image.get('zones', []):
 		for comp in zone.get('components', []):
 			for r in comp.get('renderings', []):
+				rect = r.get('rect', {})
 				if r.get('type') == 'rect':
-					rect = r['rect']
 					keys.append((zone['id'], comp['id'], rect['x'], rect['y'], rect['width'], rect['height']))
+				elif r.get('type') == 'circle' and 'r' in rect:      # a mouse's LED: centre and radius (ours: its box)
+					keys.append((zone['id'], comp['id'], rect['x'] - rect['r'], rect['y'] - rect['r'], 2 * rect['r'], 2 * rect['r']))
 	origin = image.get('origin', {})
 	return origin.get('width', 1), origin.get('height', 1), keys
+
+
+def load_light_map(model):
+	"""{(PerKey type, id): zone} from the model's light_map.json, {} when it has none."""
+	try:
+		with open(depots.light_map_path(model)) as f:
+			data = json.load(f)
+	except (OSError, ValueError):
+		return {}
+	out = {}
+	for name, group in (data.get('perKey') or {}).items():
+		for key, entry in (group.get('mapping') or {}).items():
+			if key.isdigit() and isinstance(entry, dict) and 'ledIndex' in entry:
+				out[(TYPES.get(name, 0), int(key))] = int(entry['ledIndex'])
+	return out
 
 
 COLORS_FILE = 'perkey.json'      # in store.CONFIG_DIR: {model: {"<group>:<id>": [r, g, b]}}
@@ -82,12 +100,17 @@ def zone_for(kind, key):
 	return zone if 0 < zone < 0x100 else None
 
 
-def zones(colors):
-	"""[(zone, r, g, b)] for {"<PerKey type>:<id>": [r, g, b]}; keys without a zone are left out."""
+def zones(colors, light_map=None):
+	"""[(zone, r, g, b)] for {"<PerKey type>:<id>": [r, g, b]}; keys without a zone are left out.
+	light_map (load_light_map) overrides the default table for the keys it lists."""
+	light_map = light_map or {}
 	out = []
 	for name, rgb in colors.items():
 		kind, _sep, key = name.partition(':')
-		zone = zone_for(TYPES.get(kind, 0), int(key)) if key.isdigit() else None
+		if not key.isdigit():
+			continue
+		kind_id = (TYPES.get(kind, 0), int(key))
+		zone = light_map[kind_id] if kind_id in light_map else zone_for(*kind_id)
 		if zone is not None:
 			out.append((zone, *(max(0, min(255, int(c))) for c in rgb[:3])))
 	return sorted(out)
@@ -130,12 +153,13 @@ def apply_v1(dev, colors, persist=True):
 	return sent
 
 
-def apply(dev, colors, persist=True):
-	"""Send the colours and end the frame. persist is G HUB's FrameEnd persistence flag."""
+def apply(dev, colors, persist=True, light_map=None):
+	"""Send the colours and end the frame. persist is G HUB's FrameEnd persistence flag; light_map
+	is the keyboard's own key -> LED overrides (load_light_map)."""
 	if not dev.has(PERKEY) and dev.has(PERKEY_V1):
 		return apply_v1(dev, colors, persist)
 	by_color = {}
-	for e in zones(colors):
+	for e in zones(colors, light_map):
 		by_color.setdefault(tuple(e[1:]), []).append(e)
 	entries = []
 	for rgb, group in by_color.items():

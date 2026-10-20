@@ -22,7 +22,7 @@ measurements.
 | Webcams | 90% | check on the C920 |
 | Wireless (receivers, Bluetooth, power) | 80% | pairing; see "Wireless and power" below |
 | Device catalog | 100% | 11 of G HUB's device files have keys outside its public channel (unreleased?) |
-| Lighting | 97% | screen sampler portal on GNOME / KDE; per-key on mice |
+| Lighting | 98% | screen sampler portal on GNOME / KDE |
 | App features | 85% | see "App" below |
 | Background service | 95% | re-measured 2026-10-20: 0.2% CPU, 28 MB idle |
 
@@ -87,7 +87,15 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   rates, 0x80E0 bunny hopping, 0x2240 surface tuning.
 - Left out on purpose: 0x2006 pointer orientation, 0x2205 motion scaling and 0x2150 thumbwheel;
   G HUB's agent knows them but its app has no setting for them.
-- **Per-key lighting on mice** (if any have it) and 0x8071 inside onboard profiles.
+- **Per-LED lighting on mice**: done for the G502 X PLUS (and its Millennium Falcon edition): a
+  Light strip page from G HUB's layout (its LEDs are circles there), sent over 0x8081 through the
+  model's light_map.json, with its signature effects (lighting_effects.json: keyframe animations,
+  played by softlight). Check on the mouse. Left: 0x8071 inside onboard profiles.
+- Newer models' battery.xml are power models (capacity, power per sensor / report rate / lighting
+  effect) for G HUB's "time left" estimate, not voltage curves; their percentage comes from the
+  device. A time-left estimate from them isn't built. Their defaults_override.json presets
+  (MOUSE_SENSITIVITY, MOUSE_SETTINGS, FIRMWARE_LIGHTING_SETTINGS) could give a "reset to G HUB
+  defaults"; not built (onboard mice keep factory profiles anyway).
 
 ### Keyboards
 - **Onboard profiles**: switching the active one works. Editing goes through 0x8102 with the same

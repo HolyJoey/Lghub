@@ -30,7 +30,7 @@ def apply_saved(dev, model):
 	"""Put a model's saved settings on an open device; the features it lacks are skipped."""
 	colors, keys = saved_for(model)
 	if colors and (dev.has(perkey.PERKEY) or dev.has(perkey.PERKEY_V1)):
-		perkey.apply(dev, colors)
+		perkey.apply(dev, colors, light_map=perkey.load_light_map(model))
 	if keys and (dev.has(features.DISABLE_KEYS) or dev.has(features.DISABLE_KEYS_V1)):
 		features.apply_game_mode(dev, keys)
 

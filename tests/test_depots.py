@@ -173,6 +173,15 @@ class ImagesTest(unittest.TestCase):
 			self.assertFalse(depots._to_png(b'RIFF\0\0\0\0WEBPVP8 ', out))
 
 
+	def test_light_map(self):
+		self.assertIsNone(depots.fetch_light_map('g502_hero'))                     # this depot has none
+		self.data = depot([('light_map.json', b'{"perKey": {}}')])
+		with open(depots.fetch_light_map('g502_hero')) as f:
+			self.assertEqual(f.read(), '{"perKey": {}}')
+		self.data = b''
+		self.assertTrue(depots.fetch_light_map('g502_hero'))                      # kept on disk
+		self.assertIsNone(depots.fetch_light_map('not_a_model'))
+
 	def test_capsule_depot(self):
 		manifest = json.dumps({'devices': [{'modelId': 'g502_hero', 'resources': [
 			{'key': 'device_image', 'src': 'front.png'}]}]}).encode()

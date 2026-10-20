@@ -18,7 +18,7 @@ def card(model, restore, per_key=True):
 	card = box(spacing=10, css=['card'])
 	card.append(label('LIGHTSYNC', ['section-title']))
 	card.append(label(_intro(per_key), ['muted', 'small'], wrap=True))
-	effects = _effects(per_key)
+	effects = _effects(per_key, model)
 	chosen = _chosen(effects, settings)
 	effect = Gtk.DropDown.new_from_strings([name for _k, _f, name in effects])
 	effect.set_selected(chosen)
@@ -169,12 +169,17 @@ def _intro(per_key):
 	        'zones again.')
 
 
-def _effects(per_key):
+SIGNATURE_NAMES = {'SIGNATURE_FRAME_ACTIVE': 'Signature (active)', 'SIGNATURE_FRAME_INACTIVE': 'Signature (idle)'}
+
+
+def _effects(per_key, model=None):
 	import softlight
 	effects = [(None, None, 'Off'), ('audio', None, 'Audio visualizer'), ('screen', None, 'Screen sampler'),
 	           ('starlight', None, 'Starlight'), ('cycle', None, 'Colour cycle'), ('echo', None, 'Echo press')]
 	if per_key:
-		return effects + _keyframe_effects() + [('custom', file, name) for name, file in softlight.custom_effects()]
+		own = [('device', name, SIGNATURE_NAMES.get(name, name.replace('_', ' ').capitalize()))
+		       for name, _e in softlight.device_effects(model)] if model else []
+		return effects + own + _keyframe_effects() + [('custom', file, name) for name, file in softlight.custom_effects()]
 	return effects                                     # G HUB: no keyframe animations on zones
 
 

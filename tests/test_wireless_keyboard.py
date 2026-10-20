@@ -167,6 +167,26 @@ class PerKeyTest(unittest.TestCase):
 		self.assertEqual(perkey.zone_for(perkey.INDICATOR, 3), 0x96)
 		self.assertIsNone(perkey.zone_for(8, 1))
 
+	def test_light_map_overrides_the_table(self):
+		import json
+		import tempfile
+		from unittest import mock
+		# the PRO X TKL's light_map.json moves its media keys (Play/Pause 205 -> 152; the table says 155)
+		data = {'zonal': {}, 'perKey': {'PERKEY_CONSUMER': {'type': 'PERKEY_CONSUMER',
+		                                                    'mapping': {'205': {'ledIndex': 152}}}}}
+		with tempfile.TemporaryDirectory() as tmp:
+			path = f'{tmp}/map.json'
+			with open(path, 'w') as f:
+				json.dump(data, f)
+			with mock.patch('depots.light_map_path', return_value=path):
+				light_map = perkey.load_light_map('pro_x_tkl')
+			with mock.patch('depots.light_map_path', return_value=f'{tmp}/missing.json'):
+				self.assertEqual(perkey.load_light_map('g815'), {})
+		self.assertEqual(light_map, {(perkey.CONSUMER, 205): 152})
+		colors = {'PERKEY_CONSUMER:205': [1, 2, 3], 'PERKEY_KEYBOARD:4': [4, 5, 6]}
+		self.assertEqual(perkey.zones(colors), [(1, 4, 5, 6), (155, 1, 2, 3)])
+		self.assertEqual(perkey.zones(colors, light_map), [(1, 4, 5, 6), (152, 1, 2, 3)])
+
 	def test_apply(self):
 		kb = simulate.FakeKeyboard()
 		colors = {f'PERKEY_KEYBOARD:{k}': [k, 0, 255] for k in range(4, 14)}
