@@ -75,8 +75,8 @@ force), bunny hopping, surface tuning, angle snapping, left-handed buttons and h
 their 2-8 kHz report rates and extended DPI range.
 **Macros** like G HUB's: keystrokes, text, media and system actions, apps, web pages and
 recorded sequences (once, while held, or on/off), put on any button but the left one. They
-run in the background service, the same way G HUB does it (HID++ 0x8110: only buttons with a
-macro stop clicking by themselves). DPI and profile macros switch the mouse's own DPI and
+run in the background service, the same way G HUB does it (HID++ 0x8110, or 0x1B04 on newer
+mice like the G502 X: only buttons with a macro stop clicking by themselves). DPI and profile macros switch the mouse's own DPI and
 profiles. G HUB's audio actions (cycle equalizer, toggle surround, cycle output or input, mic
 gain and volume) work with any headset and show a short notice.
 When the mouse's own buttons switch DPI, profile or report rate, a short desktop notice shows the new value,

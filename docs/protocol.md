@@ -91,6 +91,7 @@ both.
 | 0x2400 hybrid tracking | fn 0 engine on?, fn 2 / fn 3 get / set mode (0 low latency, 1 power save) |
 | 0x80E0 bunny hopping | fn 1 get, fn 2 set the timeout in 10 ms steps (0 = off, up to 2540 ms); G HUB's slider is 100-1000 ms in 100 ms steps |
 | 0x8110 button spy | fn 3 read the remap table, fn 1 start, fn 4 set entries (0 = report in software instead of clicking), fn 2 stop; pressed buttons arrive as a 16-bit mask event |
+| 0x1B04 special keys and buttons | fn 0 count, fn 1 `[index]` → control id u16, task id u16, flags (0x20 divertable), position (mouse button n = n); fn 3 `[cid u16, flags, remap u16, flags2]` (G HUB's SetCtrlIdReporting; flags 0x01 divert, 0x02 divert valid, from Logitech's spec); diverted controls held arrive as event 0, up to four control ids. Newer mice without 0x8110 get button macros this way |
 
 **Surface tuning (0x2240)**, G HUB's sequence:
 

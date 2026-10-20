@@ -21,6 +21,7 @@ POLAR_PATTERN = 0x8330
 ANGLE_SNAPPING = 0x2230
 FN_INVERSION = 0x40A3
 ANALOG_KEYS = 0x1B08
+REPROG_CONTROLS = 0x1B04
 DISABLE_KEYS = 0x4522
 DISABLE_KEYS_V1 = 0x4521
 CHANGE_HOST = 0x1814
@@ -199,6 +200,43 @@ def fn_inversion(dev, host=0):
 
 def set_fn_inversion(dev, on, host=0):
 	dev.call(FN_INVERSION, 1, bytes([host, 1 if on else 0]))
+
+
+# Special keys and mouse buttons (0x1B04), as G HUB's Feature1B04SpecialKeys: fn 0 count, fn 1
+# control info, fn 2 / fn 3 get / set reporting; fn 3 sends [cid u16, flags, remap u16, flags2]
+# (G HUB's SetCtrlIdReporting). Bit meanings from Logitech's HID++ spec for 0x1B04: in fn 1's
+# flags 0x20 = divertable, in fn 3's flags 0x01 = divert and 0x02 = "divert is valid". A diverted
+# control is reported to software (event 0: up to four control ids held, u16 each) instead of
+# doing its own job. fn 1 also gives the control's position: mouse button n has position n.
+DIVERTABLE, DIVERT, DIVERT_VALID = 0x20, 0x01, 0x02
+
+
+@dataclass
+class Control:
+	cid: int
+	task: int
+	flags: int
+	position: int
+
+
+def controls(dev):
+	"""The device's controls (0x1B04 fn 0 / fn 1)."""
+	found = []
+	for i in range(dev.call(REPROG_CONTROLS, 0)[0]):
+		r = dev.call(REPROG_CONTROLS, 1, bytes([i]))
+		cid, task = struct.unpack('>HH', r[:4])
+		found.append(Control(cid, task, r[4], r[5]))
+	return found
+
+
+def set_diverted(dev, cid, on):
+	"""Report the control to software (on) or let it do its own job again (off)."""
+	dev.call(REPROG_CONTROLS, 3, struct.pack('>HBHB', cid, DIVERT_VALID | (DIVERT if on else 0), 0, 0))
+
+
+def diverted_held(params):
+	"""Control ids held, from a 0x1B04 diverted-controls event."""
+	return [c for c in struct.unpack('>4H', bytes(params[:8]).ljust(8, b'\0')) if c]
 
 
 # Analog keyboards' switches (0x1B08), as G HUB's Feature1B08AnalogKeys: fn 0 capabilities, fn 1 /

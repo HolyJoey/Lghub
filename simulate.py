@@ -278,6 +278,38 @@ class FakeWheelMouse(FakeMouse):
 		return b''
 
 
+class FakeMouseX(FakeMouse):
+	"""A G502 X-like mouse: buttons over 0x1B04 (diverted to software), no 0x8110."""
+	FEATURES = [f for f in FakeMouse.FEATURES if f != 0x8110] + [features.REPROG_CONTROLS]
+	# (control id, task id, position): left, right, middle, back, forward, DPI, ... (made up)
+	CONTROLS = [(0x50, 0x38, 1), (0x51, 0x39, 2), (0x52, 0x3A, 3), (0x53, 0x3C, 4), (0x56, 0x3E, 5),
+	            (0xED, 0xDB, 6), (0xEE, 0xDC, 7), (0xEF, 0xDD, 8)]
+
+	def __init__(self, name='G502 X'):
+		super().__init__(name)
+		self.diverted = set()
+
+	def handle(self, feature, fn, p):
+		if feature != features.REPROG_CONTROLS:
+			return super().handle(feature, fn, p)
+		if fn == 0:
+			return bytes([len(self.CONTROLS)])
+		if fn == 1:
+			cid, task, pos = self.CONTROLS[p[0]]
+			return struct.pack('>HHBB', cid, task, features.DIVERTABLE | 0x10, pos)
+		cid = struct.unpack('>H', p[:2])[0]
+		if fn == 3 and p[2] & features.DIVERT_VALID:
+			(self.diverted.add if p[2] & features.DIVERT else self.diverted.discard)(cid)
+		return struct.pack('>HB', cid, int(cid in self.diverted))
+
+	def hold(self, cids):
+		"""Simulate controls being held: a 0x1B04 event for the diverted ones."""
+		idx = self.FEATURES.index(features.REPROG_CONTROLS)
+		held = [c for c in cids if c in self.diverted][:4]
+		payload = b''.join(struct.pack('>H', c) for c in held)
+		self.outbox.append(bytes([hidpp.LONG, 0xFF, idx, 0x00]) + payload.ljust(16, b'\0'))
+
+
 class FakeKeyboard(FakeMouse):
 	"""A corded G815-like keyboard: two lighting zones, brightness, report rate, onboard mode."""
 	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, features.COLOR_LED_EFFECTS,
@@ -563,6 +595,7 @@ class FakeReceiver:
 
 
 MICE = ('c08b', 'c08d', 'c332', 'c07d', 'c084', 'c092')
+MICE_X = ('c099',)               # G502 X
 KEYBOARDS = ('c33f', 'c339', 'c33c', 'c343', 'c33e')
 ANALOG_KEYBOARDS = ('c35b',)     # PRO X TKL RAPID
 YETIS = ('0aaf',)
@@ -575,7 +608,7 @@ def transport_for(usb_id, port):
 	app's lifetime so changes stick while it runs."""
 	pid = usb_id.split(':')[1]
 	kinds = {**dict.fromkeys(MICE, FakeMouse), **dict.fromkeys(KEYBOARDS, FakeKeyboard),
-	         **dict.fromkeys(ANALOG_KEYBOARDS, FakeAnalogKeyboard),
+	         **dict.fromkeys(ANALOG_KEYBOARDS, FakeAnalogKeyboard), **dict.fromkeys(MICE_X, FakeMouseX),
 	         **dict.fromkeys(YETIS, FakeYeti),
 	         **dict.fromkeys(RECEIVERS, FakeReceiver)}
 	if pid not in kinds:

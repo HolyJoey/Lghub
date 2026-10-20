@@ -5,6 +5,9 @@ Mice (HID++ 0x8110 MouseButtonSpy): read the device's remap table (function 3), 
 button no longer clicks by itself and is reported in a 16-bit big-endian event instead; all
 other buttons keep working natively. Stopping restores the table and stops spying (function 2).
 
+Newer mice without 0x8110 (HID++ 0x1B04, see features.controls): every button that runs a
+macro is diverted to software and comes back in 0x1B04's events; stopping undiverts them.
+
 Keyboards (HID++ 0x8010 G-keys): software control on (function 2, 1), G-keys reported as a bit
 mask (G1 = bit 0 of the first byte), off again when done. With M-keys (0x8020) the G-keys have
 three sets, M1 to M3, as in G HUB: an M-key press (event 0) picks the set and lights its key
@@ -18,10 +21,13 @@ assignments.json: {device ident: {"button:N", "gkey:N" (M1), "m2:gkey:N" or "m3:
 """
 import threading
 
+import features
 import hidpp
 import macros
 
 SPY, GKEY, MKEYS = 0x8110, 0x8010, 0x8020
+REPROG = features.REPROG_CONTROLS
+BUTTON = 'button:'                   # assignment keys of mouse buttons: button:N, shift:button:N
 M_LEDS = {1: 1, 2: 2, 3: 4}          # M-key -> its bit, in 0x8020's LED setting and its events
 
 
@@ -54,19 +60,16 @@ class DeviceInput:
 		self.mkeys = None                 # 0x8020's feature index, when the keyboard has M-keys
 		self.pressed = {}                 # bit -> (key, macro) while down: releases what was pressed
 		self.shifted = 0                  # G-Shift buttons held
+		self.positions = {}               # 0x1B04: control id -> button number
+		self.diverted = []                # 0x1B04: control ids handled here
 
 	def start(self):
-		if self.dev.has(SPY) and any('button:' in k for k in self.assigned):
-			self.kind = SPY
-			self.original_remap = self.dev.call(SPY, 3)[:16]
-			self.dev.call(SPY, 1)
-			remap = bytearray(self.original_remap)
-			for key in self.assigned:
-				n = int(key.rsplit(':', 1)[1])
-				if 'button:' in key and 1 <= n <= 16:
-					remap[n - 1] = 0          # handled here, not by the mouse (with only a G-Shift
-					                          # macro it does nothing unshifted: ours)
-			self.dev.call(SPY, 4, bytes(remap))
+		buttons = self._buttons()
+		if self.dev.has(SPY) and buttons:
+			self._spy(buttons)
+		elif self.dev.has(REPROG) and buttons:
+			if not self._divert(buttons):
+				return False
 		elif self.dev.has(GKEY) and any('gkey:' in k for k in self.assigned):
 			self.kind = GKEY
 			self.dev.call(GKEY, 2, b'\x01')
@@ -79,6 +82,34 @@ class DeviceInput:
 		self.thread.start()
 		return True
 
+	def _buttons(self):
+		"""Numbers of the mouse buttons that have a macro (in either layer)."""
+		return {int(k.rsplit(':', 1)[1]) for k in self.assigned if BUTTON in k}
+
+	def _spy(self, buttons):
+		"""0x8110: spy on the buttons and take the ones with a macro out of the remap table."""
+		self.kind = SPY
+		self.original_remap = self.dev.call(SPY, 3)[:16]
+		self.dev.call(SPY, 1)
+		remap = bytearray(self.original_remap)
+		for n in buttons:
+			if 1 <= n <= 16:
+				remap[n - 1] = 0          # handled here, not by the mouse (with only a G-Shift
+				                          # macro it does nothing unshifted: ours)
+		self.dev.call(SPY, 4, bytes(remap))
+
+	def _divert(self, buttons):
+		"""0x1B04: divert the controls of the buttons that run a macro. False if none can be."""
+		self.positions = {c.cid: c.position for c in features.controls(self.dev)
+		                  if c.position and c.flags & features.DIVERTABLE}
+		self.diverted = [cid for cid, pos in self.positions.items() if pos in buttons]
+		if not self.diverted:
+			return False
+		self.kind = REPROG
+		for cid in self.diverted:
+			features.set_diverted(self.dev, cid, True)
+		return True
+
 	def stop(self):
 		self.stop_event.set()
 		if self.thread:
@@ -88,6 +119,9 @@ class DeviceInput:
 				if self.original_remap is not None:
 					self.dev.call(SPY, 4, self.original_remap)
 				self.dev.call(SPY, 2)
+			elif self.kind == REPROG:
+				for cid in self.diverted:
+					features.set_diverted(self.dev, cid, False)
 			elif self.kind == GKEY:
 				self.dev.call(GKEY, 2, b'\x00')
 		except hidpp.HidppError:
@@ -108,6 +142,9 @@ class DeviceInput:
 			p = event[2]
 			if self.kind == SPY:
 				self._changed('button', (p[0] << 8) | p[1])
+			elif self.kind == REPROG:
+				held = features.diverted_held(p)
+				self._changed('button', sum(1 << (self.positions[c] - 1) for c in held if c in self.positions))
 			else:
 				self._changed('gkey', int.from_bytes(p[:4], 'little'))
 

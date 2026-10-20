@@ -65,8 +65,10 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 - Plan: read-only first (read the band records), then writes. Notes: `re/notes/proeq.txt`.
 
 ### Mice
-- **0x1B04 buttons on newer mice** (those without 0x8110): functions found; the divert flag bits
-  and G HUB's button -> control-id map not.
+- **0x1B04 buttons on newer mice** (those without 0x8110, like the G502 X): done: macros on
+  buttons divert the buttons' controls (G HUB's 6-byte SetCtrlIdReporting; flag bits from
+  Logitech's spec, G HUB's caller not found) and read the diverted-controls events. Check on a
+  G502 X. Left: remapping a button to another button's job (fn 3's remap field).
 - **0x2240 surface tuning**: done as G HUB's routine (fn 2 / 3, shutter event, fn 4, squal, fn 5,
   event, fn 6; fn 1 sets the three values). Factory surface from fn 0 bytes 6-8, active one found
   by bytes 3-5 (as G HUB). Left: G HUB's hard / soft presets (source not found) and a check on a

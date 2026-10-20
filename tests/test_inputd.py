@@ -47,6 +47,23 @@ class SpyTest(unittest.TestCase):
 		self.assertFalse(fake.spying)
 		self.assertEqual(fake.remap, bytes(range(1, 17)))         # restored
 
+	def test_newer_mice_divert_over_0x1b04(self):
+		fake = simulate.FakeMouseX()
+		dev = hidpp.Device(fake)
+		rec = Recorder()
+		macro = dict(macros.keystroke(0x06, [macros.CTRL]), name='Copy')
+		d = inputd.DeviceInput(dev, {'button:6': macro, 'button:40': macro}, rec)
+		self.assertTrue(d.start())
+		self.assertEqual(fake.diverted, {0xED})                  # button 6 only; no button 40 here
+		fake.hold([0xED, 0x50])                                  # left is not diverted: not reported
+		time.sleep(0.3)
+		fake.hold([])
+		time.sleep(0.3)
+		d.stop()
+		self.assertEqual(rec.calls, [('press', 'button:6', 'Copy'), ('release', 'button:6', 'Copy')])
+		self.assertEqual(fake.diverted, set())                   # back to the mouse
+		self.assertFalse(inputd.DeviceInput(dev, {'button:40': macro}, rec).start())   # nothing divertable
+
 	def test_nothing_assigned_does_nothing(self):
 		fake = simulate.FakeMouse()
 		d = inputd.DeviceInput(hidpp.Device(fake), {}, Recorder())
