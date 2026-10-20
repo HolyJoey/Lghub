@@ -96,8 +96,10 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 - 0x4521 game mode on older keyboards done (bits from G HUB, key names from Logitech's HID++
   spec). 0x4523 disable controls (newer keyboards' game mode): fn 0 sets a bitmap of control
   indexes, fn 1 / fn 3 read game-mode bits, fn 2 [0, on | lock << 1] sets game mode (G HUB's
-  Feature4523DisableControls); left: which index is which key (the keyboard's control table and
-  G HUB's disable_controls_preset.json). 0x8088 multi-lightbar: not started (no device known). Left out: 0x8051 Logi
+  Feature4523DisableControls); left: which index is which key. G HUB's game-mode presets hold
+  control ids (CIDs, from the key pictures' inputRegions), and the agent reads
+  content/disable_controls_preset.json, but the newer keyboards' depots (G515, PRO X 60, ...) are
+  encrypted (key-id header), so that file is off limits; needs a keyboard to read its control table. 0x8088 multi-lightbar: not started (no device known). Left out: 0x8051 Logi
   modifiers (G HUB uses it inside its key remapping, no setting of its own).
 - Left out on purpose: 0x4540 layout, 0x4530 / 0x4531 multi-platform, 0x4220 lock-key state;
   G HUB's app has no setting for them.
