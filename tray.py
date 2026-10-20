@@ -12,7 +12,7 @@ from gi.repository import Gio, GLib
 
 ITEM_PATH, MENU_PATH = '/StatusNotifierItem', '/MenuBar'
 WATCHER = 'org.kde.StatusNotifierWatcher'
-APP_ID, APP_PATH = 'dev.local.LghubBlueVoice', '/dev/local/LghubBlueVoice'   # the window (app.py)
+APP_ID, APP_PATH = 'dev.local.Lghub', '/dev/local/Lghub'   # the window (app.py)
 ICONS = os.path.join(os.environ.get('XDG_DATA_HOME') or os.path.expanduser('~/.local/share'), 'icons')
 QUIT = 4
 
@@ -60,7 +60,7 @@ def open_app():
 def icon_name(icons=ICONS):
 	"""The installer's icon: G HUB's logo when it was downloaded, else Lghub's own."""
 	return 'lghub' if os.path.exists(os.path.join(icons, 'hicolor', '256x256', 'apps', 'lghub.png')) \
-		else 'lghub-bluevoice'
+		else 'lghub-logo'
 
 
 def quit_all(bus):

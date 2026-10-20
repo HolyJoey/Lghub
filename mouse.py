@@ -3,7 +3,7 @@
 G HUB keeps a mouse's settings in its onboard memory (feature 0x8100), so they work on any
 computer without software running. We do the same: read a profile sector, change it, write it
 back with its checksum, and read it again to check. The first write keeps a backup of every
-sector we touch (in ~/.local/share/lghub-bluevoice/backups).
+sector we touch (in ~/.local/share/lghub/backups).
 
 Mice without onboard memory get live settings through 0x2201 (DPI) and 0x8060 (report rate).
 """

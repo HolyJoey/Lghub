@@ -59,7 +59,7 @@ class TrayBusTest(unittest.TestCase):
 		self.assertIn('Equalizer', labels)
 		rows = self.call('GetGroupProperties', ('(aias)', ([1], []))).unpack()[0]
 		self.assertEqual(rows, [(1, {'label': 'Open Lghub'})])
-		self.assertIn(self.tray._item_get(None, None, None, None, 'IconName').unpack(), ('lghub', 'lghub-bluevoice'))
+		self.assertIn(self.tray._item_get(None, None, None, None, 'IconName').unpack(), ('lghub', 'lghub-logo'))
 		self.assertEqual(self.call('GetProperty', ('(is)', (1, 'label'))).unpack()[0], 'Open Lghub')
 		self.assertEqual(self.call('AboutToShow', ('(i)', (0,))).unpack(), (False,))
 		self.assertEqual(self.call('AboutToShowGroup', ('(ai)', ([],))).unpack(), ([], []))
@@ -87,7 +87,7 @@ class TrayBusTest(unittest.TestCase):
 
 	def test_icon_follows_the_installer(self):
 		with tempfile.TemporaryDirectory() as d:
-			self.assertEqual(tray.icon_name(d), 'lghub-bluevoice')
+			self.assertEqual(tray.icon_name(d), 'lghub-logo')
 			os.makedirs(os.path.join(d, 'hicolor', '256x256', 'apps'))
 			open(os.path.join(d, 'hicolor', '256x256', 'apps', 'lghub.png'), 'w').close()
 			self.assertEqual(tray.icon_name(d), 'lghub')

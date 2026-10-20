@@ -46,7 +46,7 @@ Everything below has only met the simulator (`simulate.py`) or the DLLs offline.
     DPI / profile notices; the tray (clicking a switch)
   - report-rate byte = ms, writing a 255-byte sector in 16-byte chunks, button order
   - 0x8110 software buttons, DPI/profile macros, G-Shift layer
-  - Backups of every sector written go to `~/.local/share/lghub-bluevoice/backups/`.
+  - Backups of every sector written go to `~/.local/share/lghub/backups/`.
 - **C920**: control names and ranges, preview at 640x360 MJPEG.
 - **Untestable here (no device)**:
   - G733, Yetis, G735

@@ -10,7 +10,7 @@ import re
 
 import presets
 
-APP_NAME = 'lghub-bluevoice'
+APP_NAME = 'lghub'
 DATA_DIR = os.path.join(os.environ.get('XDG_DATA_HOME', os.path.expanduser('~/.local/share')), APP_NAME)
 CONFIG_DIR = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.expanduser('~/.config')), APP_NAME)
 # Runtime state lives in the per-user runtime dir; without one, in the user's own cache (never a

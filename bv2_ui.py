@@ -248,7 +248,7 @@ class Bv2Page(Gtk.Box):
 		if status.get('voice') == 'bv2':
 			text = f'{inp.get("description", "Microphone")} → Blue VO!CE Microphone'
 		elif status.get('state') == 'error':
-			text = status.get('error') or 'Problem: see journalctl --user -u lghub-bluevoice'
+			text = status.get('error') or 'Problem: see journalctl --user -u lghub'
 		else:
 			text = 'Waiting for the microphone (the engine picks it up when it is plugged in)'
 		if text != self.route.get_text():   # a wrapping label relayouts on every set_text

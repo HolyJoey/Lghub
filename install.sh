@@ -6,10 +6,10 @@
 #   ./install.sh --depot-dir DIR     use driver_audio_apo.depot / pro_headset.depot from DIR
 set -euo pipefail
 
-APP_ID="dev.local.LghubBlueVoice"
+APP_ID="dev.local.Lghub"
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PREFIX="${XDG_DATA_HOME:-$HOME/.local/share}"
-APP_DIR="$PREFIX/lghub-bluevoice"
+APP_DIR="$PREFIX/lghub"
 BIN_DIR="$HOME/.local/bin"
 UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 DEPOT_ARGS=()
@@ -172,6 +172,22 @@ if ((${#optional[@]})); then
   fi
 fi
 
+# Lghub used to be called lghub-bluevoice: move its folders over and remove the old service,
+# launcher, menu entry and icon.
+OLD_APP_DIR="$PREFIX/lghub-bluevoice"
+OLD_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/lghub-bluevoice"
+if [ -e "$UNIT_DIR/lghub-bluevoice.service" ] || [ -d "$OLD_APP_DIR" ] || [ -d "$OLD_CONFIG_DIR" ]; then
+  say "Moving lghub-bluevoice over to lghub"
+  systemctl --user disable --now lghub-bluevoice.service 2>/dev/null || true
+  rm -f "$UNIT_DIR/lghub-bluevoice.service" "$BIN_DIR/lghub-bluevoice" "$PREFIX/applications/lghub-bluevoice.desktop" \
+    "$PREFIX/icons/hicolor/scalable/apps/lghub-bluevoice.svg"
+  systemctl --user daemon-reload
+  if [ -d "$OLD_APP_DIR" ] && [ ! -e "$APP_DIR" ]; then mv "$OLD_APP_DIR" "$APP_DIR"; fi
+  NEW_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/lghub"
+  if [ -d "$OLD_CONFIG_DIR" ] && [ ! -e "$NEW_CONFIG_DIR" ]; then mv "$OLD_CONFIG_DIR" "$NEW_CONFIG_DIR"; fi
+  echo "Done; your settings came along."
+fi
+
 say "Building"
 mkdir -p "$APP_DIR/bin"
 read -ra PW_FLAGS <<< "$(pkg-config --cflags --libs libpipewire-0.3)"
@@ -186,7 +202,7 @@ rm -rf "$APP_DIR/wine" "$APP_DIR/bin/bluevoice_host.exe"
 echo "OK"
 
 say "Installing to $APP_DIR"
-cp "$SRC"/*.py "$SRC/lghub-bluevoice.svg" "$APP_DIR/"
+cp "$SRC"/*.py "$SRC/lghub-logo.svg" "$APP_DIR/"
 
 say "Getting Logitech's audio effects"
 if [ -f "$APP_DIR/apo/logi_audio_dts_studio_capture_apo.dll" ] \
@@ -198,27 +214,25 @@ fi
 
 say "Adding the launcher, menu entry and icon"
 mkdir -p "$BIN_DIR" "$PREFIX/applications" "$PREFIX/icons/hicolor/scalable/apps"
-for launcher in lghub lghub-bluevoice; do
-  cat > "$BIN_DIR/$launcher" <<EOF
+cat > "$BIN_DIR/lghub" <<EOF
 #!/usr/bin/env bash
 exec python3 "$APP_DIR/app.py" "\$@"
 EOF
-  chmod +x "$BIN_DIR/$launcher"
-done
-cp "$SRC/lghub-bluevoice.svg" "$PREFIX/icons/hicolor/scalable/apps/lghub-bluevoice.svg"
+chmod +x "$BIN_DIR/lghub"
+cp "$SRC/lghub-logo.svg" "$PREFIX/icons/hicolor/scalable/apps/lghub-logo.svg"
 python3 "$APP_DIR/depots.py" --eq-presets "$APP_DIR/presets/equalizer_presets.json" || true
 # The G HUB icon, read from Logitech's update server (six small requests); ours if that fails.
-ICON=lghub-bluevoice
+ICON=lghub-logo
 mkdir -p "$PREFIX/icons/hicolor/256x256/apps"
 if python3 "$APP_DIR/depots.py" --app-icon "$PREFIX/icons/hicolor/256x256/apps/lghub.png"; then
   ICON=lghub
 fi
-cat > "$PREFIX/applications/lghub-bluevoice.desktop" <<EOF
+cat > "$PREFIX/applications/lghub.desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=Lghub
 GenericName=Logitech G devices
-Comment=Settings for Logitech G headsets, mice and webcams, with Blue VO!CE
+Comment=Settings for Logitech G headsets, mice, keyboards and webcams, with Blue VO!CE
 Exec=$BIN_DIR/lghub
 Icon=$ICON
 Terminal=false
@@ -230,9 +244,9 @@ if command -v gtk-update-icon-cache >/dev/null; then gtk-update-icon-cache -qf "
 
 say "Starting the background service"
 mkdir -p "$UNIT_DIR"
-cat > "$UNIT_DIR/lghub-bluevoice.service" <<EOF
+cat > "$UNIT_DIR/lghub.service" <<EOF
 [Unit]
-Description=Blue VO!CE virtual microphone
+Description=Lghub (Blue VO!CE, equalizer, surround, device settings)
 After=pipewire.service wireplumber.service
 Wants=pipewire.service wireplumber.service
 
@@ -245,8 +259,8 @@ RestartSec=3
 WantedBy=default.target
 EOF
 systemctl --user daemon-reload
-systemctl --user enable --now lghub-bluevoice.service
-systemctl --user restart lghub-bluevoice.service
+systemctl --user enable --now lghub.service
+systemctl --user restart lghub.service
 echo "Running. A new input device, 'Blue VO!CE Microphone', appears in a few seconds."
 
 say "Done"

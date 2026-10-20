@@ -24,7 +24,7 @@ from worker import Worker  # noqa: E402
 from ui import (CSS, box, button_widget, device_icon, device_sidebar, forget_image, label, nav_button,  # noqa: E402
                 page_header, scrolled)
 
-APP_ID = 'dev.local.LghubBlueVoice'
+APP_ID = 'dev.local.Lghub'
 APP_NAME = 'Lghub'
 DISCOVER_SECONDS = 2
 RECEIVER_SCAN_SECONDS = 10
@@ -307,7 +307,7 @@ class App(Adw.Application):
 		Adw.Application.do_startup(self)
 		Adw.StyleManager.get_default().set_color_scheme(Adw.ColorScheme.FORCE_DARK)
 		theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
-		Gtk.Window.set_default_icon_name('lghub' if theme.has_icon('lghub') else 'lghub-bluevoice')
+		Gtk.Window.set_default_icon_name('lghub' if theme.has_icon('lghub') else 'lghub-logo')
 		provider = Gtk.CssProvider()
 		provider.load_from_string(CSS)
 		Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), provider,

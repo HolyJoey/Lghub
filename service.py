@@ -1,7 +1,7 @@
 """The background engine, as a systemd user service."""
 import subprocess
 
-UNIT = 'lghub-bluevoice.service'
+UNIT = 'lghub.service'
 
 
 def _systemctl(*args):

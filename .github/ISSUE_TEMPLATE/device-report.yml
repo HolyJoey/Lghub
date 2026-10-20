@@ -36,7 +36,7 @@ body:
     id: log
     attributes:
       label: Service log
-      description: Output of `journalctl --user -u lghub-bluevoice -n 200 --no-pager`
+      description: Output of `journalctl --user -u lghub -n 200 --no-pager`
       render: text
   - type: textarea
     id: page

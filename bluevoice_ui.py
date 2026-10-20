@@ -360,7 +360,7 @@ class MicrophonePage(Gtk.Box):
 		elif state == 'starting':
 			text = 'Starting…'
 		else:
-			text = status.get('error') or 'Problem: see journalctl --user -u lghub-bluevoice'
+			text = status.get('error') or 'Problem: see journalctl --user -u lghub'
 		self.service_state.set_text(text)
 		self.stop_button.set_sensitive(active)
 
@@ -504,7 +504,7 @@ class BlueVoiceView(Gtk.Box):
 		self.window.toast(text)
 
 	def _build_sidebar(self, device):
-		icon_path = os.path.join(APP_DIR, 'lghub-bluevoice.svg')
+		icon_path = os.path.join(APP_DIR, 'lghub-logo.svg')
 		if device:
 			logo = device_icon(device, 32)
 		elif os.path.exists(icon_path):

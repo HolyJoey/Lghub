@@ -5,7 +5,7 @@ Each model's G HUB package (a "depot") holds its pictures. A depot can be tens o
 it is just a header plus files laid end to end, and the server answers HTTP range requests,
 so we read the header, hop over the file lengths, and download only the manifest and the
 one picture it names for the model: a few hundred KB, once per model. Nothing from Logitech
-is stored in this repo; the files land in ~/.local/share/lghub-bluevoice.
+is stored in this repo; the files land in ~/.local/share/lghub.
 
 Newer depots are G HUB "capsules": the same layout, but the file list and each file are
 encrypted (AES-128-GCM). The keys are the ones G HUB itself downloads from the same server

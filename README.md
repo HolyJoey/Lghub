@@ -83,7 +83,7 @@ When the mouse's own buttons switch DPI, profile or report rate, a short desktop
 as G HUB's on-screen display does.
 Like G HUB's on-board memory mode, everything is saved *in the mouse*, so it keeps working on
 any computer and nothing has to run in the background. Before the first change, the mouse's
-memory is backed up to `~/.local/share/lghub-bluevoice/backups/`.
+memory is backed up to `~/.local/share/lghub/backups/`.
 
 | Sensitivity | Buttons | Lighting |
 | --- | --- | --- |
@@ -215,7 +215,7 @@ The app itself does nothing once closed.
   the preview (MJPEG frames, decoded by GTK).
 - **Headset sound card.** ALSA's mixer (`headset.py`).
 - **Background service.** `engine.py` keeps Blue VO!CE, the equalizer and surround running and
-  puts webcam settings back. `systemctl --user status lghub-bluevoice` shows it.
+  puts webcam settings back. `systemctl --user status lghub` shows it.
 
 Which device is which comes from a table of model facts (`devices.py`): USB ids, lighting
 zones, and so on, from G HUB's own device list. `depots.py` knows where each model's G HUB
@@ -240,7 +240,7 @@ simulator. The webcam screenshot is a real camera.
 
 - Most devices here have only met the simulator. If something doesn't work on yours (or does),
   open an issue with the "Device report" form: it asks for the model, the service log
-  (`journalctl --user -u lghub-bluevoice`) and what the device's page says.
+  (`journalctl --user -u lghub`) and what the device's page says.
 - Still open, compared with G HUB: the 5-band PRO equalizer, the G735 / PRO X 2 protocol and
   the newer headsets' settings (A50 X, G522, PRO X3), Blue VO!CE on the newer devices, per-key
   actuation on analog keyboards, receiver pairing, keyboard onboard-profile editing and a few
@@ -248,7 +248,7 @@ simulator. The webcam screenshot is a real camera.
 
 ## If something's off
 
-`systemctl --user status lghub-bluevoice` and `journalctl --user -u lghub-bluevoice` show what
+`systemctl --user status lghub` and `journalctl --user -u lghub` show what
 the service is doing. If a mouse or keyboard page says it can't talk to the device, check the
 udev rule above and replug it. If the installer says a download doesn't match, Logitech has
 released new files; open an issue. If you have the files from somewhere else, point the
