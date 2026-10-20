@@ -133,9 +133,11 @@ Blue VO!CE helper:
 | Arch | `python-gobject gtk4 libadwaita gcc libpipewire alsa-utils` |
 
 PipeWire has to be the running sound server (the default on current distributions) and the
-service runs under systemd's user session; the installer checks both and names any missing
-package. Optional extras it points out: grim (Hyprland, Sway) or GStreamer's PipeWire plugin
-(GNOME, KDE) for the screen sampler, and on GNOME the AppIndicator extension for the tray icon.
+service runs under systemd's user session. The installer checks all of this. On Debian, Ubuntu,
+Fedora, Arch and their derivatives it shows the exact command for anything missing and asks
+before running it (the default is no); elsewhere it lists what to install. Optional extras get
+their own question: grim (Hyprland, Sway) or GStreamer's PipeWire plugin (GNOME, KDE) for the
+screen sampler, and on GNOME the AppIndicator extension for the tray icon.
 
 The installer downloads Logitech's audio effects (Blue VO!CE and DTS Headphone:X), G HUB's
 equalizer presets and G HUB's app icon from G HUB's own update server (none of it is in this
@@ -144,7 +146,8 @@ app fetches its product picture from the same server (and, for the G733, its Blu
 presets): just those files, a few hundred KB.
 
 Mice and keyboards need permission to talk to the device, and macros to type. One udev rule
-file does both; this is the only step that needs root:
+file does both; this is the only step that needs root. The installer shows these commands and
+offers to run them when the rule isn't there yet:
 
 ```bash
 printf '%s\n' 'SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", TAG+="uaccess"' \
