@@ -30,6 +30,7 @@ import webcam
 
 POLL = 0.25          # config / status interval while an app records, seconds
 IDLE_POLL = 1.0      # the same while idle (link events still wake the loop at once)
+USB_SETTLE = 3.0     # after a USB plug-in, devices are read again this much later (ours)
 LINK_EVERY = 60.0    # fallback; link events and sound-card hotplug trigger a check at once
 IDLE_STATUS_EVERY = 1.0  # status.json interval while no app listens (meters need 10 Hz only when used)
 IDLE_GRACE = 5.0     # release the real mic this long after the last app stops recording
@@ -61,6 +62,7 @@ class Engine:
 		self.webcams = webcam.Restorer()
 		self.surround = surround.Runner()
 		self.sound_cards = hotplug.Watch(hotplug.SOUND)
+		self.hid = hotplug.Watch(hotplug.HID)
 		self.inputs = inputd.Manager()
 		self.games = profiles.Switcher()
 		self.restorer = restore.Restorer()
@@ -309,8 +311,11 @@ class Engine:
 			self.restorer.check(now)
 		if self.lightsync.due(now):
 			self.lightsync.check(now)
-		if self.battery.due(now):
+		plugged = self.hid.changed()
+		if plugged or self.battery.due(now):
 			self.battery.check(now)
+			if plugged:   # read again once a receiver's mouse has connected, not at the next 5-minute check
+				self.battery.last = now - battery_watch.CHECK_EVERY + USB_SETTLE
 			if self.tray:
 				self.tray.refresh()
 		if self.osd.due(now):
@@ -318,13 +323,16 @@ class Engine:
 
 	def tray_devices(self):
 		"""[(name, battery reading or None)] for the tray: what's plugged in, and the wireless devices
-		the battery watch last read."""
+		the battery watch last read. A receiver none of them was read through is listed itself, so a
+		just plugged-in one never shows as nothing connected."""
 		import devices
 		readings = dict(self.battery.readings)
 		out = []
 		for d in devices.discover():
 			if d.model.type != 'receiver':
 				out.append((d.name, readings.pop(d.id, (None, None))[1]))
+			elif not any(key.startswith(d.id + '#') for key in readings):
+				out.append((d.name, None))
 		out += list(readings.values())
 		return out
 

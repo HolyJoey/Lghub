@@ -4,6 +4,7 @@ import os
 
 SOUND = '/sys/class/sound'          # sound cards: headsets, mics, speakers
 USB = '/sys/bus/usb/devices'        # USB devices: webcams, receivers, ...
+HID = '/sys/bus/hid/devices'        # HID devices: USB, a receiver's paired devices, Bluetooth
 
 
 class Watch:
@@ -21,3 +22,9 @@ class Watch:
 			return False
 		self.seen = now
 		return True
+
+
+def on_port(real, port):
+	"""Whether a sysfs device path (resolved) belongs to a port: a USB port like '3-2' (its
+	interfaces are '3-2:1.0', ...) or a HID device name like '0005:046D:B024.0007' (Bluetooth)."""
+	return f'/{port}:' in real or real.endswith(f'/{port}')

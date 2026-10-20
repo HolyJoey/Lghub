@@ -11,6 +11,8 @@ from dataclasses import dataclass
 
 LOGITECH = '046d'
 SYS_USB = '/sys/bus/usb/devices'
+SYS_HID = '/sys/bus/hid/devices'
+BLUETOOTH = '0005'   # HID bus number of Bluetooth devices
 # Comma-separated vid:pid (or just pid, Logitech assumed) to pretend are connected; for testing
 # pages and screenshots without the hardware. pid@port pretends a real USB port holds that
 # model (e.g. 082d@3-4 shows another webcam as a C920).
@@ -133,8 +135,9 @@ class Model:
 
 @dataclass(frozen=True)
 class Device:
-	id: str          # stable while connected: usb:<port>, or usb:<port>#<slot> behind a receiver
-	usb_id: str      # vid:pid (of the receiver, for a paired device)
+	id: str          # stable while connected: usb:<port>, usb:<port>#<slot> behind a receiver, or
+	                 # bt:<HID device name> over Bluetooth
+	usb_id: str      # vid:pid (of the receiver, for a paired device; the Bluetooth one over Bluetooth)
 	model: Model
 	serial: str = ''
 	index: int = 0xFF   # HID++ device index: 0xFF corded, 1-6 paired to a receiver
@@ -146,6 +149,17 @@ class Device:
 	@property
 	def wireless(self):
 		return self.index != 0xFF
+
+	@property
+	def bluetooth(self):
+		return self.id.startswith('bt:')
+
+	@property
+	def link(self):
+		"""How it's connected, for labels: 'wireless' (through a receiver), 'Bluetooth' or 'USB'."""
+		if self.wireless:
+			return 'wireless'
+		return 'Bluetooth' if self.bluetooth else 'USB'
 
 	@property
 	def name(self):
@@ -203,6 +217,27 @@ def _usb_devices():
 	return found
 
 
+def _bluetooth_devices():
+	"""[(HID device name, vid:pid, address, name)] for each Logitech device connected over
+	Bluetooth, one entry per device."""
+	try:
+		names = sorted(os.listdir(SYS_HID))
+	except OSError:
+		return []
+	found, seen = [], set()
+	for name in names:
+		bus, vid, rest = (name.split(':') + ['', ''])[:3]
+		if bus != BLUETOOTH or vid.lower() != LOGITECH:
+			continue
+		lines = _read(os.path.join(SYS_HID, name, 'uevent')).splitlines()
+		info = {key: value for key, _, value in (line.partition('=') for line in lines)}
+		address = info.get('HID_UNIQ', name)
+		if address not in seen:
+			seen.add(address)
+			found.append((name, f'{LOGITECH}:{rest.split(".")[0]}'.lower(), address, info.get('HID_NAME', '')))
+	return found
+
+
 def _fake_devices():
 	found = []
 	for i, item in enumerate(filter(None, (s.strip().lower() for s in os.environ.get(FAKE_ENV, '').split(',')))):
@@ -219,6 +254,10 @@ def discover():
 		model = model_for(usb_id)
 		if model:
 			devices.append(Device(f'usb:{port}', usb_id, model, serial))
+	for hid_name, usb_id, address, name in _bluetooth_devices():
+		# the Bluetooth product id if the catalog has it, else the name the device gives itself
+		model = _BY_USB_ID.get(usb_id) or match_model(name or f'Logitech device {usb_id}', 'other')
+		devices.append(Device(f'bt:{hid_name}', usb_id, model, address))
 	return devices
 
 

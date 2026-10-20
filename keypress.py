@@ -9,6 +9,7 @@ import os
 import select
 import threading
 
+import hotplug
 import surface_tuning
 
 KEYBOARD_PAGE = 0x07
@@ -70,7 +71,7 @@ def key_nodes(usb_port, page=KEYBOARD_PAGE):
 		return found
 	for name in names:
 		real = os.path.realpath(os.path.join(surface_tuning.SYS_HIDRAW, name, 'device'))
-		if f'/{usb_port}:' not in real:
+		if not hotplug.on_port(real, usb_port):
 			continue
 		try:
 			with open(os.path.join(surface_tuning.SYS_HIDRAW, name, 'device', 'report_descriptor'), 'rb') as f:

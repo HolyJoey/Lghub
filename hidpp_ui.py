@@ -34,7 +34,7 @@ class GenericView(Gtk.Box):
 		self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE, hexpand=True)
 		page = box(spacing=20, css=['page'])
 		page.append(page_header(device.name, f'{device.type_name}'
-		                        + (' · wireless' if device.wireless else ' · connected over USB')))
+		                        + (' · wireless' if device.wireless else f' · connected over {device.link}')))
 		self.panel = SettingsPanel(win, device, self._status)
 		page.append(self.panel)
 		self.stack.add_named(scrolled(page), 'settings')

@@ -40,13 +40,13 @@ class Restorer:
 
 	def __init__(self):
 		import receiver_watch
-		self.usb = hotplug.Watch(hotplug.USB)
+		self.hid = hotplug.Watch(hotplug.HID)
 		self.wireless = receiver_watch.Watch()
 		self.present = set()       # device ids seen last time
 		self.last = 0.0
 
 	def due(self, now):
-		return self.usb.changed() or self.wireless.changed() or now - self.last >= CHECK_EVERY
+		return self.hid.changed() or self.wireless.changed() or now - self.last >= CHECK_EVERY
 
 	def check(self, now=None):
 		import devices

@@ -20,6 +20,7 @@ import select
 import threading
 import time
 
+import hotplug
 import store
 
 SURFACE_TUNING = 0x2240
@@ -140,7 +141,7 @@ def motion_nodes(usb_port):
 		return found
 	for name in names:
 		real = os.path.realpath(os.path.join(SYS_HIDRAW, name, 'device'))
-		if f'/{usb_port}:' not in real:
+		if not hotplug.on_port(real, usb_port):
 			continue
 		try:
 			with open(os.path.join(SYS_HIDRAW, name, 'device', 'report_descriptor'), 'rb') as f:

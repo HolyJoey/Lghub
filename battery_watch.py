@@ -90,7 +90,7 @@ class Watch:
 	def _wireless(devices):
 		for d in devices.discover():
 			if d.model.type != 'receiver':
-				if 'battery' in d.model.flags:
+				if 'battery' in d.model.flags or d.bluetooth:   # Bluetooth ones run on battery
 					yield d
 				continue
 			try:

@@ -249,7 +249,7 @@ class Manager:
 
 	def __init__(self):
 		import hotplug
-		self.usb = hotplug.Watch(hotplug.USB)
+		self.hid = hotplug.Watch(hotplug.HID)
 		self.running = {}         # device id -> (DeviceInput, assigned)
 		self.mtimes = None
 		self.last_check = 0.0
@@ -260,7 +260,7 @@ class Manager:
 		import time
 		mtimes = tuple(os.stat(p).st_mtime if os.path.exists(p) else None
 		               for p in (macros.ASSIGNMENTS_FILE, macros.LIBRARY_FILE))
-		changed = self.usb.changed() or mtimes != self.mtimes
+		changed = self.hid.changed() or mtimes != self.mtimes
 		self.mtimes = mtimes
 		return changed or time.monotonic() - self.last_check >= self.CHECK_EVERY
 

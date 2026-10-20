@@ -79,7 +79,7 @@ class HomePage(Gtk.Box):
 			if dev.model.type == 'receiver':
 				detail = 'No wireless device switched on'
 			else:
-				detail = 'Wireless' if dev.wireless else 'Connected'
+				detail = 'Connected' if dev.link == 'USB' else dev.link.capitalize()
 			self.flow.append(device_tile(device_icon(dev, TILE_PICTURE), dev.name, dev.type_name, detail,
 			                             lambda d=dev: self.win.show_device(d)))
 		self.flow.set_visible(bool(found))
@@ -108,7 +108,7 @@ class DeviceView(Gtk.Box):
 		self.append(side)
 
 		page = box(spacing=20, css=['page'])
-		page.append(page_header(device.name, f'{device.type_name} · connected over USB'))
+		page.append(page_header(device.name, f'{device.type_name} · connected over {device.link}'))
 
 		hero = box(Gtk.Orientation.HORIZONTAL, 20, ['card', 'hero'])
 		hero.append(device_icon(device, 72))

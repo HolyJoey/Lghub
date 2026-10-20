@@ -147,14 +147,18 @@ presets): just those files, a few hundred KB.
 
 Mice and keyboards need permission to talk to the device, and macros to type. One udev rule
 file does both; this is the only step that needs root. The installer shows these commands and
-offers to run them when the rule isn't there yet:
+offers to run them when the rule isn't there yet (or is from before Bluetooth support):
 
 ```bash
 printf '%s\n' 'SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", TAG+="uaccess"' \
+  'SUBSYSTEM=="hidraw", KERNELS=="0005:046D:*", TAG+="uaccess"' \
   'KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"' \
   | sudo tee /etc/udev/rules.d/70-lghub.rules
 sudo udevadm control --reload && sudo udevadm trigger
 ```
+
+The second line is for devices connected over Bluetooth (G604, G915 and the others G HUB lists
+with a Bluetooth id); they show up next to the USB ones.
 
 Then open **Lghub** from your menu (or run `lghub`).
 

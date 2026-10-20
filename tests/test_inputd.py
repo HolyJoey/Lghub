@@ -115,7 +115,7 @@ class ManagerTest(unittest.TestCase):
 				mock.patch.object(macros, 'ASSIGNMENTS_FILE', os.path.join(d, 'a.json')), \
 				mock.patch.object(macros, 'LIBRARY_FILE', os.path.join(d, 'l.json')):
 			manager = inputd.Manager()
-			manager.usb.changed.return_value = False
+			manager.hid.changed.return_value = False
 			manager.last_check = time.monotonic()
 			self.assertTrue(manager.due())                     # first look
 			self.assertFalse(manager.due())

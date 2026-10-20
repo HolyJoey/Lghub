@@ -35,6 +35,8 @@ Everything below has only met the simulator (`simulate.py`) or the DLLs offline.
   - Its sound card's mixer controls, the PRO_X surround tuning by ear, rooms (Entertainment /
     Gaming / Sports = DLL 0/1/2 from G HUB's enum order).
   - Then the PRO equalizer (below).
+- **Bluetooth** (found as `0005:046D:*` HID devices, ours): a G604 / G915 over Bluetooth shows
+  up, its page talks HID++ (device index 0xFF), battery in the tray, the new udev line.
 - **G502**:
   - profile layout offsets, LED effect bytes (cycle 0x03, breathing 0x0a)
   - LIGHTSYNC on its zones (0x8070 fixed colour, not saved) while it is in onboard mode; the
@@ -129,6 +131,9 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   (Lghub's meters come from PipeWire). Nothing to do unless a meter source turns out better.
 
 ### Wireless and power
+- **Models G HUB only lists in its encrypted device files** (68 of its 133 `data/devices` files,
+  G502 X among them): not in our catalog, so they show by the name they give (receiver,
+  Bluetooth) or as "Logitech device". Find their ids where G HUB keeps them readable.
 - **Pairing a device to a receiver**: newer LIGHTSPEED receivers pair through 0x1894
   (LightspeedDevicePairing). Found: fn 0 capabilities, fn 1 receiver info, fn 2 open lock (3 bytes,
   meaning not found), fn 3 close lock, fn 4 / 5 pairing info / extended info [slot], fn 6 device

@@ -9,6 +9,7 @@ Feature ids used here (see the per-device modules for what they do):
 	0x0000 root, 0x0001 feature set, 0x0003 firmware, 0x0005 name and type.
 """
 import errno
+import hotplug
 import os
 import select
 import struct
@@ -242,7 +243,8 @@ def _descriptor_reports(desc):
 
 
 def hidraw_for(usb_port):
-	"""[(path, HID++ report ids)] for the HID++ interfaces of a USB device (port like '3-2')."""
+	"""[(path, HID++ report ids)] for the HID++ interfaces of a USB device (port like '3-2') or a
+	Bluetooth one (its HID device name)."""
 	found = []
 	try:
 		names = sorted(os.listdir(SYS_HIDRAW))
@@ -250,7 +252,7 @@ def hidraw_for(usb_port):
 		return found
 	for name in names:
 		real = os.path.realpath(os.path.join(SYS_HIDRAW, name, 'device'))
-		if f'/{usb_port}:' not in real:
+		if not hotplug.on_port(real, usb_port):
 			continue
 		try:
 			with open(os.path.join(SYS_HIDRAW, name, 'device', 'report_descriptor'), 'rb') as f:

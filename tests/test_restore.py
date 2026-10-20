@@ -69,7 +69,7 @@ class RestoreTest(unittest.TestCase):
 		with mock.patch.object(restore, 'anything_saved', return_value=False):
 			r.check(1.0)
 		self.assertEqual(r.present, set())
-		r.usb.changed.return_value = False
+		r.hid.changed.return_value = False
 		r.wireless.changed.return_value = False
 		self.assertTrue(r.due(1.0 + restore.CHECK_EVERY))
 

@@ -27,7 +27,8 @@ class DiscoverTest(unittest.TestCase):
 			usb_tree(root, [('3-2', '046d', 'C33F', 'ABC'), ('3-3', '046d', 'ffff', None),
 			                ('3-4', '8087', '0026', None), ('3-2:1.0', '046d', 'c33f', None),
 			                ('usb3', '1d6b', '0003', None), ('3-5', None, None, None)])
-			with mock.patch.object(devices, 'SYS_USB', root), mock.patch.dict(os.environ, {devices.FAKE_ENV: ''}):
+			with mock.patch.object(devices, 'SYS_USB', root), mock.patch.object(devices, 'SYS_HID', '/nonexistent'), \
+					mock.patch.dict(os.environ, {devices.FAKE_ENV: ''}):
 				found = devices.discover()
 		self.assertEqual([(d.id, d.model.key, d.serial) for d in found],
 		                 [('usb:3-2', 'g815', 'ABC'), ('usb:3-3', 'unknown', '')])
@@ -37,6 +38,32 @@ class DiscoverTest(unittest.TestCase):
 		self.assertTrue(g815.icon)
 		with mock.patch.object(devices, 'SYS_USB', '/nonexistent'):
 			self.assertEqual(devices._usb_devices(), [])
+
+	def test_bluetooth_devices(self):
+		with tempfile.TemporaryDirectory() as root:
+			for name, uevent in (('0005:046D:B354.0004', 'HID_NAME=G915\nHID_UNIQ=aa:bb\n'),
+			                     ('0005:046D:B354.0005', 'HID_NAME=G915\nHID_UNIQ=aa:bb\n'),   # same device
+			                     ('0005:046D:B0FF.0006', 'HID_NAME=Logitech G305\nHID_UNIQ=cc\n'),
+			                     ('0005:046D:B0FE.0007', 'HID_UNIQ=dd\n'),
+			                     ('0005:054C:0CE6.0008', 'HID_NAME=Wireless Controller\n'),
+			                     ('0003:046D:C33F.0009', 'HID_NAME=G815\n')):
+				os.makedirs(os.path.join(root, name))
+				with open(os.path.join(root, name, 'uevent'), 'w') as f:
+					f.write(uevent)
+			with mock.patch.object(devices, 'SYS_USB', '/nonexistent'), mock.patch.object(devices, 'SYS_HID', root), \
+					mock.patch.dict(os.environ, {devices.FAKE_ENV: ''}):
+				found = devices.discover()
+		self.assertEqual([(d.id, d.usb_id, d.model.key, d.serial) for d in found],
+		                 [('bt:0005:046D:B0FE.0007', '046d:b0fe', 'unknown', 'dd'),
+		                  ('bt:0005:046D:B0FF.0006', '046d:b0ff', 'g305', 'cc'),          # by its name
+		                  ('bt:0005:046D:B354.0004', '046d:b354', 'g915', 'aa:bb')])      # Bluetooth id in the catalog
+		g915 = found[2]
+		self.assertEqual((g915.port, g915.bluetooth, g915.wireless, g915.link), ('0005:046D:B354.0004', True, False, 'Bluetooth'))
+		self.assertEqual(found[0].name, 'Logitech device 046d:b0fe')
+		self.assertEqual(devices.Device('usb:3-2', '046d:c33f', g915.model).link, 'USB')
+		self.assertEqual(devices.Device('usb:3-2#1', '046d:c539', g915.model, index=1).link, 'wireless')
+		with mock.patch.object(devices, 'SYS_HID', '/nonexistent'):
+			self.assertEqual(devices._bluetooth_devices(), [])
 
 	def test_models(self):
 		self.assertEqual(devices.model_for('046d:c52b').type, 'receiver')
@@ -48,7 +75,7 @@ class DiscoverTest(unittest.TestCase):
 
 	def test_fake_devices_and_receiver_scan(self):
 		with mock.patch.dict(os.environ, {devices.FAKE_ENV: 'c33f, 046d:c539@r1'}), \
-				mock.patch.object(devices, 'SYS_USB', '/nonexistent'):
+				mock.patch.object(devices, 'SYS_USB', '/nonexistent'), mock.patch.object(devices, 'SYS_HID', '/nonexistent'):
 			found = devices.discover()
 			self.assertEqual([d.id for d in found], ['usb:fake0', 'usb:r1'])
 			keyboard = devices.open_hidpp(found[0])

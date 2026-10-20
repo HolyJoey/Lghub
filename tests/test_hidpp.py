@@ -123,6 +123,18 @@ class TransportTest(unittest.TestCase):
 		with mock.patch.object(hidpp, 'SYS_HIDRAW', '/nonexistent'):
 			self.assertEqual(hidpp.hidraw_for('3-2'), [])
 
+	def test_bluetooth_hidpp_interface(self):
+		with tempfile.TemporaryDirectory() as root:
+			dev = os.path.join(root, 'devices', 'hci0', 'hci0:256', '0005:046D:B024.0007')
+			os.makedirs(dev)
+			with open(os.path.join(dev, 'report_descriptor'), 'wb') as f:
+				f.write(VENDOR)
+			os.makedirs(os.path.join(root, 'class', 'hidraw5'))
+			os.symlink(dev, os.path.join(root, 'class', 'hidraw5', 'device'))
+			with mock.patch.object(hidpp, 'SYS_HIDRAW', os.path.join(root, 'class')):
+				self.assertEqual([p for p, _ids in hidpp.hidraw_for('0005:046D:B024.0007')], ['/dev/hidraw5'])
+				self.assertEqual(hidpp.hidraw_for('0005:046D:B024.0008'), [])
+
 	def test_open_usb_tries_each_interface(self):
 		silent = mock.Mock()
 		silent.protocol_version.side_effect = hidpp.NoReply()

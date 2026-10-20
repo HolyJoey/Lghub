@@ -44,21 +44,22 @@ class BatteryWatchTest(unittest.TestCase):
 
 	def test_readings_walk_wireless_devices(self):
 		model = mock.Mock(type='headset', flags={'battery'})
-		corded = mock.Mock(model=mock.Mock(type='keyboard', flags=set()))
+		corded = mock.Mock(model=mock.Mock(type='keyboard', flags=set()), bluetooth=False)
 		receiver = mock.Mock(model=mock.Mock(type='receiver'))
 		headset, behind = mock.Mock(model=model), mock.Mock(model=model)
+		mouse = mock.Mock(model=mock.Mock(type='mouse', flags=set()), bluetooth=True)   # over Bluetooth
 		devices = mock.Mock()
-		devices.discover.return_value = [headset, corded, receiver]
+		devices.discover.return_value = [headset, corded, mouse, receiver]
 		devices.scan_receiver.return_value = [behind]
 		hid = mock.Mock()
 		hid.has.return_value = False
-		devices.open_hidpp.side_effect = [hid, OSError('gone')]
+		devices.open_hidpp.side_effect = [hid, hid, OSError('gone')]
 		features = mock.Mock()
 		features.battery.return_value = (50, 'On battery')
 		with mock.patch.dict(sys.modules, {'devices': devices, 'features': features}):
 			found = list(battery_watch.Watch()._readings())
-		self.assertEqual(found, [(headset, (50, 'On battery'))])
-		hid.close.assert_called_once()
+		self.assertEqual(found, [(headset, (50, 'On battery')), (mouse, (50, 'On battery'))])
+		self.assertEqual(hid.close.call_count, 2)
 
 	def test_notify_without_a_server(self):
 		from gi.repository import GLib

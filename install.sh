@@ -249,23 +249,25 @@ echo "Running. A new input device, 'Blue VO!CE Microphone', appears in a few sec
 say "Done"
 echo "Open 'Lghub' from your menu, or run: lghub"
 UDEV_RULES="${LGHUB_UDEV_RULES:-/etc/udev/rules.d/70-lghub.rules}"
-if ! grep -qs uinput "$UDEV_RULES"; then
+# hidraw of Logitech USB devices and of Logitech Bluetooth devices (HID bus 0005), and uinput
+RULES='SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNELS=="0005:046D:*", TAG+="uaccess"
+KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"'
+if ! grep -qs '0005:046D' "$UDEV_RULES"; then   # missing, or from before Bluetooth support
   echo
-  cat <<RULES
+  cat <<TEXT
 Mice, keyboards and macros need a udev rule (the only step that needs root). These commands
 set it up:
-  printf '%s\n' 'SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", TAG+="uaccess"' \\
-    'KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"' \\
-    | sudo tee $UDEV_RULES
-  sudo udevadm control --reload && sudo udevadm trigger
+  sudo tee $UDEV_RULES >/dev/null <<'RULES'
+$RULES
 RULES
+  sudo udevadm control --reload && sudo udevadm trigger
+TEXT
   answer=""
   if interactive; then read -r -p "Run them now? [y/N] " answer || true; fi
   case "$answer" in
     y|Y|yes|Yes)
-      printf '%s\n' 'SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", TAG+="uaccess"' \
-        'KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"' \
-        | "$SUDO" tee "$UDEV_RULES" >/dev/null
+      printf '%s\n' "$RULES" | "$SUDO" tee "$UDEV_RULES" >/dev/null
       "$SUDO" udevadm control --reload && "$SUDO" udevadm trigger
       echo "Done: unplug and replug your devices (or log out and in) if they don't show up." ;;
   esac

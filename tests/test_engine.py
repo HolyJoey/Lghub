@@ -9,6 +9,7 @@ from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
+import battery_watch  # noqa: E402
 import engine  # noqa: E402
 import pw  # noqa: E402
 import store  # noqa: E402
@@ -184,12 +185,26 @@ class EngineTest(unittest.TestCase):
 
 	def test_tray_devices(self):
 		e = self.engine
-		e.battery.readings = {'usb:1': ('G502', (80, 'On battery')), 'rx#1': ('G733', (40, 'Charging'))}
+		e.battery.readings = {'usb:1': ('G502', (80, 'On battery')), 'usb:2#1': ('G733', (40, 'Charging'))}
 		corded = mock.Mock(id='usb:1', model=mock.Mock(type='mouse'))
 		corded.name = 'G502'
 		receiver = mock.Mock(id='usb:2', model=mock.Mock(type='receiver'))
 		with mock.patch('devices.discover', return_value=[corded, receiver]):
 			self.assertEqual(e.tray_devices(), [('G502', (80, 'On battery')), ('G733', (40, 'Charging'))])
+		e.battery.readings = {}                       # plugged in, its mouse not read yet
+		receiver.name = 'LIGHTSPEED Receiver'
+		with mock.patch('devices.discover', return_value=[receiver]):
+			self.assertEqual(e.tray_devices(), [('LIGHTSPEED Receiver', None)])
+
+	def test_usb_hotplug_reads_devices_now(self):
+		e = self.engine
+		e.hid = mock.Mock()
+		e.hid.changed.return_value = True
+		e.battery.due.return_value = False
+		e.other_rounds(1000.0)
+		e.battery.check.assert_called_once_with(1000.0)
+		e.tray.refresh.assert_called_once()
+		self.assertEqual(e.battery.last, 1000.0 - battery_watch.CHECK_EVERY + engine.USB_SETTLE)   # and again soon
 
 	def test_run_until_stopped(self):
 		e = self.engine
