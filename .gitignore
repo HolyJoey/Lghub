@@ -26,5 +26,6 @@ bridge/*
 !/docs/
 docs/*
 !docs/apo-parameters.md
+!docs/protocol.md
 !docs/screenshots/
 __pycache__/

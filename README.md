@@ -175,6 +175,9 @@ The app itself does nothing once closed.
 
 ## How it works
 
+- **Devices.** Mice, keyboards, headsets and mics are driven over HID++ the way G HUB drives
+  them. Every feature, byte layout and G HUB default Lghub uses is written down in
+  [docs/protocol.md](docs/protocol.md), for anyone building on it.
 - **Surround.** The DTS Headphone:X effect (`logi_audio_hx2e_render_apo.dll`) doesn't export
   its DSP, but the C++ object that holds it has a plain vtable: `bridge/hx2e.c` creates it with
   the DLL's own factory and calls Init (the headset's tuning), SetStreamsParams and Process

@@ -194,11 +194,7 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 
 ## 3. Upkeep
 
-- **At the end: publish the protocol notes** as `docs/protocol.md`, in our own words: HID++
-  feature / function numbers, byte layouts, G HUB's ranges and defaults, effect timing. Not the
-  raw `re/` folder (G HUB's binaries, depots and decompiled code stay local). Our own RE scripts
-  (rtti.py, strfunc.py, hidpp_summary.py) can go along.
-
+- Keep `docs/protocol.md` current when a protocol detail is found or confirmed on a device.
 - `fetch.py` (APO hashes), `depots.py` (depot paths, the icon's offset and hash) and the DLL
   modules (`micopt.c`, `hx2e.c`, `bv2.c`: RVAs and export names) are for G HUB 2026.6. A newer
   G HUB moves the depots; the code fails cleanly and keeps working without the new files.
