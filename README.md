@@ -67,6 +67,9 @@ that have them.
 
 DPI levels (and the default and DPI-shift level), report rate, what every button does
 (including keystrokes and a G-Shift layer), lighting, and the profiles stored in the mouse.
+The G502 X, G502 X LIGHTSPEED and G502 X PLUS are recognised by the name they give and their
+lighting zones are read from the mouse; other newer models show under their own name until
+they're in the catalog.
 Mice that have them also get the scroll wheel (ratchet or free spin, SmartShift, ratchet
 force), bunny hopping, surface tuning, angle snapping, left-handed buttons and hybrid tracking; newer mice get
 their 2-8 kHz report rates and extended DPI range.

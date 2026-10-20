@@ -131,9 +131,18 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   (Lghub's meters come from PipeWire). Nothing to do unless a meter source turns out better.
 
 ### Wireless and power
-- **Models G HUB only lists in its encrypted device files** (68 of its 133 `data/devices` files,
-  G502 X among them): not in our catalog, so they show by the name they give (receiver,
-  Bluetooth) or as "Logitech device". Find their ids where G HUB keeps them readable.
+- **Models G HUB only lists in its encrypted device files** (68 of its 133 `data/devices` files).
+  Done: G502 X / LIGHTSPEED / PLUS (G HUB's model ids, our names, zones read from the mouse).
+  Left, the other models G HUB's agent names: mice G304 X, G309, G705, PRO 2 / PRO X 2 / PRO X 2
+  Compact / PRO X 2 SUPERSTRIKE / PRO X R wireless, `g502x_wl`; keyboards G316, G316 X,
+  G512 X 75 / 98, G515 (LS) TKL, G515 TKL Rapid, G517 LS TKL, G713, G715, G915 X (LS, LS TKL),
+  PRO X 60, PRO X TKL (Rapid); lights Litra Beam / Beam LX / Glow; camera `cf`; headsets not
+  counted yet. Until then they show by the name they give, or as "Logitech device".
+- **Decrypt G HUB's device files** (allowed now, local only): AES-128-GCM per `key-id`; keys come
+  from the update server's access groups, behind the pipeline password. Missing: the default
+  server / channel / password / groups the .NET software manager passes (`--server --channel
+  --password --groups`). Then: real names, ids, zones and capabilities for all the models above,
+  their depots (pictures, button layouts), and a check of what else we miss. Notes are local.
 - **Pairing a device to a receiver**: newer LIGHTSPEED receivers pair through 0x1894
   (LightspeedDevicePairing). Found: fn 0 capabilities, fn 1 receiver info, fn 2 open lock (3 bytes,
   meaning not found), fn 3 close lock, fn 4 / 5 pairing info / extended info [slot], fn 6 device

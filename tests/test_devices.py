@@ -68,13 +68,13 @@ class DiscoverTest(unittest.TestCase):
 	def test_unknown_usb_device_by_its_product_name(self):
 		with tempfile.TemporaryDirectory() as root:
 			usb_tree(root, [('3-2', '046d', 'c099', None), ('3-3', '046d', 'c098', None)])
-			for port, product in (('3-2', 'G502 X'), ('3-3', 'G305')):
+			for port, product in (('3-2', 'G999'), ('3-3', 'G502 X')):
 				with open(os.path.join(root, port, 'product'), 'w') as f:
 					f.write(product + '\n')
 			with mock.patch.object(devices, 'SYS_USB', root), mock.patch.object(devices, 'SYS_HID', '/nonexistent'), \
 					mock.patch.dict(os.environ, {devices.FAKE_ENV: ''}):
 				found = devices.discover()
-		self.assertEqual([(d.model.key, d.name) for d in found], [('unknown_046d_c099', 'G502 X'), ('g305', 'G305')])
+		self.assertEqual([(d.model.key, d.name) for d in found], [('unknown_046d_c099', 'G999'), ('g502x', 'G502 X')])
 
 	def test_models(self):
 		self.assertEqual(devices.model_for('046d:c52b').type, 'receiver')
@@ -84,7 +84,9 @@ class DiscoverTest(unittest.TestCase):
 		self.assertEqual(match('G915 TKL LIGHTSPEED Wireless RGB Keyboard', 'keyboard').key, 'g915_tkl')
 		self.assertEqual(match('Logitech G305', 'mouse').key, 'g305')
 		self.assertEqual(match('G502 HERO Gaming Mouse', 'mouse').key, 'g502_hero')
-		self.assertEqual(match('G502 X PLUS', 'mouse').key, 'unknown_g502_x_plus')     # not the old G502
+		self.assertEqual(match('G502 X PLUS', 'mouse').key, 'g502x_plus')              # not the old G502
+		self.assertEqual(match('G502 X LIGHTSPEED Wireless Gaming Mouse', 'mouse').key, 'g502x_lightspeed')
+		self.assertEqual(match('G502 Z', 'mouse').key, 'unknown_g502_z')
 		self.assertEqual(match('PRO X TKL', 'keyboard').name, 'PRO X TKL')            # not the PRO keyboard
 		self.assertEqual(match('G3050', 'mouse').key, 'unknown_g3050')
 		self.assertEqual(match('', 'mouse').name, 'Wireless device')

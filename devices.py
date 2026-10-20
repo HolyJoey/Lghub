@@ -76,6 +76,12 @@ CATALOG = (
 	('g502_hero', 'G502 HERO', 'mouse', ('046d:aae6', '046d:c08b'), ('primary', 'branding'), ('onboard',)),
 	('g502_spectrum', 'G502', 'mouse', ('046d:c332',), ('primary', 'branding'), ('onboard',)),
 	('g502_wireless', 'G502 LIGHTSPEED', 'mouse', ('046d:407f', '046d:aaef', '046d:c08d'), ('primary', 'branding'), ('onboard', 'battery')),
+	# G HUB's model ids; the names are ours and the lighting (None) is read from the mouse, as G HUB
+	# keeps both in its encrypted device files. Found by the name the mouse gives (USB product
+	# string, or HID++ through the receiver), so no USB ids are needed.
+	('g502x', 'G502 X', 'mouse', (), None, ()),
+	('g502x_lightspeed', 'G502 X LIGHTSPEED', 'mouse', (), None, ('battery',)),
+	('g502x_plus', 'G502 X PLUS', 'mouse', (), None, ('battery',)),
 	('g600', 'G600', 'mouse', ('046d:c24a',), ('primary',), ('onboard',)),
 	('g602', 'G602', 'mouse', ('046d:c537',), (), ('onboard', 'battery')),
 	('g603', 'G603', 'mouse', ('046d:406c',), (), ('onboard', 'battery')),
@@ -130,7 +136,7 @@ class Model:
 	name: str
 	type: str
 	usb_ids: tuple
-	lighting: tuple
+	lighting: tuple    # None: not known, read from the device
 	flags: tuple
 
 
