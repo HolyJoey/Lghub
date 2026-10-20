@@ -93,7 +93,11 @@ memory is backed up to `~/.local/share/lghub/backups/`.
 | ![Mouse](docs/screenshots/mouse.png) | ![Buttons](docs/screenshots/mouse-buttons.png) | ![Lighting](docs/screenshots/mouse-lighting.png) |
 
 Wireless mice also show their battery (devices that only report a voltage get G HUB's own
-voltage curves), with a desktop notification when it gets low, as G HUB does.
+voltage curves), with a desktop notification when it gets low, as G HUB does. Newer wireless mice
+and keyboards also show the time left, worked out as G HUB does from their power model (what
+the sensor, report rate and lighting draw); as Lghub doesn't know which lighting effect is
+running, it shows the range from full lighting to lights off. Newer mice also get G HUB's
+sensitivity presets (Default, First Person, MMORPG, MOBA, RTS, ...) on the Sensitivity page.
 
 ## Keyboards and the rest
 
@@ -104,7 +108,8 @@ key-to-LED table (0x8080 on older keyboards), with G HUB's LIGHTSYNC effects: it
 and Blue), starlight, colour cycle, echo press, your own animations (made in a Freestyle-like editor), the audio visualizer and the screen sampler (its regions editable as in G HUB: move, add, delete, which keys go where; it reads the screen with
 grim on Hyprland, Sway and other wlroots compositors, else through the desktop's screen-sharing
 portal on GNOME and KDE, which asks once; that needs GStreamer's PipeWire plugin,
-`gstreamer1.0-pipewire`). Lighting zones and effects, brightness, report
+`gstreamer1.0-pipewire`). Lighting zones and the device's own effects (with G HUB's effect
+numbers and settings, including newer keyboards' two-colour Signature styles), brightness, report
 rate, Fn keys, game mode, Easy-Switch, power-saving and power-off timers, angle snapping, sidetone, on-board memory and battery. Analog keyboards (PRO X TKL RAPID, G515 RAPID and the
 like) get G HUB's rapid trigger and key priority switches. Devices with a USB sound card (headsets,
 speakers, Yeti mics) also get its controls. Yetis also get their own mute, gain, headphone level and mic monitoring over HID++,

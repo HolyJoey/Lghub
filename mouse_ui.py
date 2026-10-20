@@ -8,6 +8,7 @@ from gi.repository import Gdk, Gtk
 import battery_model
 import device_settings
 import devices
+import dpi_presets
 import features
 import hidpp_panel
 import lightsync_ui
@@ -194,6 +195,12 @@ class MouseView(Gtk.Box):
 			state['dpi'] = m.current_dpi() if m.sensor else None
 			state['zones'] = _zones(m)
 			state['rate'] = m.current_rate() if m.rates else None
+		active = next((p for p in m.profiles if p.number == state.get('active')), None)
+		rate = state.get('rate') or (active.report_rate if active else None)
+		state['life'] = battery_model.life_for(self.device, state['battery'], rate)
+		if m.onboard:
+			import depots
+			depots.fetch_defaults(self.device.model.key)        # G HUB's presets, before the page is built
 		return m, state
 
 	def _connected(self, result):
@@ -253,7 +260,8 @@ class MouseView(Gtk.Box):
 		power = ''
 		if battery:
 			percent, text = battery
-			power = ' · '.join(filter(None, (f'Battery {percent} %' if percent is not None else '', text))) + '\n'
+			power = ' · '.join(filter(None, (f'Battery {percent} %' if percent is not None else '', text,
+			                                 self.state.get('life')))) + '\n'
 		if not self.mouse.onboard:
 			self.side_profile.set_text('Live')
 			self.side_detail.set_text(power + 'This mouse has no onboard memory; settings apply until it is '
@@ -297,6 +305,7 @@ class MouseView(Gtk.Box):
 		self._profile_picker(page)
 		p = self.profile
 		sensor = self.mouse.sensor or mouse.Sensor()
+		self._presets_card(page)
 		c = card('DPI levels', 'Switch between them with the DPI buttons. The default is where the mouse starts; '
 		         'the shift level is used while you hold DPI Shift.')
 		group = None
@@ -346,6 +355,34 @@ class MouseView(Gtk.Box):
 		self._surface_card(page)
 		self._tracking_card(page)
 		self._power_card(page)
+
+	def _presets_card(self, page):
+		"""G HUB's sensitivity presets for this model (its defaults_override.json), put into the profile."""
+		found = dpi_presets.load(self.device.model.key)
+		if not found:
+			return
+		c = card('G HUB presets', 'G HUB’s DPI levels for this mouse, for a kind of game. Puts them in this profile.')
+		dd = Gtk.DropDown.new_from_strings([p.name for p in found])
+		apply = Gtk.Button(label='Use', valign=Gtk.Align.CENTER)
+		apply.connect('clicked', lambda _b: self._use_preset(found[dd.get_selected()]))
+		r = box(Gtk.Orientation.HORIZONTAL, 10)
+		r.append(dd)
+		r.append(apply)
+		c.append(row('Preset', r))
+		page.append(c)
+
+	def _use_preset(self, preset):
+		sensor = self.mouse.sensor or mouse.Sensor()
+
+		def change():
+			p = self.profile
+			for slot, value in enumerate(preset.levels[:mouse.DPI_SLOTS]):
+				p.set_dpi(slot, sensor.clamp(value) if value else 0)
+			p.default_dpi, p.shift_dpi = preset.default, preset.shift
+			if preset.rate and preset.rate in (self.mouse.rates or [1000, 500, 250, 125]):
+				p.report_rate = preset.rate
+		self._edit(change)
+		self.rebuild()
 
 	def _edit(self, change):
 		if self.loading:

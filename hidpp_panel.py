@@ -114,12 +114,23 @@ def zone_card(zone, loading, do, dev):
 	names = [features.EFFECTS.get(eid, f'Effect 0x{eid:04X}') for _i, eid in effects]
 	effect_dd = Gtk.DropDown.new_from_strings(names)
 	c.append(row('Effect', effect_dd))
-	color = Gtk.ColorDialogButton(dialog=Gtk.ColorDialog(with_alpha=False))
-	rgba = Gdk.RGBA()
-	rgba.parse('#2f8cff')
-	color.set_rgba(rgba)
+	def color_button(hex_):
+		button = Gtk.ColorDialogButton(dialog=Gtk.ColorDialog(with_alpha=False))
+		rgba = Gdk.RGBA()
+		rgba.parse(hex_)
+		button.set_rgba(rgba)
+		return button
+	color, color2 = color_button('#2f8cff'), color_button('#ff00ab')
 	color_row = row('Color', color)
 	c.append(color_row)
+	color2_row = row('Second color', color2)
+	c.append(color2_row)
+	direction = Gtk.DropDown.new_from_strings(list(features.DIRECTIONS.values()))
+	direction_row = row('Direction', direction)
+	c.append(direction_row)
+	style = Gtk.DropDown.new_from_strings(list(features.STYLES.values()))
+	style_row = row('Style', style)
+	c.append(style_row)
 	speed = slider(1, 20, 3)
 	speed_row = row('Speed (seconds per cycle)', speed)
 	c.append(speed_row)
@@ -130,20 +141,29 @@ def zone_card(zone, loading, do, dev):
 	def visible():
 		eid = effects[effect_dd.get_selected()][1]
 		color_row.set_visible(eid in features.NEEDS_COLOR)
+		color2_row.set_visible(eid in features.NEEDS_COLOR2)
+		direction_row.set_visible(eid == features.COLOR_WAVE)
+		style_row.set_visible(eid in features.SIGNATURE_STYLES)
 		speed_row.set_visible(eid in features.NEEDS_SPEED)
-		bright_row.set_visible(eid in features.NEEDS_SPEED)
+		bright_row.set_visible(eid in features.NEEDS_BRIGHTNESS)
 
 	def apply(*_):
 		visible()
 		if loading():
 			return
 		index, eid = effects[effect_dd.get_selected()]
-		rgb = color.get_rgba()
-		params = features.effect_params(eid, tuple(round(v * 255) for v in (rgb.red, rgb.green, rgb.blue)),
-		                                speed.get_value() * 1000, bright.get_value())
+		def rgb(button):
+			c = button.get_rgba()
+			return tuple(round(v * 255) for v in (c.red, c.green, c.blue))
+		params = features.effect_params(eid, rgb(color), speed.get_value() * 1000, bright.get_value(), rgb(color2),
+		                                list(features.DIRECTIONS)[direction.get_selected()],
+		                                list(features.STYLES)[style.get_selected()])
 		do(lambda: features.set_effect(dev(), zone.index, index, params, feature=zone.feature))
 	effect_dd.connect(NOTIFY_SELECTED, apply)
 	color.connect('notify::rgba', apply)
+	color2.connect('notify::rgba', apply)
+	direction.connect(NOTIFY_SELECTED, apply)
+	style.connect(NOTIFY_SELECTED, apply)
 	speed.connect('value-changed', apply)
 	bright.connect('value-changed', apply)
 	visible()
@@ -201,6 +221,7 @@ class SettingsPanel(Gtk.Box):
 		self._read_keyboard(dev, have, info)
 		if features.ILLUMINATION in have:
 			info['light'] = features.illumination(dev)
+		info['life'] = battery_model.life_for(self.device, info['battery'], info.get('rate'))
 		self._read_mic(dev, have, info)
 		if device_settings.GLOBAL_SETTINGS in have:
 			info['power'] = device_settings.power_timers(dev) or None
@@ -305,7 +326,8 @@ class SettingsPanel(Gtk.Box):
 		lines = []
 		if info['battery']:
 			percent, text = info['battery']
-			lines.append(' · '.join(filter(None, (f'Battery {percent} %' if percent is not None else '', text))))
+			lines.append(' · '.join(filter(None, (f'Battery {percent} %' if percent is not None else '', text,
+			                                      info.get('life')))))
 		if info['firmware']:
 			lines.append(f'Firmware {info["firmware"]}')
 		return '\n'.join(lines)

@@ -418,6 +418,16 @@ def fetch_device_effects(model):
 	return _fetch_optional(model, 'lighting_effects.json', device_effects_path(model))
 
 
+def defaults_path(model):
+	return os.path.join(store.IMAGE_DIR, f'{model}.defaults_override.json')
+
+
+def fetch_defaults(model):
+	"""Path of the model's defaults_override.json (G HUB's default and preset cards: sensitivity
+	presets, firmware lighting, ...), downloading it if needed; None if it has none. Blocks."""
+	return _fetch_optional(model, 'defaults_override.json', defaults_path(model))
+
+
 def _fetch_optional(model, name, path):
 	"""A JSON file some depots ship (name), kept at path; None when the model's depot has none."""
 	if os.path.exists(path):

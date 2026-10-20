@@ -90,12 +90,27 @@ def _from_volts(mv, charging, curves):
 
 # --- lighting (0x8070) ---------------------------------------------------------------------
 
-EFFECTS = {0x0000: 'Off', 0x0001: 'Fixed', 0x0002: 'Pulse', 0x0003: 'Color cycle', 0x0008: 'Color wave',
-           0x0009: 'Starlight', 0x000A: 'Breathing', 0x000B: 'Ripple', 0x000C: 'Audio visualizer',
-           0x000D: 'Boot up', 0x000E: 'Demo'}
-FIXED, PULSE, CYCLE, BREATHING = 0x0001, 0x0002, 0x0003, 0x000A
-NEEDS_COLOR = {FIXED, PULSE, BREATHING}
-NEEDS_SPEED = {PULSE, CYCLE, BREATHING}
+# HID++ effect ids as G HUB's feature_8070 / feature_8071_lighting_effects read them (its own
+# names from its en-US strings); 2 "Pulse" isn't in G HUB's list (ours, kept from before).
+EFFECTS = {0: 'Off', 1: 'Fixed', 2: 'Pulse', 3: 'Color cycle', 4: 'Color wave', 10: 'Breathing', 11: 'Ripple',
+           12: 'Custom', 13: 'KITT', 14: 'Color blend', 15: 'Signature', 16: 'Signature (idle)',
+           17: 'Pulsar Point', 18: 'Neutron Null', 19: 'Streaming', 21: 'Color cycle (smooth)',
+           22: 'Color wave (smooth)', 23: 'Ripple (smooth)', 24: 'Signature', 25: 'Signature (idle)',
+           26: 'Signature (built in)', 27: 'Signature (built in, idle)', 28: 'Key travel glow'}
+FIXED, PULSE, CYCLE, COLOR_WAVE, BREATHING, RIPPLE = 1, 2, 3, 4, 10, 11
+SIGNATURE_FRAME = (15, 16)
+TWO_COLOR = (17, 18, 24, 25)            # G HUB's DualColor: Pulsar Point, Neutron Null, signature
+SIGNATURE_STYLES = (24, 25)              # ... whose last byte picks the style
+KEY_TRAVEL_GLOW = 28
+NEEDS_COLOR = {FIXED, PULSE, BREATHING, RIPPLE, KEY_TRAVEL_GLOW} | set(TWO_COLOR)
+NEEDS_COLOR2 = {KEY_TRAVEL_GLOW} | set(TWO_COLOR)
+NEEDS_SPEED = {PULSE, CYCLE, COLOR_WAVE, BREATHING, RIPPLE} | set(SIGNATURE_FRAME)
+TWO_COLOR_PERIOD = 50     # ms: G HUB's default for these (the G515's defaults_override.json); no setting of ours
+NEEDS_BRIGHTNESS = {PULSE, CYCLE, COLOR_WAVE, BREATHING} | set(SIGNATURE_FRAME) | set(TWO_COLOR)
+# G HUB's ColorWave directions (1-8) and signature styles (its SignatureAlgorithmicEffect types)
+DIRECTIONS = {1: 'Horizontal', 2: 'Vertical', 3: 'Center out', 4: 'Inward', 5: 'Outward',
+              6: 'Reverse horizontal', 7: 'Reverse vertical', 8: 'Center in'}
+STYLES = {0: 'IMMERSE', 1: 'Pulsar Point', 2: 'G3 Signature', 3: 'Reminds Me Of', 4: 'Neon', 5: 'Outer Space'}
 ZONE_LOCATIONS = {0: 'Main', 1: 'Main', 2: 'Logo', 3: 'Left side', 4: 'Right side', 5: 'Combined',
                   6: 'Primary 1', 7: 'Primary 2', 8: 'Primary 3', 9: 'Primary 4', 10: 'Primary 5',
                   11: 'Primary 6'}
@@ -143,17 +158,29 @@ def zones_v2(dev):
 	return found
 
 
-def effect_params(effect_id, color=(255, 255, 255), period=3000, brightness=100):
-	"""The 10 parameter bytes of an effect; same layouts as onboard profile lighting."""
+def effect_params(effect_id, color=(255, 255, 255), period=3000, brightness=100, color2=(0, 0, 0),
+                  direction=1, style=0):
+	"""The 10 parameter bytes of an effect, as G HUB's get_raw_effect_params builds them (the same
+	for 0x8070 and 0x8071). Pulse is ours (not in G HUB); so is Ripple's byte 3 left 0."""
 	r, g, b = color
 	period = max(1000, min(20000, int(period)))
 	brightness = max(1, min(100, int(brightness)))
+	hi, lo = period >> 8, period & 0xFF
 	if effect_id == FIXED:
-		data = bytes([r, g, b, 0])
+		data = bytes([r, g, b, 2])
 	elif effect_id in (BREATHING, PULSE):
-		data = bytes([r, g, b]) + struct.pack('>H', period) + bytes([0, brightness])
-	elif effect_id == CYCLE:
-		data = bytes(5) + struct.pack('>H', period) + bytes([brightness])
+		data = bytes([r, g, b, hi, lo, 0, brightness])
+	elif effect_id == CYCLE or effect_id in SIGNATURE_FRAME:
+		data = bytes([0, 0, 0, 0, 0, hi, lo, brightness])
+	elif effect_id == COLOR_WAVE:            # the period's two bytes are split around direction and brightness
+		data = bytes([0, 0, 0, 0, 0, 0, lo, direction, brightness, hi])
+	elif effect_id == RIPPLE:
+		data = bytes([r, g, b, 0, hi, lo])
+	elif effect_id in TWO_COLOR:
+		data = bytes([r, g, b, *color2, *struct.pack('>H', TWO_COLOR_PERIOD), brightness,
+		              style if effect_id in SIGNATURE_STYLES else 0])
+	elif effect_id == KEY_TRAVEL_GLOW:
+		data = bytes([r, g, b, *color2, 100, 100])
 	else:
 		data = b''
 	return data.ljust(10, b'\0')

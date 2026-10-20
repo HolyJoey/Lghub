@@ -65,7 +65,7 @@ class KeyboardTest(unittest.TestCase):
 	def test_set_effect(self):
 		params = features.effect_params(features.FIXED, (1, 2, 3))
 		features.set_effect(self.dev, 0, 0, params)
-		self.assertEqual(self.kb.effects[0], (0, bytes([1, 2, 3]) + bytes(7)))
+		self.assertEqual(self.kb.effects[0], (0, bytes([1, 2, 3, 2]) + bytes(6)))
 
 	def test_brightness(self):
 		self.assertEqual(features.brightness(self.dev), (80, 100))

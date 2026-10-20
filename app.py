@@ -286,7 +286,7 @@ class MainWindow(Adw.ApplicationWindow):
 			if d.model.type in ('keyboard', 'mouse') and key in depots.DEPOTS:
 				# the per-key page's layout, the device's own LED map and effects, before its page opens
 				self.pictures.submit(lambda k=key: (depots.fetch_metadata(k), depots.fetch_light_map(k),
-				                                    depots.fetch_device_effects(k)))
+				                                    depots.fetch_device_effects(k), depots.fetch_defaults(k)))
 
 	def _got_picture(self, key):
 		forget_image(key)
@@ -337,7 +337,8 @@ class App(Adw.Application):
 		win.present()
 		if '--screenshot' in argv and argv.index('--screenshot') + 1 < len(argv):
 			path = argv[argv.index('--screenshot') + 1]
-			GLib.timeout_add(2500, self._screenshot, win, path)
+			delay = os.environ.get('LGHUB_SCREENSHOT_DELAY', '')       # ms; slow pages need longer
+			GLib.timeout_add(int(delay) if delay.isdigit() else 2500, self._screenshot, win, path)
 
 	def _screenshot(self, win, path):
 		"""Render the window itself to a PNG (for the README); independent of the screen."""

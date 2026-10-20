@@ -311,8 +311,9 @@ class FakeMouseX(FakeMouse):
 
 
 class FakeMouseXPlus(FakeMouseX):
-	"""A G502 X PLUS-like mouse: FakeMouseX plus per-LED lighting on its light strip (0x8081)."""
-	FEATURES = FakeMouseX.FEATURES + [0x8081]
+	"""A G502 X PLUS-like mouse: FakeMouseX plus per-LED lighting on its light strip (0x8081) and a
+	battery (it's wireless)."""
+	FEATURES = FakeMouseX.FEATURES + [0x8081, features.UNIFIED_BATTERY]
 
 	def __init__(self):
 		super().__init__('G502 X PLUS')
@@ -351,7 +352,7 @@ class FakeKeyboard(FakeMouse):
 	"""A corded G815-like keyboard: two lighting zones, brightness, report rate, onboard mode."""
 	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, features.COLOR_LED_EFFECTS,
 	            features.BRIGHTNESS, mouse.REPORT_RATE, mouse.ONBOARD, 0x8010, 0x8020, 0x4522, 0x8081, 0x40A3]
-	ZONE_EFFECTS = [features.FIXED, features.BREATHING, features.CYCLE, 0x0008, 0x0000]
+	ZONE_EFFECTS = [features.FIXED, features.BREATHING, features.CYCLE, features.COLOR_WAVE, 0x0000]
 	KIND = 0   # keyboard
 
 	def __init__(self):
@@ -540,9 +541,9 @@ class FakeEqHeadset(FakeMouse):
 
 
 class FakeRgbMouse(FakeMouse):
-	"""A newer mouse with 0x8071 RGB effects: two clusters (primary, logo), three effects each."""
+	"""A newer mouse with 0x8071 RGB effects: two clusters (primary, logo), five effects each."""
 	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, 0x8071]
-	EFFECTS = (features.FIXED, features.BREATHING, features.CYCLE)
+	EFFECTS = (features.FIXED, features.BREATHING, features.CYCLE, features.COLOR_WAVE, 24)
 
 	def __init__(self):
 		super().__init__('G502 X PLUS')
@@ -555,7 +556,7 @@ class FakeRgbMouse(FakeMouse):
 			if p[0] == 0xFF:
 				return bytes([0xFF, 0xFF, 2])
 			if p[1] == 0xFF:
-				return bytes([p[0], 0xFF]) + struct.pack('>H', 1 if p[0] == 0 else 2) + bytes([3])
+				return bytes([p[0], 0xFF]) + struct.pack('>H', 1 if p[0] == 0 else 2) + bytes([len(self.EFFECTS)])
 			return bytes([p[0], p[1]]) + struct.pack('>H', self.EFFECTS[p[1]])
 		self.set[p[0]] = (p[1], bytes(p[2:12]), p[12])
 		return b''

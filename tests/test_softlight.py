@@ -48,7 +48,7 @@ class ZoneTargetTest(unittest.TestCase):
 		self.assertEqual(target.keys, ['ZONE:0', 'ZONE:1'])
 		cycle = softlight.ColorCycle(target.keys, speed=1000)
 		target.send(cycle.frame(0.0))
-		self.assertEqual(fake.set[0], (0, bytes([255, 0, 0, 0]).ljust(10, b'\0'), 0))   # fixed, not saved
+		self.assertEqual(fake.set[0], (0, bytes([255, 0, 0, 2]).ljust(10, b'\0'), 0))   # fixed, not saved
 		self.assertEqual(fake.set[1][1][:3], bytes([255, 0, 0]))
 
 

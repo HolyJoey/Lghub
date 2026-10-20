@@ -149,10 +149,22 @@ Other tags' formats are still unknown.
   (bytes 2-3) and effect count (byte 4); `[cluster, effect, 0]` → effect id (bytes 2-3). fn 1
   `[cluster, effect index, parameters, persist]` (**ours:** that it takes 0x8070's parameter
   bytes and persist flag).
-- HID++ effect ids: 0 off, 1 fixed, 2 pulse, 3 colour cycle, 8 colour wave, 9 starlight,
-  0x0A breathing, 0x0B ripple, 0x0C audio visualizer, 0x0D boot up, 0x0E demo.
-- G HUB's own list of firmware effects also has Smooth Star (18), Smooth Wave (19) and signature
-  effects (20-25); their HID++ numbers are not known yet.
+- HID++ effect ids, as G HUB's feature_8070 / feature_8071_lighting_effects read them (the
+  same for both): 0 off, 1 fixed, 3 colour cycle, 4 colour wave, 10 breathing, 11 ripple,
+  12 custom, 13 KITT, 14 colour blend, 15 / 16 signature (keyframes, active / idle), 17 Pulsar
+  Point, 18 Neutron Null, 19 streaming, 21-23 smooth colour cycle / colour wave / ripple,
+  24 / 25 signature (algorithmic, active / idle), 26 / 27 signature (built in), 28 key travel
+  glow. 2 "pulse" isn't in G HUB's list (ours). G HUB's Smooth Star / Smooth Wave have no HID++
+  id: they are software effects.
+- Parameters (10 bytes, G HUB's get_raw_effect_params): fixed `[r, g, b, 2]`; breathing
+  `[r, g, b, period u16, 0, brightness]`; colour cycle and signature 15 / 16
+  `[0 × 5, period u16, brightness]`; colour wave `[0 × 6, period low, direction (1-8), brightness,
+  period high]`; ripple `[r, g, b, ?, period u16]`; two colours (17, 18, 24, 25)
+  `[r, g, b, r2, g2, b2, period u16, intensity %, style]`, style = G HUB's signature effect index
+  (0 IMMERSE, 1 Pulsar Point, 2 G3 Signature, 3 Reminds Me Of, 4 Neon, 5 Outer Space); key
+  travel glow `[r, g, b, r2, g2, b2, %, %]`. Brightness and intensity are percentages, at least 1.
+  Ours: the two-colour period stays at G HUB's default 50 ms (the G515's defaults_override.json);
+  what the period means for them isn't known.
 
 ### Per-key (0x8081, 0x8080)
 

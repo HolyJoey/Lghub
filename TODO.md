@@ -15,7 +15,7 @@ measurements.
 | Blue VO!CE 2 (Yetis, G735, PRO X 2) | 95% | check against Logitech's APO under Wine; check on a mic |
 | Surround, equalizer | 100% | check on the G Pro X |
 | PRO 5-band equalizer | 20% | runs on the headset's Conexant chip (see below); needs the G Pro X |
-| Mice | 92% | see "Mice" below |
+| Mice | 94% | see "Mice" below |
 | Keyboards | 80% | analog keys' per-key settings, onboard profiles; see "Keyboards" below |
 | Headsets (other than the voice chain) | 50% | Centurion and the newer headsets; see "Headsets" below |
 | Yeti controls | 100% | check on a Yeti |
@@ -94,11 +94,16 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   Light strip page from G HUB's layout (its LEDs are circles there), sent over 0x8081 through the
   model's light_map.json, with its signature effects (lighting_effects.json: keyframe animations,
   played by softlight). Check on the mouse. Left: 0x8071 inside onboard profiles.
-- Newer models' battery.xml are power models (capacity, power per sensor / report rate / lighting
-  effect) for G HUB's "time left" estimate, not voltage curves; their percentage comes from the
-  device. A time-left estimate from them isn't built. Their defaults_override.json presets
-  (MOUSE_SENSITIVITY, MOUSE_SETTINGS, FIRMWARE_LIGHTING_SETTINGS) could give a "reset to G HUB
-  defaults"; not built (onboard mice keep factory profiles anyway).
+- **Battery time left** (newer models' battery.xml are power models: capacity in Wh, milliwatts
+  per sensor / MCU / roller / report rate / lighting effect): done as G HUB's agent does it
+  (hours = percent / 100 * Wh * 1000 / mW, its max_life_span and "mileage"). Ours: the running
+  lighting effect isn't read back, so it shows a range from solid at full brightness to off;
+  the nearest report-rate interval when there's no exact one. Check against G HUB on a G502 X
+  PLUS / PRO X SUPERLIGHT 2 (the files give 137 h / 92 h; Logitech says 130 h / 95 h).
+- **G HUB's sensitivity presets** (MOUSE_SETTINGS_ADVANCED in defaults_override.json: Default,
+  First Person, Third Person, MMORPG, MOBA, RTS, Simulation, Productivity, pro players' ones):
+  done on onboard mice' Sensitivity page ("Use" puts them in the profile). Left out: the "XY
+  Split" ones (separate X / Y DPI; a profile has one per level).
 
 ### Keyboards
 - **Onboard profiles**: switching the active one works. Editing goes through 0x8102 with the same
@@ -202,13 +207,15 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 - **Software effects done**: G HUB's own animations (Verticool, Contrastic, Ocean Wave, Lightning,
   Red White and Blue: its keyframe files, downloaded at first use), Starlight, Colour cycle
   and Echo press (key presses read from the keyboard's own reports: ours) with G HUB's settings.
-  Not yet: Smooth star / wave (G HUB's players are ~2000 lines of vector maths each; newer
-  keyboards only) and G HUB's other "signature" effects (its SignatureAlgorithmicEffect: Smooth
-  Star, Pulsar Point, G 3 Series, Remind Me Of, Neon, Outer Space; primary / secondary colour,
-  brightness). G HUB also knows Smooth Star / Wave as firmware effects (its firmware effect ids
-  18 / 19, next to signature active / inactive 20-25): a keyboard that has them lists them over
-  0x8071 and Lghub already offers every listed effect (unknown ones by number). Left: which
-  HID++ effect number is which, and their parameters. The keyframe editor (Freestyle) is done: frames,
+  **Firmware effects** (the device plays them): HID++ effect ids and parameter bytes now from
+  G HUB's feature_8070 / 8071_lighting_effects (docs/protocol.md), which also corrected Lghub's
+  old table (colour wave is 4, not 8). Signature (algorithmic, ids 24 / 25) with two colours
+  and its six styles (IMMERSE, Pulsar Point, G3 Signature, Reminds Me Of, Neon, Outer Space),
+  Pulsar Point, Neutron Null, colour wave with direction. Check on a G515 / newer keyboard;
+  ours: the two-colour period fixed at G HUB's default 50 ms. Not yet: the same signature
+  styles as *software* effects on per-key keyboards without them in firmware (G HUB's
+  SignatureAlgorithmicEffect players, ~2000 lines of vector maths each), and Smooth Star /
+  Wave (software only). The keyframe editor (Freestyle) is done: frames,
   length, curve, order, preview; saved in G HUB's keyframe format. Effects on zonal devices done
   (starlight, colour cycle, audio, echo press on clicks, screen sampler with G HUB's zone regions). Per-key frames use
   G HUB's single-value call for shared colours; its delta-compressed calls (0x8081 fn 3 / 4) aren't
