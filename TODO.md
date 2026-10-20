@@ -105,6 +105,9 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   G HUB's app has no setting for them.
 
 ### Headsets
+- **Newer headsets (A50 X, A50, G522, A20 X, G325, PRO X3)**: G HUB lists auto sleep, factory
+  reset, battery eco mode, rename, spatial sound, LED brightness and cross-device support for
+  them (capabilities in G HUB's device list); none done yet, features to find in the agent.
 - **Centurion (G735, PRO X 2)**: features 0x06xx (mic mute 0x0601, sidetone 0x0604, ANC 0x0605,
   mic gain 0x0611, onboard EQ 0x0636, ...) over G HUB's own transport.
   - Found: messages are HID++ without the device index, with an optional length byte and a
