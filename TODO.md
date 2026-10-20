@@ -78,7 +78,8 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 - **0x1B04 buttons on newer mice** (those without 0x8110, like the G502 X): done: macros on
   buttons divert the buttons' controls (G HUB's 6-byte SetCtrlIdReporting; flag bits from
   Logitech's spec, G HUB's caller not found) and read the diverted-controls events. Check on a
-  G502 X. Left: remapping a button to another button's job (fn 3's remap field).
+  G502 X. Not needed: remapping a button to another button's job (fn 3's remap field); these
+  mice keep their buttons' jobs in the onboard profile, which the Buttons page edits.
 - **0x2240 surface tuning**: done as G HUB's routine (fn 2 / 3, shutter event, fn 4, squal, fn 5,
   event, fn 6; fn 1 sets the three values). Factory surface from fn 0 bytes 6-8, active one found
   by bytes 3-5 (as G HUB). Left: G HUB's hard / soft presets (source not found) and a check on a
@@ -123,6 +124,11 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   that a get answers in bit 0 is ours, check on a keyboard). Left: actuation point and
   rapid-trigger sensitivity per key and globally (G HUB's AnalogSettings, written into the
   onboard profile over 0x8101 / 0x8102), click haptics, 0x1B0C analog buttons, 0x80A4 curves.
+  Found (profile_management_tag_helper_analog_preset, 0x14235ff40): values go in as u16 of
+  the value x 100 (millimetres, probably; global, then per key), per-key entries by the keyboard's control index
+  (CIDX, from the device; entries without one are dropped); the bytes come from a field-tree
+  writer below it (not followed yet). Not built: a wrong write breaks the onboard profile and
+  there's no keyboard here to check.
 - **0x1B05 full key customization** (G HUB's "FKC": remap any key, per layer, with presets):
   large; needs a keyboard that has it. Not started.
 - 0x4521 game mode on older keyboards done (bits from G HUB, key names from Logitech's HID++

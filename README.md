@@ -115,9 +115,9 @@ like) get G HUB's rapid trigger and key priority switches. Devices with a USB so
 speakers, Yeti mics) also get its controls. Yetis also get their own mute, gain, headphone level and mic monitoring over HID++,
 as G HUB sets them. Litra lights get on / off, brightness and colour temperature (HID++ 0x1990, as G HUB sets them).
 
-| Settings | Per-key lighting |
-| --- | --- |
-| ![Keyboard](docs/screenshots/keyboard.png) | ![Per-key lighting](docs/screenshots/keyboard-perkey.png) |
+| Settings | Per-key lighting | Litra |
+| --- | --- | --- |
+| ![Keyboard](docs/screenshots/keyboard.png) | ![Per-key lighting](docs/screenshots/keyboard-perkey.png) | ![Litra](docs/screenshots/litra.png) |
 
 ## Webcams
 
