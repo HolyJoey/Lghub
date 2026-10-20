@@ -88,7 +88,10 @@ def easing(name):
 
 
 def _hex(c):
+	"""[r, g, b] from "#rrggbb" or the short "#rgb"."""
 	c = c.lstrip('#')
+	if len(c) == 3:
+		c = ''.join(d * 2 for d in c)
 	return [int(c[i:i + 2], 16) for i in (0, 2, 4)]
 
 
