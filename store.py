@@ -58,6 +58,16 @@ def _write_json(path, data):
 	os.replace(tmp, path)
 
 
+def read_json(path, fallback=None):
+	"""A JSON file's contents, or fallback when it's missing or broken."""
+	return _read_json(path, fallback)
+
+
+def write_json(path, data):
+	"""Writes a JSON file atomically (the folder is made if needed)."""
+	_write_json(path, data)
+
+
 def headset_model(cfg, status=None, hint=None):
 	"""Which headset's presets to offer ('wired', 'wireless' or 'g733'): G HUB tunes them per
 	headset. 'auto' follows the headset whose page is open (hint), else the microphone the

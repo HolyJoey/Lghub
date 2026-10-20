@@ -16,7 +16,7 @@ import store  # noqa: E402
 
 RUNNERS = ('eq.Runner', 'webcam.Restorer', 'surround.Runner', 'hotplug.Watch', 'inputd.Manager',
            'profiles.Switcher', 'restore.Restorer', 'lightsync.Runner', 'battery_watch.Watch', 'osd.Watch',
-           'tray.Tray')
+           'tray.Tray', 'update.Checker')
 MIC = {'id': 40, 'name': 'alsa_input.usb-Logitech_PRO_X', 'description': 'PRO X'}
 
 

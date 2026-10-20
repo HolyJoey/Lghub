@@ -141,6 +141,8 @@ if ((${#missing[@]})); then
     echo "Install these with your distribution's packages (the README has the names for Debian /"
     echo "Ubuntu, Fedora and Arch), then run ./install.sh again."
   fi
+  # Run by the app's "Update now" (no terminal): status 3 tells it root is needed.
+  if [ -n "${LGHUB_UPDATE:-}" ]; then exit 3; fi
   exit 1
 fi
 systemctl --user show-environment >/dev/null 2>&1 \
@@ -202,7 +204,8 @@ rm -rf "$APP_DIR/wine" "$APP_DIR/bin/bluevoice_host.exe"
 echo "OK"
 
 say "Installing to $APP_DIR"
-cp "$SRC"/*.py "$SRC/lghub-logo.svg" "$APP_DIR/"
+cp "$SRC"/*.py "$SRC/lghub-logo.svg" "$SRC/release-key.pub" "$APP_DIR/"
+echo script > "$APP_DIR/install-source"   # updates itself from releases (update.py)
 
 say "Getting Logitech's audio effects"
 if [ -f "$APP_DIR/apo/logi_audio_dts_studio_capture_apo.dll" ] \

@@ -61,6 +61,8 @@ class SettingsPage(Gtk.Box):
 		dd.connect('notify::selected', self._persistent)
 		persist.append(_row('Keep this profile on', dd, 'As G HUB’s persistent profile: it stays on whatever runs.'))
 		self.append(persist)
+		import update_ui
+		self.append(update_ui.settings_card(win.home.banner))
 
 	def _persistent(self, dd, _p):
 		data = profiles.load()

@@ -11,6 +11,7 @@
 !/install.sh
 !/uninstall.sh
 !/lghub-logo.svg
+!/release-key.pub
 !/tests/
 !/bridge/
 bridge/*

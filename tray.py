@@ -15,6 +15,7 @@ WATCHER = 'org.kde.StatusNotifierWatcher'
 APP_ID, APP_PATH = 'dev.local.Lghub', '/dev/local/Lghub'   # the window (app.py)
 ICONS = os.path.join(os.environ.get('XDG_DATA_HOME') or os.path.expanduser('~/.local/share'), 'icons')
 QUIT = 4
+UPDATE = 5
 
 SNI_XML = '''<node><interface name="org.kde.StatusNotifierItem">
 <property name="Category" type="s" access="read"/><property name="Id" type="s" access="read"/>
@@ -98,9 +99,9 @@ def _switches():
 	        ('surround', 'Surround', surround.load().get('enabled', False), flip(surround))]
 
 
-def menu_items(devices, switches):
-	"""[(id, props)] of the menu: devices (with battery), switches, Open Lghub. devices =
-	[(name, (percent or None, text) or None)]."""
+def menu_items(devices, switches, update_version=None):
+	"""[(id, props)] of the menu: devices (with battery), switches, Open Lghub, and Update to ... when
+	a newer release is out. devices = [(name, (percent or None, text) or None)]."""
 	items = []
 	for i, (name, battery) in enumerate(devices):
 		text = name
@@ -114,6 +115,8 @@ def menu_items(devices, switches):
 		items.append((10 + n, {'label': text, 'toggle-type': 'checkmark', 'toggle-state': 1 if on else 0}))
 	items.append((3, {'type': 'separator'}))
 	items.append((1, {'label': 'Open Lghub'}))
+	if update_version:
+		items.append((UPDATE, {'label': f'Update to Lghub {update_version}…'}))
 	items.append((QUIT, {'label': 'Quit Lghub'}))
 	return items
 
@@ -158,7 +161,9 @@ class Tray:
 			self.switches = _switches()
 		except (OSError, ValueError):
 			self.switches = []
-		self.items = menu_items(self.devices(), self.switches)
+		import update
+		pending = update.pending()
+		self.items = menu_items(self.devices(), self.switches, pending and pending['version'])
 		self.revision += 1
 		if self.conn:
 			self.conn.emit_signal(None, MENU_PATH, 'com.canonical.dbusmenu', 'LayoutUpdated',
@@ -244,7 +249,7 @@ class Tray:
 			invocation.return_value(GLib.Variant('(aiai)', ([], [])))
 
 	def _clicked(self, item):
-		if item == 1:
+		if item in (1, UPDATE):        # the update itself runs from the window's banner
 			open_app()
 		elif item == QUIT:
 			threading.Thread(target=quit_all, args=(self.conn,), daemon=True).start()

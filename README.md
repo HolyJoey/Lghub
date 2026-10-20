@@ -169,6 +169,16 @@ with a Bluetooth id); they show up next to the USB ones.
 
 Then open **Lghub** from your menu (or run `lghub`).
 
+## Updates
+
+Once a day the background service asks GitHub for the newest Lghub release (nothing else is
+sent; Settings turns it off or checks now). When there is one, the Devices page shows a banner:
+**What's new…** shows the release notes and **Update now** installs it. Lghub checks the
+download's SHA-256 and that it is signed with the release key in this repo (`release-key.pub`),
+backs up its own program files, runs the new `install.sh` and puts the backup back if anything
+fails. If the new version needs something only an administrator can install, it says so and
+shows the command. Copies run from a git checkout or a distribution package only get the notice.
+
 ## Tray
 
 Like G HUB, the background service puts an icon in the tray (waybar, KDE, GNOME with the

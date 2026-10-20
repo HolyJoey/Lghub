@@ -15,6 +15,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango  # noqa: E402
 import bluevoice_ui  # noqa: E402
 import games_ui  # noqa: E402
 import settings_ui  # noqa: E402
+import update_ui  # noqa: E402
 import devices  # noqa: E402
 import hidpp_ui  # noqa: E402
 import depots  # noqa: E402
@@ -59,6 +60,8 @@ class HomePage(Gtk.Box):
 	def __init__(self, win):
 		super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=24, css_classes=['page'])
 		self.win = win
+		self.banner = update_ui.UpdateBanner(win)
+		self.append(self.banner.widget)
 		self.append(page_header('Devices', 'Your connected Logitech G gear. Pick one to set it up.',
 		                        button_widget('Games', ['ghost'], win.show_games),
 		                        button_widget('Settings', ['ghost'], win.show_settings)))
@@ -72,6 +75,7 @@ class HomePage(Gtk.Box):
 		self.devices = []
 
 	def show(self, found):
+		self.banner.refresh()
 		self.devices = found
 		while (child := self.flow.get_first_child()):
 			self.flow.remove(child)

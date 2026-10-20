@@ -26,6 +26,13 @@ measurements.
 | App features | 85% | see "App" below |
 | Background service | 95% | re-measured 2026-10-20: 0.2% CPU, 28 MB idle |
 
+## 0. Next, in this order
+
+1. Update button: release 0.9.0, then the small items (receiver ids, "Pair a device",
+   pre-release cleanup), release 0.9.1 and test updating 0.9.0 -> 0.9.1 in the app.
+2. The G502 X tile showed the generic icon instead of its product photo (seen in a screenshot of
+   the simulated G502 X); find out why and fix.
+
 ## 1. Check on the real hardware (G Pro X, G502, C920, newer models)
 
 Everything below has only met the simulator (`simulate.py`) or the DLLs offline.
@@ -201,11 +208,9 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   used yet: check animation smoothness on a real keyboard first.
 
 ### App
-- **Update notice and "Update now"** (planned, not started; waits for the repo to go public and
-  a first release): versioned GitHub releases (tarball, SHA-256, signature), a daily anonymous
-  check of the latest release, a banner on the home page and a tray item, and an update that
-  downloads, verifies, backs up the current install, runs the new `install.sh` and rolls back
-  if anything fails. Distro-package installs only get the notice.
+- **Update notice and "Update now"**: built (update.py, update_ui.py; GitHub releases with a
+  SHA-256 and an SSH signature, daily anonymous check, banner, Settings card, tray item, backup and
+  rollback). Releases: re/tools/release.py (local). Left: the end-to-end test from 0.9.0 to 0.9.1.
 - Low-battery notifications done (G HUB's LOW 30 % / CRITICAL 15 %; checking every 5 minutes is
   ours). Game-profile notifications and DPI / profile notices for onboard mice (G HUB's
   OSD_DPI_CHANGED / OSD_PROFILE_CHANGED from 0x8100 events) done. Report-rate notices (0x8061
