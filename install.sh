@@ -17,6 +17,7 @@ DEPOT_ARGS=()
 say() { printf '\n\033[1m%s\033[0m\n' "$1"; }
 
 say "Checking requirements"
+[ "$(uname -m)" = x86_64 ] || { echo "Blue VO!CE's DSP is x86-64 code; this machine is $(uname -m)."; exit 1; }
 missing=()
 need() { command -v "$1" >/dev/null || missing+=("$2"); }
 need python3 "python3"
@@ -32,10 +33,28 @@ pkg-config --exists libpipewire-0.3 2>/dev/null \
 if ((${#missing[@]})); then
   printf 'Missing:\n'; printf '  - %s\n' "${missing[@]}" | sort -u; exit 1
 fi
+systemctl --user show-environment >/dev/null 2>&1 \
+  || { echo "The background service needs systemd user services (systemctl --user), which aren't available here."; exit 1; }
+if ! wpctl status >/dev/null 2>&1; then
+  echo "PipeWire isn't running in this session (Lghub's audio parts need it, not PulseAudio)."
+  echo "Most distributions switch with their pipewire-pulse package; log out and in afterwards."
+  exit 1
+fi
 echo "OK"
 
+# Optional: only some features need these; Lghub works without them.
+optional=()
+command -v grim >/dev/null \
+  || python3 -c "import gi; gi.require_version('Gst','1.0'); from gi.repository import Gst; Gst.init(None); assert Gst.ElementFactory.find('pipewiresrc')" 2>/dev/null \
+  || optional+=("Screen sampler (LIGHTSYNC): grim on Hyprland / Sway, or GStreamer's PipeWire plugin on GNOME / KDE (Debian/Ubuntu: gir1.2-gstreamer-1.0 gstreamer1.0-pipewire · Fedora: pipewire-gstreamer · Arch: gst-plugin-pipewire)")
+if [ "${XDG_CURRENT_DESKTOP:-}" != "${XDG_CURRENT_DESKTOP#*GNOME}" ]; then
+  optional+=("Tray icon on GNOME: the AppIndicator extension (Debian/Ubuntu: gnome-shell-extension-appindicator · Fedora / Arch: gnome-shell-extension-appindicator)")
+fi
+if ((${#optional[@]})); then
+  printf 'Optional, for some features:\n'; printf '  - %s\n' "${optional[@]}"
+fi
+
 say "Building"
-[ "$(uname -m)" = x86_64 ] || { echo "Blue VO!CE's DSP is x86-64 code; this machine is $(uname -m)."; exit 1; }
 mkdir -p "$APP_DIR/bin"
 read -ra PW_FLAGS <<< "$(pkg-config --cflags --libs libpipewire-0.3)"
 gcc -O2 -o "$APP_DIR/bin/bluevoice-bridge" \

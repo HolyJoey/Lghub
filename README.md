@@ -132,6 +132,11 @@ Blue VO!CE helper:
 | Fedora | `python3-gobject gtk4 libadwaita gcc pipewire-devel alsa-utils` |
 | Arch | `python-gobject gtk4 libadwaita gcc libpipewire alsa-utils` |
 
+PipeWire has to be the running sound server (the default on current distributions) and the
+service runs under systemd's user session; the installer checks both and names any missing
+package. Optional extras it points out: grim (Hyprland, Sway) or GStreamer's PipeWire plugin
+(GNOME, KDE) for the screen sampler, and on GNOME the AppIndicator extension for the tray icon.
+
 The installer downloads Logitech's audio effects (Blue VO!CE and DTS Headphone:X), G HUB's
 equalizer presets and G HUB's app icon from G HUB's own update server (none of it is in this
 repo), checks the hashes, builds the helpers, adds a menu entry and starts a user service. `./uninstall.sh` undoes all of it. Later, the first time a device shows up, the
@@ -154,7 +159,8 @@ Then open **Lghub** from your menu (or run `lghub`).
 
 Like G HUB, the background service puts an icon in the tray (waybar, KDE, GNOME with the
 AppIndicator extension): your devices with their battery, switches for Blue VO!CE, the equalizer
-and surround, and Open Lghub. The Settings page (from the home screen) turns it off, along with
+and surround, Open Lghub, and Quit Lghub (closes the window and stops the background service
+until the next login). The Settings page (from the home screen) turns it off, along with
 each kind of notification, and sets a persistent profile (one game profile that stays on, as in
 G HUB).
 

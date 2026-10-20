@@ -185,7 +185,8 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   up / down, ADVANCED_EQUALIZER_TOGGLE, MAKE_DEFAULT_AUDIO_DEVICE (per headset).
 - Game scan done (G HUB scans for installed games): Steam, Heroic (Epic, GOG), Legendary, Lutris.
 - Tray icon done (G HUB's system tray: devices with battery, Blue VO!CE / equalizer / surround
-  switches, Open Lghub; StatusNotifierItem + dbusmenu). config.json "tray": false turns it off.
+  switches, Open Lghub, Quit Lghub (what Quit does is ours); StatusNotifierItem + dbusmenu, the
+  installed Lghub / G HUB icon). config.json "tray": false turns it off.
 - Settings page done (G HUB's general settings: notifications, tray, persistent profile). Not
   ours to copy: language (Lghub is English only), analytics, G HUB updates.
 - **Firmware updates**: not planned (a mistake can brick a device).

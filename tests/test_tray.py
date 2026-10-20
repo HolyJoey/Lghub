@@ -1,5 +1,7 @@
 import os
 import sys
+import tempfile
+import threading
 import unittest
 from unittest import mock
 
@@ -14,7 +16,7 @@ class TrayMenuTest(unittest.TestCase):
 		                        [('voice', 'Blue VO!CE', True, None), ('eq', 'Equalizer', False, None)])
 		labels = [p.get('label') for _i, p in items]
 		self.assertEqual(labels, ['G502 HERO', 'G733 · 35 % (charging)', None, 'Blue VO!CE', 'Equalizer', None,
-		                          'Open Lghub'])
+		                          'Open Lghub', 'Quit Lghub'])
 		self.assertEqual(dict(items)[10]['toggle-state'], 1)
 		self.assertEqual(dict(items)[11]['toggle-state'], 0)
 
@@ -57,6 +59,7 @@ class TrayBusTest(unittest.TestCase):
 		self.assertIn('Equalizer', labels)
 		rows = self.call('GetGroupProperties', ('(aias)', ([1], []))).unpack()[0]
 		self.assertEqual(rows, [(1, {'label': 'Open Lghub'})])
+		self.assertIn(self.tray._item_get(None, None, None, None, 'IconName').unpack(), ('lghub', 'lghub-bluevoice'))
 		self.assertEqual(self.call('GetProperty', ('(is)', (1, 'label'))).unpack()[0], 'Open Lghub')
 		self.assertEqual(self.call('AboutToShow', ('(i)', (0,))).unpack(), (False,))
 		self.assertEqual(self.call('AboutToShowGroup', ('(ai)', ([],))).unpack(), ([], []))
@@ -81,6 +84,27 @@ class TrayBusTest(unittest.TestCase):
 		with mock.patch('subprocess.Popen', side_effect=[OSError, mock.Mock()]) as popen:
 			tray.open_app()
 		self.assertEqual(popen.call_args_list[1].args[0][0], 'python3')
+
+	def test_icon_follows_the_installer(self):
+		with tempfile.TemporaryDirectory() as d:
+			self.assertEqual(tray.icon_name(d), 'lghub-bluevoice')
+			os.makedirs(os.path.join(d, 'hicolor', '256x256', 'apps'))
+			open(os.path.join(d, 'hicolor', '256x256', 'apps', 'lghub.png'), 'w').close()
+			self.assertEqual(tray.icon_name(d), 'lghub')
+
+	def test_quit_closes_the_window_and_stops_the_service(self):
+		from gi.repository import GLib
+		bus = mock.Mock()
+		with mock.patch('service.stop') as stop:
+			tray.quit_all(bus)
+			bus.call_sync.side_effect = GLib.Error('not running')
+			tray.quit_all(bus)
+		self.assertEqual(bus.call_sync.call_args.args[3], 'Activate')
+		self.assertEqual(stop.call_count, 2)
+		with mock.patch.object(tray, 'quit_all') as quit_all:
+			self.tray._clicked(tray.QUIT)
+			threading.Event().wait(0.05)                       # it runs on its own thread
+		quit_all.assert_called_once()
 
 	def test_switches_flip_settings(self):
 		mock.patch.stopall()

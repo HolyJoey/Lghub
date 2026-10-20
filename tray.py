@@ -12,12 +12,16 @@ from gi.repository import Gio, GLib
 
 ITEM_PATH, MENU_PATH = '/StatusNotifierItem', '/MenuBar'
 WATCHER = 'org.kde.StatusNotifierWatcher'
+APP_ID, APP_PATH = 'dev.local.LghubBlueVoice', '/dev/local/LghubBlueVoice'   # the window (app.py)
+ICONS = os.path.join(os.environ.get('XDG_DATA_HOME') or os.path.expanduser('~/.local/share'), 'icons')
+QUIT = 4
 
 SNI_XML = '''<node><interface name="org.kde.StatusNotifierItem">
 <property name="Category" type="s" access="read"/><property name="Id" type="s" access="read"/>
 <property name="Title" type="s" access="read"/><property name="Status" type="s" access="read"/>
 <property name="IconName" type="s" access="read"/><property name="ToolTip" type="(sa(iiay)ss)" access="read"/>
 <property name="Menu" type="o" access="read"/><property name="ItemIsMenu" type="b" access="read"/>
+<property name="IconThemePath" type="s" access="read"/>
 <method name="Activate"><arg type="i" direction="in"/><arg type="i" direction="in"/></method>
 <method name="SecondaryActivate"><arg type="i" direction="in"/><arg type="i" direction="in"/></method>
 <method name="ContextMenu"><arg type="i" direction="in"/><arg type="i" direction="in"/></method>
@@ -51,6 +55,24 @@ def open_app():
 			return
 		except OSError:
 			continue
+
+
+def icon_name(icons=ICONS):
+	"""The installer's icon: G HUB's logo when it was downloaded, else Lghub's own."""
+	return 'lghub' if os.path.exists(os.path.join(icons, 'hicolor', '256x256', 'apps', 'lghub.png')) \
+		else 'lghub-bluevoice'
+
+
+def quit_all(bus):
+	"""Close the Lghub window if it's open (its 'quit' action), then stop the background service
+	(this process; it comes back at the next login or with the window)."""
+	import service
+	try:
+		bus.call_sync(APP_ID, APP_PATH, 'org.gtk.Actions', 'Activate', GLib.Variant('(sava{sv})', ('quit', [], {})),
+		              None, Gio.DBusCallFlags.NONE, 2000, None)
+	except GLib.Error:
+		pass                                     # the window isn't open
+	service.stop()
 
 
 def _switches():
@@ -92,6 +114,7 @@ def menu_items(devices, switches):
 		items.append((10 + n, {'label': text, 'toggle-type': 'checkmark', 'toggle-state': 1 if on else 0}))
 	items.append((3, {'type': 'separator'}))
 	items.append((1, {'label': 'Open Lghub'}))
+	items.append((QUIT, {'label': 'Quit Lghub'}))
 	return items
 
 
@@ -167,9 +190,10 @@ class Tray:
 	# --- StatusNotifierItem --------------------------------------------------------------------
 
 	def _item_get(self, _conn, _sender, _path, _iface, prop):
+		icon = icon_name()
 		values = {'Category': ('s', 'Hardware'), 'Id': ('s', 'lghub'), 'Title': ('s', 'Lghub'),
-		          'Status': ('s', 'Active'), 'IconName': ('s', 'input-gaming'),
-		          'ToolTip': ('(sa(iiay)ss)', ('input-gaming', [], 'Lghub', self._tooltip())),
+		          'Status': ('s', 'Active'), 'IconName': ('s', icon), 'IconThemePath': ('s', ICONS),
+		          'ToolTip': ('(sa(iiay)ss)', (icon, [], 'Lghub', self._tooltip())),
 		          'Menu': ('o', MENU_PATH), 'ItemIsMenu': ('b', True)}
 		kind, value = values.get(prop, ('s', ''))
 		return GLib.Variant(kind, value)
@@ -222,6 +246,8 @@ class Tray:
 	def _clicked(self, item):
 		if item == 1:
 			open_app()
+		elif item == QUIT:
+			threading.Thread(target=quit_all, args=(self.conn,), daemon=True).start()
 		elif 10 <= item < 10 + len(self.switches):
 			self.switches[item - 10][3]()
 			self._rebuild()

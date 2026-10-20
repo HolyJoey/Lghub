@@ -312,6 +312,9 @@ class App(Adw.Application):
 		provider.load_from_string(CSS)
 		Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), provider,
 		                                          Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+		quit_action = Gio.SimpleAction.new('quit', None)       # the tray's Quit closes the window too
+		quit_action.connect('activate', lambda *_: self.quit())
+		self.add_action(quit_action)
 
 	def do_activate(self):
 		page = 'home'
