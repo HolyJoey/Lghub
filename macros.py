@@ -26,8 +26,6 @@ SYSTEM_KEYS = {'COPY': (CTRL, 0x06), 'PASTE': (CTRL, 0x19), 'UNDO': (CTRL, 0x1d)
 SYSTEM_CONSUMER = {'BRIGHTNESS_UP': 0x6f, 'BRIGHTNESS_DOWN': 0x70, 'MAIL_CLIENT': 0x18a,
                    'INTERNET_CLIENT': 0x223, 'FILE_CLIENT': 0x194}
 SYSTEM_COMMANDS = {'LOCK': ['loginctl', 'lock-session']}
-AUDIO_COMMANDS = {'MUTE_MICROPHONE': ['wpctl', 'set-mute', '@DEFAULT_AUDIO_SOURCE@', 'toggle'],
-                  'MUTE_SPEAKERS': ['wpctl', 'set-mute', '@DEFAULT_AUDIO_SINK@', 'toggle']}
 WHEEL = {'WHEEL_UP': (1, False), 'WHEEL_DOWN': (-1, False), 'WHEEL_LEFT': (-1, True), 'WHEEL_RIGHT': (1, True)}
 # Sequence steps that are whole macros of their own
 COMPONENT_MACROS = ('keystroke', 'text_block', 'media', 'system', 'app', 'audio', 'open_web_page', 'device')
@@ -170,9 +168,8 @@ class Runner:
 		elif t == 'OPEN_WEB_PAGE':
 			_spawn(['xdg-open', macro['open_web_page'].get('url', '')])
 		elif t == 'AUDIO':
-			cmd = AUDIO_COMMANDS.get(macro['audio'].get('action'))
-			if cmd:
-				_spawn(cmd)
+			import audio_actions
+			threading.Thread(target=audio_actions.run, args=(macro['audio'].get('action'),), daemon=True).start()
 		elif t == 'DEVICE':
 			self.device_action('DEVICE', macro['device'].get('action'), True)
 

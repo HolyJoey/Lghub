@@ -4,6 +4,7 @@ import time
 
 from gi.repository import GLib, Gdk, Gtk
 
+import audio_actions
 import macros
 from ui import box, button_widget, label, page_header
 
@@ -15,7 +16,7 @@ DEVICE_ACTIONS = tuple(action for _kind, action in sorted(macros.DEVICE_ACTIONS)
 MODES = (('once', 'Play once'), ('held', 'Repeat while held'), ('toggle', 'Start / stop on each press'))
 MEDIA = tuple(macros.MEDIA)
 SYSTEM = tuple(sorted(set(macros.SYSTEM_KEYS) | set(macros.SYSTEM_CONSUMER) | set(macros.SYSTEM_COMMANDS)))
-AUDIO = tuple(macros.AUDIO_COMMANDS)
+AUDIO = audio_actions.ACTIONS
 MODIFIER_NAMES = {'Control_L': 0xe0, 'Shift_L': 0xe1, 'Alt_L': 0xe2, 'Super_L': 0xe3, 'Control_R': 0xe4,
                   'Shift_R': 0xe5, 'Alt_R': 0xe6, 'ISO_Level3_Shift': 0xe6, 'Super_R': 0xe7}
 

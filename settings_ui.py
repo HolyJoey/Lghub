@@ -40,6 +40,8 @@ class SettingsPage(Gtk.Box):
 		notes.append(_row('Low battery', _switch('battery_warnings'), 'At 30 % and again at 15 %.'))
 		notes.append(_row('DPI, profile and report rate changes', _switch('osd_notifications'),
 		                  'When a mouse’s own buttons change them.'))
+		notes.append(_row('Equalizer, surround and audio device changes', _switch('audio_notifications'),
+		                  'When a button or macro changes them.'))
 		notes.append(_row('Game profiles', _switch('profile_notifications'), 'When a game’s profile switches on or off.'))
 		self.append(notes)
 
