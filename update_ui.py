@@ -1,6 +1,7 @@
 """The window's side of updates (update.py): a banner on the home page when a newer release is out,
 its notes and Update now, progress, and the Updates card on the Settings page. Ours."""
 import os
+import re
 import sys
 
 from gi.repository import Adw, GLib, Gtk
@@ -11,6 +12,45 @@ from version import VERSION
 from worker import Worker
 
 RELEASES = f'https://github.com/{update.REPO}/releases'
+
+
+def notes_blocks(text):
+	"""[(kind, Pango markup)] for release notes written in simple Markdown: 'p' paragraphs (**bold**
+	lines), 'li' "- " bullets, 'gap' blank lines; hard-wrapped lines are joined back."""
+	blocks = []                 # [(kind, text)]: 'p' paragraph, 'li' bullet
+	for line in text.strip().splitlines():
+		line = line.strip()
+		if not line:
+			blocks.append(('gap', ''))
+		elif line.startswith(('- ', '* ')):
+			blocks.append(('li', line[2:]))
+		elif blocks and blocks[-1][0] in ('li', 'p') and not line.startswith('**'):
+			blocks[-1] = (blocks[-1][0], f'{blocks[-1][1]} {line}')
+		else:
+			blocks.append(('p', line))
+	return [(kind, re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', GLib.markup_escape_text(body))) for kind, body in blocks]
+
+
+def notes_view(text):
+	"""The notes as a left-aligned, scrollable block for a dialog; bullets hang."""
+	column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+	for kind, markup in notes_blocks(text):
+		if kind == 'gap':
+			column.append(Gtk.Box(height_request=6))
+			continue
+		label = Gtk.Label(use_markup=True, wrap=True, xalign=0, hexpand=True, label=markup)
+		if kind == 'li':
+			line = Gtk.Box(spacing=8)
+			line.append(Gtk.Label(label='•', yalign=0, margin_start=4))
+			line.append(label)
+			column.append(line)
+		else:
+			column.append(label)
+	scroller = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER, propagate_natural_height=True,
+	                              max_content_height=360)
+	scroller.set_child(column)
+	scroller.set_size_request(460, -1)
+	return scroller
 
 
 class UpdateBanner:
@@ -39,15 +79,16 @@ class UpdateBanner:
 	def _details(self):
 		if not self.info:
 			return
-		notes = self.info['notes'].strip() or 'No notes for this release.'
-		dialog = Adw.AlertDialog(heading=f'Lghub {self.info["version"]}', body=notes[:2000])
+		notes = self.info['notes'].strip()[:4000] or 'No notes for this release.'
+		dialog = Adw.AlertDialog(heading=f'Lghub {self.info["version"]}', extra_child=notes_view(notes))
+		dialog.set_prefer_wide_layout(True)
 		dialog.add_response('cancel', 'Later')
 		if update.can_install():
 			dialog.add_response('update', 'Update now')
 			dialog.set_response_appearance('update', Adw.ResponseAppearance.SUGGESTED)
 			dialog.connect('response', lambda _d, r: r == 'update' and self._install())
 		else:
-			dialog.set_body(notes[:2000] + '\n\nThis copy of Lghub isn’t updated by the app (it runs from a git checkout '
+			dialog.set_body('This copy of Lghub isn’t updated by the app (it runs from a git checkout '
 			                'or a package): update it the way you installed it.')
 			dialog.add_response('open', 'Open releases')
 			dialog.connect('response', lambda _d, r: r == 'open' and Gtk.UriLauncher.new(RELEASES).launch(self.win, None))
