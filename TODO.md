@@ -12,7 +12,7 @@ measurements.
 | Area | Done | What's left |
 | --- | --- | --- |
 | Blue VO!CE (G Pro X, G733) | 100% | check on the G Pro X |
-| Blue VO!CE 2 (Yetis, G735) | 85% | check against Logitech's APO under Wine; check on a mic; newer devices' preset layout (PRO X 2, Yeti GX, ...) |
+| Blue VO!CE 2 (Yetis, G735, PRO X 2) | 95% | check against Logitech's APO under Wine; check on a mic |
 | Surround, equalizer | 100% | check on the G Pro X |
 | PRO 5-band equalizer | 20% | runs on the headset's Conexant chip (see below); needs the G Pro X |
 | Mice | 92% | see "Mice" below |
@@ -133,11 +133,10 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   - 0x0200 / 0x0201 / 0x020D volume and EQ sets, 0x020E mic test
   - 0x0800 / 0x0801 / 0x0809 mixer, 0x0900-0x0909 voice processing on the headset
   - 0x0920 Bluetooth EQ
-- **Blue VO!CE 2 on the newer devices** (PRO X 2, PRO X3, A50 X, Yeti GX, Yeti Orb, Yeti 2): their
-  depots (encrypted, readable now) hold Blue VO!CE presets under MICROPHONE_SETTINGS /
-  AUDIO_EFFECTS_SETTINGS, a newer layout than the BLUE_VOICE_2_SETTINGS presets bv2_presets reads.
-
-### Mics (Yeti)
+- **Blue VO!CE 2 on the newer devices**: done for the PRO X 2, Yeti GX and Yeti Orb (their
+  depots, encrypted, hold the same BLUE_VOICE_2_SETTINGS presets; the PRO X 2 under another file
+  name). Check that the PRO X 2's PipeWire name contains "PRO X 2". The PRO X3, A50 X and
+  Yeti 2 ship no Blue VO!CE 2 presets (their voice processing is somewhere else; not looked at).
 - 0x8370 mic mute and gain done (G HUB: channel 0, gain x 100, mute flipped on 0AD1 / 0AD2).
 - 0x8360 headphone level done (type 2, x 100, the only control G HUB writes).
 - 0x8350 mic monitoring done (G HUB's sidetone code: read fn 1 (i, i), write fn 2 (0, 1, level)).

@@ -11,9 +11,13 @@ APO, so a preset here sets every name, 0 where the file has none.
 import json
 import os
 
-# Devices G HUB ships Blue VO!CE 2 presets for (checked against every depot we know).
-MODELS = ('g735', 'yeti_classic', 'yeti_nano', 'yeti_original_nano', 'yeti_x', 'yeti_x_wow')
+# Devices G HUB ships Blue VO!CE 2 presets for (checked against every depot, the encrypted ones
+# included). The Yeti GX and Orb presets also set automaticGainControl, which isn't part of the
+# DSP (the mic does it) and is left out.
+MODELS = ('g735', 'pro_x2_gaming_wireless_headset', 'yeti_classic', 'yeti_gx', 'yeti_nano', 'yeti_orb',
+          'yeti_original_nano', 'yeti_x', 'yeti_x_wow')
 DEPOT_FILE = 'defaults_override.json'
+DEPOT_FILES = {'pro_x2_gaming_wireless_headset': 'pro_x2_wireless_headset_defaults_override.json'}
 SKIP = {'volume'}          # not a DSP setting (see bv2.c)
 MIC_GAIN = 'inputGain'     # the mic's own gain (its PipeWire volume, 0-1); the engine sets it, not the DSP
 
@@ -226,6 +230,11 @@ def params_text(settings, enabled=True):
 	lines = [f'enabled {1 if enabled else 0}\n']
 	lines += [f'{k} {settings[k]:g}\n' for k in sorted(settings) if k != MIC_GAIN]
 	return ''.join(lines)
+
+
+def depot_file(model):
+	"""The file in the model's depot that holds its presets."""
+	return DEPOT_FILES.get(model, DEPOT_FILE)
 
 
 def path_for(data_dir, model):

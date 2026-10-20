@@ -478,7 +478,7 @@ def fetch_presets(model):
 def fetch_bv2_presets(model):
 	"""Path of a Blue VO!CE 2 device's G HUB presets (its defaults_override.json), or None. Blocks."""
 	import bv2_presets
-	return _fetch_file(model, bv2_presets.DEPOT_FILE, bv2_presets.path_for(store.DATA_DIR, model))
+	return _fetch_file(model, bv2_presets.depot_file(model), bv2_presets.path_for(store.DATA_DIR, model))
 
 
 def _fetch_file(model, name, path):

@@ -32,7 +32,7 @@ Cinematic, Communications) and bands, 32 Hz to 16 kHz, on a new output *… (Equ
 headset. The presets come from Logitech's own files; the filters doing the work are PipeWire's,
 not Logitech's DSP.
 
-**Blue VO!CE 2.** On Yeti mics and the G735, the newer voice chain G HUB runs there
+**Blue VO!CE 2.** On Yeti mics (Yeti GX and Orb too), the G735 and the PRO X 2, the newer voice chain G HUB runs there
 (Logitech's own DTS ClearVoice 2 processing), with G HUB's presets for the mic (Broadcaster,
 High Voice, Warm and Vintage, ...) and a switch for each stage: high-pass, noise reduction,
 noise gate, compressor, equalizer, de-popper, de-esser, limiter, each with G HUB's own controls.

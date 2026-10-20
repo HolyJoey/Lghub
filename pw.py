@@ -45,17 +45,18 @@ def default_source_name():
 
 
 def is_blue_voice_headset(src):
-	"""A G Pro X or G733 microphone/output, going by its PipeWire name."""
+	"""A G Pro X or G733 microphone/output, going by its PipeWire name (not a PRO X 2, which runs
+	Blue VO!CE 2)."""
 	text = f"{src['name']} {src['description']}".lower().replace('_', ' ')
-	return any(name in text for name in ('pro x', 'prox', 'g pro', 'g733'))
+	return any(name in text for name in ('pro x', 'prox', 'g pro', 'g733')) and not is_bv2_mic(src)
 
 
 # Blue VO!CE 2 mics and headsets (bv2_presets.MODELS), going by their PipeWire names.
-BV2_NAMES = ('yeti', 'g735')
+BV2_NAMES = ('yeti', 'g735', 'pro x 2', 'pro x2')
 
 
 def is_bv2_mic(src):
-	"""A Yeti or G735 microphone: G HUB runs Blue VO!CE 2 on these."""
+	"""A Yeti, G735 or PRO X 2 microphone: G HUB runs Blue VO!CE 2 on these."""
 	text = f"{src['name']} {src['description']}".lower().replace('_', ' ')
 	return any(name in text for name in BV2_NAMES)
 

@@ -87,6 +87,12 @@ class MicTest(unittest.TestCase):
 		self.assertTrue(pw.is_bv2_mic(yeti))
 		self.assertFalse(pw.is_bv2_mic(prox))
 		self.assertTrue(pw.is_blue_voice_headset(prox))
+		prox2 = {'name': 'alsa_input.usb-Logitech_PRO_X_2_LIGHTSPEED-00.mono-fallback', 'description': 'PRO X 2 LIGHTSPEED'}
+		self.assertTrue(pw.is_bv2_mic(prox2))                        # Blue VO!CE 2, not the G Pro X's
+		self.assertFalse(pw.is_blue_voice_headset(prox2))
+		self.assertEqual(bv2_presets.depot_file('pro_x2_gaming_wireless_headset'),
+		                 'pro_x2_wireless_headset_defaults_override.json')
+		self.assertEqual(bv2_presets.depot_file('yeti_gx'), bv2_presets.DEPOT_FILE)
 
 	def test_engine_kind(self):
 		e = engine.Engine.__new__(engine.Engine)
