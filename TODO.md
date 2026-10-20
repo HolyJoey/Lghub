@@ -23,7 +23,7 @@ measurements.
 | Wireless (receivers, power) | 75% | see "Wireless and power" below |
 | Lighting | 95% | screen sampler on GNOME / KDE; per-key on mice |
 | App features | 85% | see "App" below |
-| Background service | 90% | re-measure CPU and memory with the current version installed |
+| Background service | 95% | re-measured 2026-10-20: 0.2% CPU, 28 MB idle |
 
 ## 1. Check on the real hardware (G Pro X, G502, C920)
 
@@ -43,8 +43,6 @@ Everything below has only met the simulator (`simulate.py`) or the DLLs offline.
   - 0x8110 software buttons, DPI/profile macros, G-Shift layer
   - Backups of every sector written go to `~/.local/share/lghub-bluevoice/backups/`.
 - **C920**: control names and ranges, preview at 640x360 MJPEG.
-- **README numbers**: re-measure "Is it heavy?" with the current version installed (new since
-  the last measurement: game profiles, the restorer, LIGHTSYNC, Blue VO!CE 2).
 - **Untestable here (no device)**:
   - G733, Yetis, G735
   - keyboards: per-key 0x8081 / 0x8080, M-keys, Fn keys, game mode, Easy-Switch names, LIGHTSYNC

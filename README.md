@@ -162,7 +162,7 @@ No. Measured on a laptop (Intel Alder Lake), as a share of one CPU core:
 
 | Part | While in use | Otherwise |
 | --- | --- | --- |
-| Background service (keeps everything below running) | | 0.2%, 30 MB |
+| Background service (keeps everything below running) | | 0.2%, 28 MB |
 | Blue VO!CE | about 4% while you talk, 8 ms delay | nothing: your mic is only opened while an app records |
 | Surround | about 1.5% while something plays | nothing: the headset can go idle |
 | Equalizer | about 0.5% while something plays | nothing (and not running when switched off) |
