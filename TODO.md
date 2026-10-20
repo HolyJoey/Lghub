@@ -193,6 +193,11 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   used yet: check animation smoothness on a real keyboard first.
 
 ### App
+- **Update notice and "Update now"** (planned, not started; waits for the repo to go public and
+  a first release): versioned GitHub releases (tarball, SHA-256, signature), a daily anonymous
+  check of the latest release, a banner on the home page and a tray item, and an update that
+  downloads, verifies, backs up the current install, runs the new `install.sh` and rolls back
+  if anything fails. Distro-package installs only get the notice.
 - Low-battery notifications done (G HUB's LOW 30 % / CRITICAL 15 %; checking every 5 minutes is
   ours). Game-profile notifications and DPI / profile notices for onboard mice (G HUB's
   OSD_DPI_CHANGED / OSD_PROFILE_CHANGED from 0x8100 events) done. Report-rate notices (0x8061
