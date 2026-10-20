@@ -54,15 +54,28 @@ def notes_view(text):
 
 
 class UpdateBanner:
-	"""The home page's update banner (an Adw.Banner, which can't be subclassed: .widget)."""
+	"""The home page's update bar (.widget): the new version, What's new… and Update now (installs
+	straight away, without opening the notes)."""
 
 	def __init__(self, win):
-		self.widget = Adw.Banner(revealed=False, visible=False, button_label='What’s new…')
+		from ui import button_widget
 		self.win = win
 		self.info = None
 		self.busy = False
 		self.worker = Worker()
-		self.widget.connect('button-clicked', lambda _b: self._details())
+		bar = Gtk.Box(spacing=10, css_classes=['card', 'update-bar'])
+		self.title = Gtk.Label(xalign=0, hexpand=True, wrap=True, css_classes=['update-title'])
+		self.notes_button = button_widget('What’s new…', ['ghost'], self._details)
+		self.update_button = button_widget('Update now', ['apply'], self._install)
+		for w in (self.title, self.notes_button, self.update_button):
+			w.set_valign(Gtk.Align.CENTER)
+			bar.append(w)
+		self.widget = Gtk.Revealer(child=bar, reveal_child=False, visible=False,
+		                           transition_type=Gtk.RevealerTransitionType.SLIDE_DOWN)
+
+	def _buttons(self, shown):
+		self.notes_button.set_visible(shown)
+		self.update_button.set_visible(shown and update.can_install())
 
 	def refresh(self):
 		"""Shows the banner when the last check found a newer release (cheap: one small file)."""
@@ -72,9 +85,10 @@ class UpdateBanner:
 		if info != self.info:
 			self.info = info
 			if info:
-				self.widget.set_title(f'Lghub {info["version"]} is available')
+				self.title.set_text(f'Lghub {info["version"]} is available')
+				self._buttons(True)
 			self.widget.set_visible(bool(info))   # hidden, it takes no room in the page's spacing
-			self.widget.set_revealed(bool(info))
+			self.widget.set_reveal_child(bool(info))
 
 	def _details(self):
 		if not self.info:
@@ -95,22 +109,24 @@ class UpdateBanner:
 		dialog.present(self.win)
 
 	def _install(self):
+		if not self.info or self.busy:
+			return
 		self.busy = True
-		self.widget.set_button_label('')
+		self._buttons(False)
 		info = self.info
 
 		def progress(text):
-			GLib.idle_add(self.widget.set_title, f'{text} Lghub {info["version"]}…')
+			GLib.idle_add(self.title.set_text, f'{text} Lghub {info["version"]}…')
 		self.worker.submit(lambda: update.install(info, progress), self._done, self._failed)
 
 	def _done(self, _output):
-		self.widget.set_title(f'Updated to {self.info["version"]}. Restarting…')
+		self.title.set_text(f'Updated to {self.info["version"]}. Restarting…')
 		GLib.timeout_add(1200, _restart)
 
 	def _failed(self, error):
 		self.busy = False
-		self.widget.set_button_label('What’s new…')
-		self.widget.set_title(f'Lghub {self.info["version"]} is available')
+		self._buttons(True)
+		self.title.set_text(f'Lghub {self.info["version"]} is available')
 		if isinstance(error, update.NeedsRoot):
 			body = ('The new version needs something only an administrator can install. Nothing was changed. '
 			        f'Run its installer in a terminal:\n\ncd {error.folder} && ./install.sh')

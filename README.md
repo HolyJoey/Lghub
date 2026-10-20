@@ -179,8 +179,9 @@ Then open **Lghub** from your menu (or run `lghub`).
 ## Updates
 
 Once a day the background service asks GitHub for the newest Lghub release (nothing else is
-sent; Settings turns it off or checks now). When there is one, the Devices page shows a banner:
-**What's new…** shows the release notes and **Update now** installs it. Lghub checks the
+sent; Settings turns it off or checks now). When there is one, the Devices page shows a bar
+with **Update now**, which installs it straight away, and **What's new…**, which shows the release
+notes first (with its own Update now). Lghub checks the
 download's SHA-256 and that it is signed with the release key in this repo (`release-key.pub`),
 backs up its own program files, runs the new `install.sh` and puts the backup back if anything
 fails. If the new version needs something only an administrator can install, it says so and

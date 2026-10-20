@@ -39,6 +39,8 @@ button.nav.active image {{ color: {ACCENT}; }}
 .stage-title {{ font-size: 16px; font-weight: 700; }}
 button.apply {{ background: {ACCENT}; color: #04121f; font-weight: 700; border-radius: 10px;
   min-height: 40px; padding: 0 20px; border: none; box-shadow: none; }}
+.update-bar {{ padding: 10px 12px 10px 20px; }}
+.update-title {{ font-weight: 700; }}
 button.ghost {{ background: transparent; border: 1px solid #2c313b; color: #eceef2; font-weight: 600;
   border-radius: 10px; min-height: 40px; padding: 0 16px; box-shadow: none; }}
 button.danger {{ background: transparent; border: 1px solid #5a2a2a; color: #ff8a8a; font-weight: 600;
