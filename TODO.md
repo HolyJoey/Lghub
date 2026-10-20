@@ -130,6 +130,8 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
     behind the 0x0003 bridge (it refuses packets larger than the adapter's size). G HUB's feature
     routes: 0601 mic mute, 0604 sidetone, 0605 ANC mode / button, mixer_mic, onboard_equalizer
     (+ save), onboard_noise_reduction, volume, bt_equalizer. Not built: nothing here can test it.
+  - Plan (decided 2026-10-20): wait for a tester with a G735 / PRO X 2; then build the transport
+    plus a probe mode that reports what the headset answers, and the features from that data.
 - **Others**:
   - 0x8320 jack detection done (headphone bit ours); 0x8305 bass tone done
   - 0x0200 / 0x0201 / 0x020D volume and EQ sets, 0x020E mic test
