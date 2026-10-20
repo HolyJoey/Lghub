@@ -25,6 +25,14 @@ measurements.
 | App features | 85% | see "App" below |
 | Background service | 95% | re-measured 2026-10-20: 0.2% CPU, 28 MB idle |
 
+## 0. First thing next session: G HUB's device data
+
+Decrypting G HUB's encrypted device files (see "Wireless and power" below). Static RE found the
+format, the cipher (AES-128-GCM per `key-id`) and where the keys come from (the update server's
+access groups), but not the server / channel / password / groups G HUB uses: they come from the
+`pipeline.json` its installer writes. Next try: run G HUB's installer under Wine in a throwaway
+prefix (asked the user; waiting for the OK), then read `pipeline.json`, its logs and downloads.
+
 ## 1. Check on the real hardware (G Pro X, G502, C920)
 
 Everything below has only met the simulator (`simulate.py`) or the DLLs offline.
