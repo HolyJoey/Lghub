@@ -31,7 +31,7 @@ class DiscoverTest(unittest.TestCase):
 					mock.patch.dict(os.environ, {devices.FAKE_ENV: ''}):
 				found = devices.discover()
 		self.assertEqual([(d.id, d.model.key, d.serial) for d in found],
-		                 [('usb:3-2', 'g815', 'ABC'), ('usb:3-3', 'unknown', '')])
+		                 [('usb:3-2', 'g815', 'ABC'), ('usb:3-3', 'unknown_046d_ffff', '')])
 		g815 = found[0]
 		self.assertEqual((g815.port, g815.wireless, g815.name), ('3-2', False, g815.model.name))
 		self.assertTrue(g815.type_name)
@@ -54,7 +54,7 @@ class DiscoverTest(unittest.TestCase):
 					mock.patch.dict(os.environ, {devices.FAKE_ENV: ''}):
 				found = devices.discover()
 		self.assertEqual([(d.id, d.usb_id, d.model.key, d.serial) for d in found],
-		                 [('bt:0005:046D:B0FE.0007', '046d:b0fe', 'unknown', 'dd'),
+		                 [('bt:0005:046D:B0FE.0007', '046d:b0fe', 'unknown_logitech_device_046d_b0fe', 'dd'),
 		                  ('bt:0005:046D:B0FF.0006', '046d:b0ff', 'g305', 'cc'),          # by its name
 		                  ('bt:0005:046D:B354.0004', '046d:b354', 'g915', 'aa:bb')])      # Bluetooth id in the catalog
 		g915 = found[2]
@@ -65,9 +65,29 @@ class DiscoverTest(unittest.TestCase):
 		with mock.patch.object(devices, 'SYS_HID', '/nonexistent'):
 			self.assertEqual(devices._bluetooth_devices(), [])
 
+	def test_unknown_usb_device_by_its_product_name(self):
+		with tempfile.TemporaryDirectory() as root:
+			usb_tree(root, [('3-2', '046d', 'c099', None), ('3-3', '046d', 'c098', None)])
+			for port, product in (('3-2', 'G502 X'), ('3-3', 'G305')):
+				with open(os.path.join(root, port, 'product'), 'w') as f:
+					f.write(product + '\n')
+			with mock.patch.object(devices, 'SYS_USB', root), mock.patch.object(devices, 'SYS_HID', '/nonexistent'), \
+					mock.patch.dict(os.environ, {devices.FAKE_ENV: ''}):
+				found = devices.discover()
+		self.assertEqual([(d.model.key, d.name) for d in found], [('unknown_046d_c099', 'G502 X'), ('g305', 'G305')])
+
 	def test_models(self):
 		self.assertEqual(devices.model_for('046d:c52b').type, 'receiver')
-		self.assertEqual(devices.model_for('046d:1234').key, 'unknown')
+		self.assertEqual(devices.model_for('046d:1234').key, 'unknown_046d_1234')
+		self.assertTrue(devices.is_unknown(devices.model_for('046d:1234')))
+		match = devices.match_model
+		self.assertEqual(match('G915 TKL LIGHTSPEED Wireless RGB Keyboard', 'keyboard').key, 'g915_tkl')
+		self.assertEqual(match('Logitech G305', 'mouse').key, 'g305')
+		self.assertEqual(match('G502 HERO Gaming Mouse', 'mouse').key, 'g502_hero')
+		self.assertEqual(match('G502 X PLUS', 'mouse').key, 'unknown_g502_x_plus')     # not the old G502
+		self.assertEqual(match('PRO X TKL', 'keyboard').name, 'PRO X TKL')            # not the PRO keyboard
+		self.assertEqual(match('G3050', 'mouse').key, 'unknown_g3050')
+		self.assertEqual(match('', 'mouse').name, 'Wireless device')
 		self.assertIsNone(devices.model_for('8087:0026'))
 		self.assertEqual(devices.match_model('Something new', 'mouse').type, 'mouse')
 		self.assertEqual(devices.blue_voice_model(mock.Mock(model=mock.Mock(key='pro_71_gaming_headset'))), 'wired')

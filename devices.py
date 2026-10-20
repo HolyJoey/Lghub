@@ -7,6 +7,7 @@ files are shipped; the device itself is asked for the rest (HID++, V4L2) on its 
 Discovery reads sysfs only, so it needs no permissions and is cheap enough to poll.
 """
 import os
+import re
 from dataclasses import dataclass
 
 LOGITECH = '046d'
@@ -188,8 +189,18 @@ def model_for(usb_id):
 	if usb_id in RECEIVERS:
 		return Model('receiver', RECEIVERS[usb_id], 'receiver', (usb_id,), (), ())
 	if usb_id.startswith(LOGITECH + ':'):
-		return Model('unknown', f'Logitech device {usb_id}', 'other', (usb_id,), (), ())
+		return Model(unknown_key(usb_id), f'Logitech device {usb_id}', 'other', (usb_id,), (), ())
 	return None
+
+
+def unknown_key(text):
+	"""A model key for a device the catalog doesn't know, its own per device name or id, so its
+	saved settings never mix with another unknown device's."""
+	return 'unknown_' + (re.sub(r'[^a-z0-9]+', '_', text.lower()).strip('_') or 'device')
+
+
+def is_unknown(model):
+	return model.key.startswith('unknown')
 
 
 def _read(path):
@@ -201,7 +212,7 @@ def _read(path):
 
 
 def _usb_devices():
-	"""[(port path, vid:pid, serial)] for every USB device (not interfaces or root hubs)."""
+	"""[(port path, vid:pid, serial, product name)] for every USB device (not interfaces or root hubs)."""
 	try:
 		names = sorted(os.listdir(SYS_USB))
 	except OSError:
@@ -213,7 +224,7 @@ def _usb_devices():
 		base = os.path.join(SYS_USB, name)
 		vid, pid = _read(os.path.join(base, 'idVendor')), _read(os.path.join(base, 'idProduct'))
 		if vid and pid:
-			found.append((name, f'{vid}:{pid}'.lower(), _read(os.path.join(base, 'serial'))))
+			found.append((name, f'{vid}:{pid}'.lower(), _read(os.path.join(base, 'serial')), _read(os.path.join(base, 'product'))))
 	return found
 
 
@@ -243,15 +254,17 @@ def _fake_devices():
 	for i, item in enumerate(filter(None, (s.strip().lower() for s in os.environ.get(FAKE_ENV, '').split(',')))):
 		item, _, port = item.partition('@')
 		usb_id = item if ':' in item else f'{LOGITECH}:{item}'
-		found.append((port or f'fake{i}', usb_id, ''))
+		found.append((port or f'fake{i}', usb_id, '', ''))
 	return found
 
 
 def discover():
 	"""Connected devices we know or that are Logitech's, in a stable order."""
 	devices = []
-	for port, usb_id, serial in _usb_devices() + _fake_devices():
+	for port, usb_id, serial, product in _usb_devices() + _fake_devices():
 		model = model_for(usb_id)
+		if model and is_unknown(model) and product:   # not in the catalog: the name it gives itself
+			model = match_model(product, 'other', fallback=model)
 		if model:
 			devices.append(Device(f'usb:{port}', usb_id, model, serial))
 	for hid_name, usb_id, address, name in _bluetooth_devices():
@@ -286,16 +299,38 @@ KIND_TYPES = {'mouse': 'mouse', 'trackball': 'mouse', 'touchpad': 'mouse', 'keyb
               'numpad': 'keyboard', 'headset': 'headset', 'speaker': 'speaker', 'microphone': 'microphone'}
 
 
-def match_model(name, kind):
-	"""The catalog model whose name appears in a device's own name (longest wins)."""
+# Words that can follow a model's name in a device's own name without making it another model
+# ("G915 TKL LIGHTSPEED Wireless RGB Keyboard" is a G915 TKL; "G502 X PLUS" is not a G502)
+NAME_WORDS = frozenset(('LIGHTSPEED', 'WIRELESS', 'GAMING', 'MOUSE', 'KEYBOARD', 'HEADSET', 'RGB',
+                        'MECHANICAL', 'RECEIVER', 'SPEAKERS', 'MICROPHONE', 'WEBCAM', 'LOGITECH'))
+
+
+def _names(text, name):
+	"""Whether a device's own name (upper case) is this model's name and not a longer model's."""
+	for m in re.finditer(re.escape(name), text):
+		if m.start() and text[m.start() - 1].isalnum():
+			continue
+		after = re.match(r'\W*(\w*)', text[m.end():]).group(1)
+		if not after or after in NAME_WORDS:
+			return True
+	return False
+
+
+def match_model(name, kind, fallback=None):
+	"""The catalog model a device's own name names (longest wins), else fallback, else a model of
+	its own under that name."""
 	dev_type = KIND_TYPES.get(kind, 'other')
 	text = name.upper()
 	best = None
 	for m in MODELS:
-		if m.name.upper() in text and (m.type == dev_type or dev_type == 'other'):
+		if (m.type == dev_type or dev_type == 'other') and _names(text, m.name.upper()):
 			if best is None or len(m.name) > len(best.name):
 				best = m
-	return best or Model('unknown', name or 'Wireless device', dev_type, (), (), ())
+	if best:
+		return best
+	if fallback:
+		return Model(fallback.key, name or fallback.name, fallback.type, fallback.usb_ids, (), ())
+	return Model(unknown_key(name or 'wireless'), name or 'Wireless device', dev_type, (), (), ())
 
 
 def scan_receiver(receiver):

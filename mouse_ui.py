@@ -568,7 +568,7 @@ class MouseView(Gtk.Box):
 				page.append(lightsync_ui.card(self.device.model.key, lambda: None, per_key=False))
 			return
 		zones = self.device.model.lighting
-		if not zones and self.device.model.key != 'unknown':
+		if not zones and not devices.is_unknown(self.device.model):
 			page.append(label('This model has no lighting.', ['muted']))
 			return
 		self._profile_picker(page)
