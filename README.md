@@ -5,7 +5,7 @@ Logitech G headsets, mice, keyboards and webcams, running natively (no Wine). Wh
 features are Logitech's own code, like Blue VO!CE and DTS surround, Lghub runs that same code
 from G HUB's packages; everything else talks to the devices directly, the way G HUB does.
 Devices show up as you plug them in, including wireless ones behind a LIGHTSPEED, Unifying or
-Bolt receiver; pick one to change its settings.
+Bolt receiver and ones connected over Bluetooth; pick one to change its settings.
 
 ![Devices](docs/screenshots/home.png)
 
@@ -102,7 +102,8 @@ and Blue), starlight, colour cycle, echo press, your own animations (made in a F
 grim on Hyprland, Sway and other wlroots compositors, else through the desktop's screen-sharing
 portal on GNOME and KDE, which asks once; that needs GStreamer's PipeWire plugin,
 `gstreamer1.0-pipewire`). Lighting zones and effects, brightness, report
-rate, Fn keys, game mode, Easy-Switch, power-saving and power-off timers, angle snapping, sidetone, on-board memory and battery. Devices with a USB sound card (headsets,
+rate, Fn keys, game mode, Easy-Switch, power-saving and power-off timers, angle snapping, sidetone, on-board memory and battery. Analog keyboards (PRO X TKL RAPID, G515 RAPID and the
+like) get G HUB's rapid trigger and key priority switches. Devices with a USB sound card (headsets,
 speakers, Yeti mics) also get its controls. Yetis also get their own mute, gain, headphone level and mic monitoring over HID++,
 as G HUB sets them.
 
@@ -216,18 +217,21 @@ The app itself does nothing once closed.
 - **Background service.** `engine.py` keeps Blue VO!CE, the equalizer and surround running and
   puts webcam settings back. `systemctl --user status lghub-bluevoice` shows it.
 
-Which device is which comes from a small table of model facts (`devices.py`): USB ids,
-lighting zones, and so on. `depots.py` knows where each model's G HUB package lives and reads
-just the files it needs out of it with HTTP range requests.
+Which device is which comes from a table of model facts (`devices.py`): USB ids, lighting
+zones, and so on, from G HUB's own device list. `depots.py` knows where each model's G HUB
+package lives and reads just the files it needs out of it with HTTP range requests. Newer
+packages are encrypted (AES-128-GCM, the IV from each file's hash); `depots.py` decrypts the
+files it reads with the keys G HUB's update server hands out to G HUB itself, and checks each
+file against its hash.
 
 ## Trying it without the hardware
 
 ```bash
-LGHUB_FAKE_DEVICES=0aaa,c08b,c539,c33f,082d lghub
+LGHUB_FAKE_DEVICES=0aaa,c08b,c539,c33f,c35b,082d lghub
 ```
 
-pretends a G Pro X, a G502 HERO, a receiver with a G502 LIGHTSPEED, a G815 and a C920 are
-plugged in. Mice and keyboards are simulated (`simulate.py`), and the tests run against the
+pretends a G Pro X, a G502 HERO, a receiver with a G502 LIGHTSPEED, a G815, a PRO X TKL RAPID
+and a C920 are plugged in. Mice and keyboards are simulated (`simulate.py`), and the tests run against the
 same simulator: `python3 -m unittest discover tests`. `082d@3-4` makes the camera on USB port
 3-4 pose as a C920. The mouse, keyboard and wireless screenshots above are from the
 simulator. The webcam screenshot is a real camera.
@@ -237,8 +241,10 @@ simulator. The webcam screenshot is a real camera.
 - Most devices here have only met the simulator. If something doesn't work on yours (or does),
   open an issue with the "Device report" form: it asks for the model, the service log
   (`journalctl --user -u lghub-bluevoice`) and what the device's page says.
-- Still open, compared with G HUB: the 5-band PRO equalizer, the G735 / PRO X 2 protocol,
-  receiver pairing, keyboard onboard-profile editing and a few newer-mouse features. The full list is in [TODO.md](TODO.md).
+- Still open, compared with G HUB: the 5-band PRO equalizer, the G735 / PRO X 2 protocol and
+  the newer headsets' settings (A50 X, G522, PRO X3), Blue VO!CE on the newer devices, per-key
+  actuation on analog keyboards, receiver pairing, keyboard onboard-profile editing and a few
+  newer-mouse features. The full list is in [TODO.md](TODO.md).
 
 ## If something's off
 

@@ -12,20 +12,21 @@ measurements.
 | Area | Done | What's left |
 | --- | --- | --- |
 | Blue VO!CE (G Pro X, G733) | 100% | check on the G Pro X |
-| Blue VO!CE 2 (Yetis, G735) | 95% | check against Logitech's APO under Wine; check on a mic |
+| Blue VO!CE 2 (Yetis, G735) | 85% | check against Logitech's APO under Wine; check on a mic; newer devices' preset layout (PRO X 2, Yeti GX, ...) |
 | Surround, equalizer | 100% | check on the G Pro X |
 | PRO 5-band equalizer | 20% | runs on the headset's Conexant chip (see below); needs the G Pro X |
 | Mice | 92% | see "Mice" below |
-| Keyboards | 78% | see "Keyboards" below |
-| Headsets (other than the voice chain) | 55% | see "Headsets" below |
+| Keyboards | 80% | analog keys' per-key settings, onboard profiles; see "Keyboards" below |
+| Headsets (other than the voice chain) | 50% | Centurion and the newer headsets; see "Headsets" below |
 | Yeti controls | 100% | check on a Yeti |
 | Webcams | 90% | check on the C920 |
-| Wireless (receivers, power) | 75% | see "Wireless and power" below |
+| Wireless (receivers, Bluetooth, power) | 80% | pairing; see "Wireless and power" below |
+| Device catalog | 100% | 11 of G HUB's device files have keys outside its public channel (unreleased?) |
 | Lighting | 97% | screen sampler portal on GNOME / KDE; per-key on mice |
 | App features | 85% | see "App" below |
 | Background service | 95% | re-measured 2026-10-20: 0.2% CPU, 28 MB idle |
 
-## 1. Check on the real hardware (G Pro X, G502, C920)
+## 1. Check on the real hardware (G Pro X, G502, C920, newer models)
 
 Everything below has only met the simulator (`simulate.py`) or the DLLs offline.
 
@@ -37,6 +38,8 @@ Everything below has only met the simulator (`simulate.py`) or the DLLs offline.
   - Then the PRO equalizer (below).
 - **Bluetooth** (found as `0005:046D:*` HID devices, ours): a G604 / G915 over Bluetooth shows
   up, its page talks HID++ (device index 0xFF), battery in the tray, the new udev line.
+- **Newer models** (from G HUB's device list): a G502 X / PRO X SUPERLIGHT 2 / G515 shows up with
+  its picture; analog keyboards' rapid trigger and key priority switches (0x1B08) on a real one.
 - **G502**:
   - profile layout offsets, LED effect bytes (cycle 0x03, breathing 0x0a)
   - LIGHTSYNC on its zones (0x8070 fixed colour, not saved) while it is in onboard mode; the

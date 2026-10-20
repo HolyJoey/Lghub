@@ -113,6 +113,7 @@ from the mouse's own HID reports rather than the pointer.
 | 0x4522 disable keys by usage | fn 0 how many, fn 1 turn these HID usages off, fn 2 back on, fn 3 all on |
 | 0x4523 disable controls (newer) | fn 0 bitmap of control indexes; fn 1 / fn 3 read the game-mode bits; fn 2 `[0, on \| lock << 1]`. G HUB's presets list control ids (CIDs) from the key pictures; which index is which key comes from the keyboard |
 | 0x40A3 Fn inversion | fn 0 `[host]` → state, default, capabilities; fn 1 set |
+| 0x1B08 analog keys | G HUB's Feature1B08AnalogKeys: fn 0 capabilities, fn 1 / fn 2 get / set rapid trigger, fn 3 key-travel events, fn 4 / fn 5 get / set key priority; a set is one byte, bit 0 = on (that a get answers in bit 0 is ours). Actuation points and rapid-trigger sensitivity per key are in the onboard profile (tags 0x0120-0x0130) |
 | 0x8010 G-keys | fn 2 `[1]` = report G-keys to software; events carry a bitmask (G1 = bit 0 of byte 0) |
 | 0x8020 M-keys | event 0 = M-key pressed; fn 1 lights them (M1 = 1, M2 = 2, M3 = 4) |
 | 0x8040 brightness | fn 0 info (maximum, u16), fn 1 get, fn 2 set (u16) |
@@ -197,6 +198,10 @@ Levels are G HUB's 0-1 values × 100.
 
 ## Wireless, power and battery
 
+- **Bluetooth** (ours, not from G HUB): Logitech devices connected over Bluetooth are HID devices
+  on bus 0005 (`/sys/bus/hid/devices/0005:046D:<pid>.*`); their hidraw node takes HID++ with
+  device index 0xFF, as a corded device does. G HUB lists the Bluetooth product ids (046d:bxxx).
+
 - **Battery**: 0x1004 fn 1 and 0x1000 fn 0 → `[percent, ?, state]`. States: 0 on battery,
   1 charging, 2 almost full, 3 charged, 4 charging slowly.
 - **Voltage**: 0x1001 fn 0 → `[millivolts u16, flags]` (0x80 = charging). 0x1F20 fn 0
@@ -256,8 +261,17 @@ G HUB downloads its data from `https://updates.ghub.logitechg.com/depots/<uuid>/
   `files` list. Each file follows as a u32 LE length, then its bytes, so HTTP range requests
   can fetch a single file. A length of 0xFFFFFFFF is taken to mean a u64 length follows (ours:
   no file that large has been seen).
-- **Encrypted depots**: newer devices' depots have only `header-sha` and `key-id` in their
-  header and are encrypted. Lghub doesn't use them.
+- **Encrypted depots (capsules)**: magic 0x20210506, a header `{"header-sha", "key-id"}`, then a
+  u32 length and the encrypted file list (`files`: name, mode, sha), then the files as above,
+  each encrypted. Every part is AES-128-GCM under the key named `key-id`, with the IV
+  PBKDF2-HMAC-SHA512(the part's SHA-256 as hex, `key-id`, 1000 rounds, 32 bytes); the SHA-256 is
+  of the decrypted bytes, so it checks the result. Some files in a capsule (larger pictures) are
+  **sealed files**: magic 0x20210521, header `{"key-id", "file-sha"}`, u32 length, payload,
+  encrypted the same way; the capsule's hash is then that of the file within. G HUB's own
+  device lists (`data/devices/*.json` in the core depot) are sealed files too.
+- **Keys**: G HUB's update channel (`pipeline/v2/update/ghub13/win/public/details.json` on the same
+  host) lists the depots and names an access group; `pipeline/v2/access/<group>/content.json`
+  lists the keys (name = key id, base64 AES key). Lghub fetches them the first time it needs one.
 - **Useful files**:
   - Core depot, `LGHUB/data/lighting/`: `effect_prefabs.json`, `effects/*.json` (the keyframe
     animations, screen sampler regions and the visualizer layout).
