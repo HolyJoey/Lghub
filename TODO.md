@@ -207,8 +207,10 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   event) done.
 - G HUB's audio button / macro actions done through PipeWire: cycle equalizer, toggle surround,
   cycle output / input, mic gain and volume up / down / mute, with its notices (OSD_EQUALIZER_CYCLE,
-  OSD_SURROUND_SOUND_TOGGLE_*, OSD_AUDIO_OUTPUT / _INPUT). Not yet: sidetone, bass and treble
-  up / down, ADVANCED_EQUALIZER_TOGGLE, MAKE_DEFAULT_AUDIO_DEVICE (per headset).
+  OSD_SURROUND_SOUND_TOGGLE_*, OSD_AUDIO_OUTPUT / _INPUT), and sidetone / bass up / down (the
+  first headset that has it; step 10 is ours), the advanced equalizer toggle and "switch to this
+  audio device" (the first Logitech headset or mic: ours, the action names no device). Left out:
+  treble up / down (no headset with a treble setting known).
 - Game scan done (G HUB scans for installed games): Steam, Heroic (Epic, GOG), Legendary, Lutris.
 - Tray icon done (G HUB's system tray: devices with battery, Blue VO!CE / equalizer / surround
   switches, Open Lghub, Quit Lghub (what Quit does is ours); StatusNotifierItem + dbusmenu, the

@@ -78,7 +78,8 @@ recorded sequences (once, while held, or on/off), put on any button but the left
 run in the background service, the same way G HUB does it (HID++ 0x8110, or 0x1B04 on newer
 mice like the G502 X: only buttons with a macro stop clicking by themselves). DPI and profile macros switch the mouse's own DPI and
 profiles. G HUB's audio actions (cycle equalizer, toggle surround, cycle output or input, mic
-gain and volume) work with any headset and show a short notice.
+gain and volume, sidetone and bass, switch to the headset) work with any headset and show a
+short notice.
 When the mouse's own buttons switch DPI, profile or report rate, a short desktop notice shows the new value,
 as G HUB's on-screen display does.
 Like G HUB's on-board memory mode, everything is saved *in the mouse*, so it keeps working on
