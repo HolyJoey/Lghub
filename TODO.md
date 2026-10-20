@@ -152,12 +152,15 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   G HUB's public channel, probably unreleased products). All its mice, keyboards, headsets,
   webcams, mics and lights are in the catalog, with pictures and layouts from their (encrypted)
   depots; racing gear is left out.
-- **Pairing a device to a receiver**: newer LIGHTSPEED receivers pair through 0x1894
-  (LightspeedDevicePairing). Found: fn 0 capabilities, fn 1 receiver info, fn 2 open lock (3 bytes,
-  meaning not found), fn 3 close lock, fn 4 / 5 pairing info / extended info [slot], fn 6 device
-  name [slot], fn 7 unpair [slot]. Left: the open-lock bytes and the pairing events (G HUB's
-  AccessoryBus::open_lock_LS2), then a receiver to try it on. Older receivers pair through
-  receiver registers.
+- **Pairing a device to a receiver**: found (G HUB's HPP10Command, HID++ 1.0 register 0xB2 on
+  the receiver): open lock `10 FF 80 B2 01 00 00` on LS1 receivers (c539, c53f, c53d),
+  `10 FF 80 B2 07 00 00` on LS2 (c541, c545, c547, c54d, c543), close lock `10 FF 80 B2 02 00 00`.
+  Receiver types from G HUB's (decrypted) receivers list; LSX (c54f) and LS_HYBRID (POWERPLAY c53a)
+  probably pair over 0x1894 (fn 0 capabilities, 1 receiver info, 2 open lock (3 bytes, meaning
+  not found), 3 close lock, 4 / 5 pairing info [slot], 6 device name [slot], 7 unpair [slot]).
+  G HUB's AccessoryBus::unpair is a stub (logs a failure). Left: build "Pair a device" on the
+  receiver page (open lock, wait for the 0x41 connection notice, close), add receivers c53d,
+  c543, c54d, c54f to devices.RECEIVERS, and a receiver to try it on.
 - **Sleep / power-off timers** (0x8103 GlobalDeviceSettings tags 1 / 2): done with G HUB's tag
   protocol (sessions, tag read / write, CRC-32 commit) and its minute choices. Ours: first data
   bytes in the start-write call. The screen tags (16-19) aren't used (no device with a screen).
