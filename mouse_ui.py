@@ -172,8 +172,6 @@ class MouseView(Gtk.Box):
 		                           (features.BUNNY_HOPPING, 'bhop', features.bunny_hopping)):
 			if feature in m.features:
 				state[key] = read(m.dev)
-		if m.onboard and self.device.model.lighting is None:   # zones not in the catalog: ask the mouse
-			state['zones'] = _zones(m)
 		if m.onboard:
 			m.load_profiles()
 			state['mode'] = m.mode()
@@ -575,7 +573,7 @@ class MouseView(Gtk.Box):
 			if zones:
 				page.append(lightsync_ui.card(self.device.model.key, lambda: None, per_key=False))
 			return
-		zones = self._onboard_zones()
+		zones = self.device.model.lighting
 		if not zones and not devices.is_unknown(self.device.model):
 			page.append(label('This model has no lighting.', ['muted']))
 			return
@@ -584,13 +582,6 @@ class MouseView(Gtk.Box):
 			page.append(self._led_card(i, ZONE_NAMES.get(zone, zone.replace('_', ' ').capitalize())))
 		if features.COLOR_LED_EFFECTS in self.mouse.features or features.RGB_EFFECTS in self.mouse.features:
 			page.append(lightsync_ui.card(self.device.model.key, lambda: None, per_key=False))
-
-	def _onboard_zones(self):
-		"""The catalog's zones, or the names of those the mouse reported when the catalog has none."""
-		zones = self.device.model.lighting
-		if zones is None:
-			zones = tuple(z.name for z in self.state.get('zones') or ())
-		return zones
 
 	def _led_card(self, i, title):
 		p = self.profile

@@ -67,14 +67,16 @@ class DiscoverTest(unittest.TestCase):
 
 	def test_unknown_usb_device_by_its_product_name(self):
 		with tempfile.TemporaryDirectory() as root:
-			usb_tree(root, [('3-2', '046d', 'c099', None), ('3-3', '046d', 'c098', None)])
+			usb_tree(root, [('3-2', '046d', 'ffe0', None), ('3-3', '046d', 'ffe1', None)])
 			for port, product in (('3-2', 'G999'), ('3-3', 'G502 X')):
 				with open(os.path.join(root, port, 'product'), 'w') as f:
 					f.write(product + '\n')
 			with mock.patch.object(devices, 'SYS_USB', root), mock.patch.object(devices, 'SYS_HID', '/nonexistent'), \
 					mock.patch.dict(os.environ, {devices.FAKE_ENV: ''}):
 				found = devices.discover()
-		self.assertEqual([(d.model.key, d.name) for d in found], [('unknown_046d_c099', 'G999'), ('g502x', 'G502 X')])
+		self.assertEqual([(d.model.key, d.name) for d in found], [('unknown_046d_ffe0', 'G999'), ('g502x', 'G502 X')])
+		self.assertEqual(devices.model_for('046d:c099').key, 'g502x')               # G HUB's id for it
+		self.assertEqual(devices.model_for('046d:4099').lighting, ('primary', 'all'))   # G502 X PLUS
 
 	def test_models(self):
 		self.assertEqual(devices.model_for('046d:c52b').type, 'receiver')

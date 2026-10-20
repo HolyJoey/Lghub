@@ -25,14 +25,6 @@ measurements.
 | App features | 85% | see "App" below |
 | Background service | 95% | re-measured 2026-10-20: 0.2% CPU, 28 MB idle |
 
-## 0. First thing next session: G HUB's device data
-
-Decrypting G HUB's encrypted device files (see "Wireless and power" below). Static RE found the
-format, the cipher (AES-128-GCM per `key-id`) and where the keys come from (the update server's
-access groups), but not the server / channel / password / groups G HUB uses: they come from the
-`pipeline.json` its installer writes. Next try: run G HUB's installer under Wine in a throwaway
-prefix (asked the user; waiting for the OK), then read `pipeline.json`, its logs and downloads.
-
 ## 1. Check on the real hardware (G Pro X, G502, C920)
 
 Everything below has only met the simulator (`simulate.py`) or the DLLs offline.
@@ -139,18 +131,11 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   (Lghub's meters come from PipeWire). Nothing to do unless a meter source turns out better.
 
 ### Wireless and power
-- **Models G HUB only lists in its encrypted device files** (68 of its 133 `data/devices` files).
-  Done: G502 X / LIGHTSPEED / PLUS (G HUB's model ids, our names, zones read from the mouse).
-  Left, the other models G HUB's agent names: mice G304 X, G309, G705, PRO 2 / PRO X 2 / PRO X 2
-  Compact / PRO X 2 SUPERSTRIKE / PRO X R wireless, `g502x_wl`; keyboards G316, G316 X,
-  G512 X 75 / 98, G515 (LS) TKL, G515 TKL Rapid, G517 LS TKL, G713, G715, G915 X (LS, LS TKL),
-  PRO X 60, PRO X TKL (Rapid); lights Litra Beam / Beam LX / Glow; camera `cf`; headsets not
-  counted yet. Until then they show by the name they give, or as "Logitech device".
-- **Decrypt G HUB's device files** (allowed now, local only): AES-128-GCM per `key-id`; keys come
-  from the update server's access groups, behind the pipeline password. Missing: the default
-  server / channel / password / groups the .NET software manager passes (`--server --channel
-  --password --groups`). Then: real names, ids, zones and capabilities for all the models above,
-  their depots (pictures, button layouts), and a check of what else we miss. Notes are local.
+- **G HUB's device list**: read in full (decrypted locally, 61 of 72 encrypted files; the other
+  11 have keys outside G HUB's public channel, probably unreleased products). All its mice,
+  keyboards, headsets, webcams, mics and lights are in the catalog now; racing gear is left out.
+- **Pictures for the newer models**: their depots are in G HUB's encrypted capsule format, so
+  showing their pictures and button layouts would need decryption in Lghub itself. Not decided.
 - **Pairing a device to a receiver**: newer LIGHTSPEED receivers pair through 0x1894
   (LightspeedDevicePairing). Found: fn 0 capabilities, fn 1 receiver info, fn 2 open lock (3 bytes,
   meaning not found), fn 3 close lock, fn 4 / 5 pairing info / extended info [slot], fn 6 device

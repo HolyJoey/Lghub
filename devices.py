@@ -1,8 +1,9 @@
 """Which Logitech devices are connected, and what we know about each model.
 
 CATALOG holds facts about each model (USB ids, lighting zones, whether it has onboard
-profiles or a battery), taken from the openly readable part of G HUB's device list. No Logitech
-files are shipped; the device itself is asked for the rest (HID++, V4L2) on its own page.
+profiles or a battery), taken from G HUB's device list (data/devices in its core depot; most
+files are encrypted and were read for this, see re/ locally). No Logitech files are shipped; the
+device itself is asked for the rest (HID++, V4L2) on its own page.
 
 Discovery reads sysfs only, so it needs no permissions and is cheap enough to poll.
 """
@@ -23,14 +24,28 @@ FAKE_ENV = 'LGHUB_FAKE_DEVICES'
 CATALOG = (
 	('4kpro', 'BRIO 4K STREAM', 'camera', ('046d:086b',), (), ()),
 	('brio', 'BRIO', 'camera', ('046d:085e',), (), ()),
+	('brio_500', 'BRIO 500', 'camera', ('046d:0943',), (), ()),
+	('brio_501', 'BRIO 501', 'camera', ('046d:0946',), (), ()),
+	('brio_505', 'BRIO 505', 'camera', ('046d:0919',), (), ()),
+	('brio_700', 'MX Brio', 'camera', ('046d:0944',), (), ()),
+	('brio_705', 'MX Brio 705', 'camera', ('046d:091d',), (), ()),
 	('c920', 'C920', 'camera', ('046d:082d', '046d:0892', '046d:08e5'), (), ()),
 	('c922', '1080p Pro', 'camera', ('046d:085c', '046d:0883', '046d:0894'), (), ()),
+	('c930n', 'C930n', 'camera', ('046d:091c',), (), ()),
+	('c930s', 'C930s', 'camera', ('046d:091b',), (), ()),
+	('reach', 'Reach (StreamCam)', 'camera', ('046d:0948',), (), ()),
 	('streamcam', 'StreamCam', 'camera', ('046d:0893',), (), ()),
 	('powerplay', 'POWERPLAY', 'charge_pad', ('046d:405f',), ('branding',), ()),
+	('g_fits', 'G FITS', 'earbuds', ('046d:0a7b',), (), ()),
+	('a20_x', 'A20 X', 'headset', ('046d:0b2e', '046d:0b35'), ('all',), ('battery',)),
+	('a50', 'A50', 'headset', ('046d:0b1a', '046d:0b1c'), (), ('battery',)),
+	('a50_x', 'A50 X', 'headset', ('046d:0b09', '046d:0b0b'), (), ('battery',)),
+	('g325', 'G325', 'headset', ('046d:0b21',), (), ('battery',)),
 	('g430', 'G430', 'headset', ('046d:0a4d',), (), ()),
 	('g431', 'G431', 'headset', ('046d:0a9b',), (), ()),
 	('g432', 'G432', 'headset', ('046d:0a9c',), (), ()),
 	('g433', 'G433', 'headset', ('046d:0a6d',), (), ()),
+	('g522', 'G522', 'headset', ('046d:0b18', '046d:0b19'), ('all',), ('battery',)),
 	('g533', 'G533', 'headset', ('046d:0a66',), (), ('battery',)),
 	('g535', 'G535', 'headset', ('046d:0ac4',), (), ('battery',)),
 	('g633', 'G633', 'headset', ('046d:0a5c',), ('primary', 'branding'), ('battery',)),
@@ -42,23 +57,52 @@ CATALOG = (
 	('pro_71_gaming_headset', 'PRO X', 'headset', ('046d:0aaa',), (), ()),
 	('pro_71_gaming_wireless_headset', 'PRO X WIRELESS', 'headset', ('046d:0aba',), (), ('battery',)),
 	('pro_gaming_headset', 'PRO', 'headset', ('046d:0aa7',), (), ()),
+	('pro_x2_gaming_wireless_headset', 'PRO X 2 LIGHTSPEED', 'headset', ('046d:0af7',), (), ('battery',)),
+	('pro_x3_gaming_wireless_headset', 'PRO X3 LIGHTSPEED', 'headset', ('046d:0b45',), (), ('battery',)),
 	('ni_g435', 'G435', 'hid_device', ('046d:0acb', '046d:0adf'), (), ()),
+	('litra_beam', 'LITRA BEAM', 'illumination_light', ('046d:b901', '046d:c901', '046d:c902'), (), ()),
+	('litra_beam_lx', 'LITRA BEAM LX', 'illumination_light', ('046d:b903', '046d:c903', '046d:c904'), ('primary', 'all'), ()),
+	('litra_glow', 'LITRA GLOW', 'illumination_light', ('046d:c900',), (), ()),
 	('g213', 'G213', 'keyboard', ('046d:c336',), ('primary',), ()),
 	('g310', 'G310', 'keyboard', ('046d:aab3', '046d:c32d'), ('primary',), ()),
+	('g316', 'G316', 'keyboard', ('046d:abe8', '046d:c366'), ('primary', 'one', 'all'), ('onboard',)),
+	('g316x', 'G316 X', 'keyboard', ('046d:abe2', '046d:c361'), ('primary', 'one', 'all'), ('onboard',)),
+	('g316x_ww_75', 'G316 X 75', 'keyboard', ('046d:abed', '046d:c36a'), ('primary', 'one', 'all'), ('onboard',)),
+	('g316x_ww_98', 'G316 X 98', 'keyboard', ('046d:abee', '046d:c36b'), ('primary', 'one', 'all'), ('onboard',)),
 	('g410', 'G410', 'keyboard', ('046d:aabc', '046d:c330'), ('primary',), ('onboard',)),
 	('g413', 'G413', 'keyboard', ('046d:c33a',), ('primary',), ()),
 	('g512_se', 'G512', 'keyboard', ('046d:c342',), ('primary',), ()),
+	('g512_x_75', 'G512 X 75', 'keyboard', ('046d:abe0', '046d:c35f'), ('primary', 'all', 'bottom'), ('onboard',)),
+	('g512_x_98', 'G512 X 98', 'keyboard', ('046d:abe1', '046d:c360'), ('primary', 'all', 'bottom'), ('onboard',)),
 	('g513', 'G513', 'keyboard', ('046d:aadc', '046d:c33c'), ('primary',), ('onboard',)),
+	('g515_ls_tkl', 'G515 LIGHTSPEED TKL', 'keyboard', ('046d:40b4', '046d:abd5', '046d:b389', '046d:c355'), ('primary', 'all'), ('onboard', 'battery')),
+	('g515_tkl', 'G515 TKL', 'keyboard', ('046d:abd8', '046d:c358'), ('primary', 'all'), ('onboard',)),
+	('g515_tkl_rapid', 'G515 RAPID TKL', 'keyboard', ('046d:abe3', '046d:c363'), ('primary', 'all'), ('onboard',)),
+	('g517_ls_tkl', 'G517 LIGHTSPEED TKL', 'keyboard', ('046d:40b9', '046d:abda', '046d:b390', '046d:c35a'), ('primary', 'all'), ('onboard', 'battery')),
 	('g610', 'G610', 'keyboard', ('046d:aacd', '046d:c333', '046d:c338'), ('primary', 'branding'), ()),
 	('g613', 'G613', 'keyboard', ('046d:4065', '046d:aacd'), (), ('battery',)),
+	('g713', 'G713', 'keyboard', ('046d:ab16', '046d:c348'), ('primary', 'halo', 'all'), ('onboard',)),
+	('g715', 'G715', 'keyboard', ('046d:40a2', '046d:ab15', '046d:b368', '046d:c347'), ('primary', 'halo', 'all'), ('onboard', 'battery')),
 	('g810', 'G810', 'keyboard', ('046d:aabd', '046d:aacc', '046d:c331', '046d:c337'), ('primary', 'branding'), ()),
 	('g815', 'G815', 'keyboard', ('046d:c33f',), ('primary', 'branding'), ('onboard',)),
 	('g910', 'G910', 'keyboard', ('046d:c32b', '046d:c335'), ('primary', 'branding'), ()),
 	('g915', 'G915', 'keyboard', ('046d:407c', '046d:aae3', '046d:b354', '046d:c33e'), ('primary', 'branding'), ('onboard', 'battery')),
 	('g915_tkl', 'G915 TKL', 'keyboard', ('046d:408e', '046d:aafb', '046d:b35f', '046d:c343'), ('primary', 'branding'), ('onboard', 'battery')),
+	('g915_x', 'G915 X', 'keyboard', ('046d:abd9', '046d:c359'), ('primary', 'branding', 'all'), ('onboard',)),
+	('g915_x_ls', 'G915 X LIGHTSPEED', 'keyboard', ('046d:40b5', '046d:abd6', '046d:b38a', '046d:c356'), ('primary', 'branding', 'all'), ('onboard', 'battery')),
+	('g915_x_ls_tkl', 'G915 X LIGHTSPEED TKL', 'keyboard', ('046d:40b6', '046d:abd7', '046d:b38b', '046d:c357'), ('primary', 'branding', 'all'), ('onboard', 'battery')),
+	('ni_g413_se', 'G413 SE / G412 SE', 'keyboard', ('046d:c349',), (), ()),
+	('ni_g413_tkl_se', 'G413 TKL SE / G412 TKL SE', 'keyboard', ('046d:c34a',), (), ()),
 	('pro_keyboard', 'PRO', 'keyboard', ('046d:aadc', '046d:c339'), ('primary', 'branding'), ()),
+	('pro_x2_rapid', 'PRO X2 RAPID', 'keyboard', ('046d:abe4', '046d:c364'), ('primary', 'all'), ('onboard',)),
+	('pro_x_60', 'PRO X 60', 'keyboard', ('046d:40af', '046d:ab29', '046d:b37b', '046d:c351'), ('primary', 'all'), ('onboard', 'battery')),
+	('pro_x_tkl', 'PRO X TKL', 'keyboard', ('046d:40b0', '046d:ab2a', '046d:b382', '046d:c352'), ('primary', 'all'), ('onboard', 'battery')),
+	('pro_x_tkl_rapid', 'PRO X TKL RAPID', 'keyboard', ('046d:abdb', '046d:c35b'), ('primary', 'all'), ('onboard',)),
+	('yeti_2', 'Yeti 2', 'microphone', ('046d:0b3a', '046d:0b47'), (), ()),
 	('yeti_classic', 'Yeti', 'microphone', ('046d:0ab7', 'b58e:9e84'), (), ()),
+	('yeti_gx', 'Yeti GX', 'microphone', ('046d:0afc',), ('primary', 'all'), ()),
 	('yeti_nano', 'Yeti Nano', 'microphone', ('046d:0acf', '046d:0ad0'), (), ()),
+	('yeti_orb', 'Yeti Orb', 'microphone', ('046d:0ad5',), ('idle_state', 'in_use_state', 'muted_state', 'soft_muted_state'), ()),
 	('yeti_original_nano', 'Yeti Nano', 'microphone', ('046d:0ab1', 'b58e:0005', 'b58e:0006', 'b58e:0ab2'), (), ()),
 	('yeti_x', 'Yeti X', 'microphone', ('046d:0aaf', '046d:0ad1', '046d:0aae', '046d:0ad3', 'b58e:0008'), ('primary', 'branding', 'left_side', 'right_side', 'combined', 'one', 'two', 'three', 'four', 'five', 'six', 'seven'), ()),
 	('yeti_x_wow', 'Yeti X WoW® Edition', 'microphone', ('046d:0ac6', '046d:0ad2', '046d:0aae', '046d:0ad3', 'b58e:0008'), ('primary', 'branding', 'left_side', 'right_side', 'combined', 'one', 'two', 'three', 'four', 'five', 'six', 'seven'), ()),
@@ -67,7 +111,10 @@ CATALOG = (
 	('g302', 'G302', 'mouse', ('046d:aab5', '046d:c07f'), ('primary', 'branding'), ('onboard',)),
 	('g303', 'G303', 'mouse', ('046d:aab6', '046d:c080'), ('primary', 'branding'), ('onboard',)),
 	('g303_wireless', 'G303 SHROUD EDITION', 'mouse', ('046d:409e', '046d:ab11', '046d:c097'), (), ('onboard', 'battery')),
+	('g304x', 'G304 X LIGHTSPEED', 'mouse', ('046d:40bc', '046d:abe5', '046d:c0a7'), (), ('onboard', 'battery')),
 	('g305', 'G305', 'mouse', ('046d:4074',), (), ('onboard', 'battery')),
+	('g305_x', 'G305 X SUPERLIGHT', 'mouse', ('046d:40bb', '046d:ab37', '046d:b046', '046d:c0a4'), ('branding',), ('onboard', 'battery')),
+	('g309', 'G309 LIGHTSPEED', 'mouse', ('046d:40b1', '046d:b03c'), (), ('onboard', 'battery')),
 	('g402', 'G402', 'mouse', ('046d:aab4', '046d:c07e'), ('branding',), ('onboard',)),
 	('g403_hero', 'G403 HERO', 'mouse', ('046d:aaf2', '046d:c08f'), ('primary', 'branding'), ('onboard',)),
 	('g403_wired', 'G403', 'mouse', ('046d:c083',), ('primary', 'branding'), ('onboard',)),
@@ -76,25 +123,31 @@ CATALOG = (
 	('g502_hero', 'G502 HERO', 'mouse', ('046d:aae6', '046d:c08b'), ('primary', 'branding'), ('onboard',)),
 	('g502_spectrum', 'G502', 'mouse', ('046d:c332',), ('primary', 'branding'), ('onboard',)),
 	('g502_wireless', 'G502 LIGHTSPEED', 'mouse', ('046d:407f', '046d:aaef', '046d:c08d'), ('primary', 'branding'), ('onboard', 'battery')),
-	# G HUB's model ids; the names are ours and the lighting (None) is read from the mouse, as G HUB
-	# keeps both in its encrypted device files. Found by the name the mouse gives (USB product
-	# string, or HID++ through the receiver), so no USB ids are needed.
-	('g502x', 'G502 X', 'mouse', (), None, ()),
-	('g502x_lightspeed', 'G502 X LIGHTSPEED', 'mouse', (), None, ('battery',)),
-	('g502x_plus', 'G502 X PLUS', 'mouse', (), None, ('battery',)),
+	('g502x', 'G502 X', 'mouse', ('046d:c099',), (), ('onboard',)),
+	('g502x_lightspeed', 'G502 X LIGHTSPEED', 'mouse', ('046d:409f', '046d:ab12', '046d:c098'), (), ('onboard', 'battery')),
+	('g502x_plus', 'G502 X PLUS', 'mouse', ('046d:4099', '046d:ab0b', '046d:c095'), ('primary', 'all'), ('onboard', 'battery')),
+	('g502x_wl', 'G502 X PLUS MILLENNIUM FALCON™', 'mouse', ('046d:40b2', '046d:abd2', '046d:c09e'), ('primary', 'all'), ('onboard', 'battery')),
 	('g600', 'G600', 'mouse', ('046d:c24a',), ('primary',), ('onboard',)),
 	('g602', 'G602', 'mouse', ('046d:c537',), (), ('onboard', 'battery')),
 	('g603', 'G603', 'mouse', ('046d:406c',), (), ('onboard', 'battery')),
 	('g604', 'G604 LIGHTSPEED', 'mouse', ('046d:4085', '046d:b024'), (), ('onboard', 'battery')),
 	('g703', 'G703', 'mouse', ('046d:4070', '046d:c087'), ('primary', 'branding'), ('onboard', 'battery')),
 	('g703_hero', 'G703 LIGHTSPEED', 'mouse', ('046d:4086', '046d:aaf6', '046d:c090'), ('primary', 'branding'), ('onboard', 'battery')),
+	('g705', 'G705', 'mouse', ('046d:409d', '046d:ab10', '046d:b02e', '046d:c096'), ('primary', 'all'), ('onboard', 'battery')),
 	('g900', 'G900', 'mouse', ('046d:4053', '046d:aaba', '046d:c081'), ('primary', 'branding'), ('onboard', 'battery')),
 	('g903', 'G903', 'mouse', ('046d:4067', '046d:aad8', '046d:c086'), ('primary', 'branding'), ('onboard', 'battery')),
 	('g903_hero', 'G903 LIGHTSPEED', 'mouse', ('046d:4087', '046d:aaf7', '046d:c091'), ('primary', 'branding'), ('onboard', 'battery')),
 	('mx518', 'MX518', 'mouse', ('046d:c08e',), (), ('onboard',)),
+	('pro_2_wireless_mouse', 'PRO 2 LIGHTSPEED', 'mouse', ('046d:40a8', '046d:ab1b', '046d:c09a'), ('branding',), ('onboard', 'battery')),
 	('pro_mouse', 'PRO', 'mouse', ('046d:c085',), ('branding',), ('onboard',)),
 	('pro_mouse_hero', 'PRO HERO', 'mouse', ('046d:aae7', '046d:c08c'), ('branding',), ('onboard',)),
 	('pro_wireless_mouse', 'PRO WIRELESS', 'mouse', ('046d:4079', '046d:aadf', '046d:c088'), ('primary', 'branding'), ('onboard', 'battery')),
+	('pro_x_1_superstrike_wireless_mouse', 'PRO X1 SUPERSTRIKE', 'mouse', ('046d:40cd', '046d:abfb', '046d:c0b7'), (), ('onboard', 'battery')),
+	('pro_x_2_compact_wireless_mouse', 'PRO X SUPERLIGHT 2c', 'mouse', ('046d:40b7', '046d:ab35', '046d:c09f'), (), ('onboard', 'battery')),
+	('pro_x_2_superstrike_wireless_mouse', 'PRO X2 SUPERSTRIKE', 'mouse', ('046d:40bd', '046d:ab39', '046d:c0a8'), (), ('onboard', 'battery')),
+	('pro_x_2_wireless_mouse', 'PRO X SUPERLIGHT 2', 'mouse', ('046d:40a9', '046d:ab1c', '046d:c09b'), (), ('onboard', 'battery')),
+	('pro_x_3_superstrike_wireless_mouse', 'PRO X3 SUPERSTRIKE', 'mouse', ('046d:40be', '046d:ab39', '046d:c0a9'), (), ('onboard', 'battery')),
+	('pro_x_r_wireless_mouse', 'PRO X SUPERLIGHT 2 DEX', 'mouse', ('046d:40b8', '046d:ab36', '046d:c0a0'), (), ('onboard', 'battery')),
 	('pro_x_wireless_mouse', 'PRO X SUPERLIGHT', 'mouse', ('046d:4093', '046d:ab00', '046d:c094'), (), ('onboard', 'battery')),
 	('g560', 'G560', 'speaker', ('046d:0a78',), ('one', 'two', 'three', 'four'), ()),
 )
@@ -115,14 +168,16 @@ RECEIVERS = {
 TYPE_NAMES = {
 	'mouse': 'Mouse', 'keyboard': 'Keyboard', 'headset': 'Headset', 'camera': 'Webcam',
 	'microphone': 'Microphone', 'speaker': 'Speakers', 'charge_pad': 'Charging pad',
-	'hid_device': 'Headset', 'receiver': 'Receiver', 'other': 'Device',
+	'hid_device': 'Headset', 'receiver': 'Receiver', 'illumination_light': 'Light', 'earbuds': 'Earbuds',
+	'other': 'Device',
 }
 TYPE_ICONS = {
 	'mouse': 'input-mouse-symbolic', 'keyboard': 'input-keyboard-symbolic',
 	'headset': 'audio-headset-symbolic', 'hid_device': 'audio-headset-symbolic',
 	'camera': 'camera-web-symbolic', 'microphone': 'audio-input-microphone-symbolic',
 	'speaker': 'audio-speakers-symbolic', 'charge_pad': 'battery-full-charging-symbolic',
-	'receiver': 'network-wireless-symbolic', 'other': 'input-gaming-symbolic',
+	'receiver': 'network-wireless-symbolic', 'illumination_light': 'display-brightness-symbolic',
+	'earbuds': 'audio-headphones-symbolic', 'other': 'input-gaming-symbolic',
 }
 
 # Headsets with Blue VO!CE (G HUB has presets for them) -> their preset set in store.GHUB_PRESETS.
@@ -136,7 +191,7 @@ class Model:
 	name: str
 	type: str
 	usb_ids: tuple
-	lighting: tuple    # None: not known, read from the device
+	lighting: tuple
 	flags: tuple
 
 
