@@ -162,7 +162,12 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   Red White and Blue: its keyframe files, downloaded at first use), Starlight, Colour cycle
   and Echo press (key presses read from the keyboard's own reports: ours) with G HUB's settings.
   Not yet: Smooth star / wave (G HUB's players are ~2000 lines of vector maths each; newer
-  keyboards only) and G HUB's other "signature" effects. The keyframe editor (Freestyle) is done: frames,
+  keyboards only) and G HUB's other "signature" effects (its SignatureAlgorithmicEffect: Smooth
+  Star, Pulsar Point, G 3 Series, Remind Me Of, Neon, Outer Space; primary / secondary colour,
+  brightness). G HUB also knows Smooth Star / Wave as firmware effects (its firmware effect ids
+  18 / 19, next to signature active / inactive 20-25): a keyboard that has them lists them over
+  0x8071 and Lghub already offers every listed effect (unknown ones by number). Left: which
+  HID++ effect number is which, and their parameters. The keyframe editor (Freestyle) is done: frames,
   length, curve, order, preview; saved in G HUB's keyframe format. Effects on zonal devices done
   (starlight, colour cycle, audio, echo press on clicks, screen sampler with G HUB's zone regions). Per-key frames use
   G HUB's single-value call for shared colours; its delta-compressed calls (0x8081 fn 3 / 4) aren't
@@ -188,6 +193,11 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 - **Devices with screens** (0x0A00-0x0A02, 0x8103 Screen..., 0x8130 game data): not started.
 
 ## 3. Upkeep
+
+- **At the end: publish the protocol notes** as `docs/protocol.md`, in our own words: HID++
+  feature / function numbers, byte layouts, G HUB's ranges and defaults, effect timing. Not the
+  raw `re/` folder (G HUB's binaries, depots and decompiled code stay local). Our own RE scripts
+  (rtti.py, strfunc.py, hidpp_summary.py) can go along.
 
 - `fetch.py` (APO hashes), `depots.py` (depot paths, the icon's offset and hash) and the DLL
   modules (`micopt.c`, `hx2e.c`, `bv2.c`: RVAs and export names) are for G HUB 2026.6. A newer
