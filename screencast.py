@@ -1,7 +1,8 @@
 """The screen for the screen sampler on desktops without grim (GNOME, KDE): Wayland's screen-sharing
 portal (org.freedesktop.portal.ScreenCast) hands out a PipeWire video stream of one monitor, which
 GStreamer's pipewiresrc reads at a small size. The portal asks once; its restore token (kept in
-config.json "screencast_token") lets later sessions start without asking again (portal v4+).
+config.json "screencast_token") lets later sessions start without asking again (portal v4+;
+Hyprland's picker only gives one when its "Allow a restore token" box is ticked).
 All of this is ours: G HUB samples the Windows desktop directly.
 """
 import itertools

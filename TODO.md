@@ -21,7 +21,7 @@ measurements.
 | Yeti controls | 100% | check on a Yeti |
 | Webcams | 90% | check on the C920 |
 | Wireless (receivers, power) | 75% | see "Wireless and power" below |
-| Lighting | 96% | screen sampler portal: test once; per-key on mice |
+| Lighting | 97% | screen sampler portal on GNOME / KDE; per-key on mice |
 | App features | 85% | see "App" below |
 | Background service | 95% | re-measured 2026-10-20: 0.2% CPU, 28 MB idle |
 
@@ -149,8 +149,9 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 ### Lighting
 - **LIGHTSYNC screen sampler**: grim on wlroots compositors; elsewhere the screen-sharing portal
   (screencast.py: ScreenCast session, restore token so it asks once, pipewiresrc at 160x90).
-  The GStreamer side is tested; the portal handshake is not yet (it needs someone at the
-  screen to pick the monitor): try it once on Hyprland, then on GNOME / KDE.
+  Tested on Hyprland's portal (2026-10-20): 160x90 frames, about 16 a second. Hyprland only
+  gives a restore token when "Allow a restore token" is ticked in its picker (it uses grim
+  anyway). Left: a check on GNOME / KDE.
   Keyboards now use G HUB's own regions and key map (screen_sampler-kb.json); its region editor
   is built too, as G HUB's sample editor: move / resize, add (G HUB's centred box), delete (keys go
   to the background, as G HUB), rename, give keys or zones to a region, screenshot or your own
