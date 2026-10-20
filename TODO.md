@@ -28,8 +28,8 @@ measurements.
 
 ## 0. Next, in this order
 
-1. Update button: 0.9.0 released; receiver ids and "Pair a device" done; release 0.9.1 and
-   test updating 0.9.0 -> 0.9.1 in the app.
+1. Update button: done and tested (0.9.0 updated itself to 0.9.1 from the live release with
+   the installed copy's own update code). Not seen yet: clicking it in the window (the next release).
 2. The G502 X tile showed the generic icon instead of its product photo (seen in a screenshot of
    the simulated G502 X); find out why and fix.
 
@@ -206,7 +206,7 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 ### App
 - **Update notice and "Update now"**: built (update.py, update_ui.py; GitHub releases with a
   SHA-256 and an SSH signature, daily anonymous check, banner, Settings card, tray item, backup and
-  rollback). Releases: re/tools/release.py (local). Left: the end-to-end test from 0.9.0 to 0.9.1.
+  rollback). Releases: re/tools/release.py (local). Tested 0.9.0 -> 0.9.1 (2026-10-20).
 - Low-battery notifications done (G HUB's LOW 30 % / CRITICAL 15 %; checking every 5 minutes is
   ours). Game-profile notifications and DPI / profile notices for onboard mice (G HUB's
   OSD_DPI_CHANGED / OSD_PROFILE_CHANGED from 0x8100 events) done. Report-rate notices (0x8061
