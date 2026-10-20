@@ -96,7 +96,9 @@ asks the device what it can do and shows that. Keyboards also get macros on thei
 per-key lighting page drawn from G HUB's own key layout, sent over HID++ 0x8081 with G HUB's
 key-to-LED table (0x8080 on older keyboards), with G HUB's LIGHTSYNC effects: its own animations (Verticool, Contrastic, Ocean Wave, Lightning, Red White
 and Blue), starlight, colour cycle, echo press, your own animations (made in a Freestyle-like editor), the audio visualizer and the screen sampler (its regions editable as in G HUB: move, add, delete, which keys go where; it reads the screen with
-grim: Hyprland, Sway and other wlroots compositors). Lighting zones and effects, brightness, report
+grim on Hyprland, Sway and other wlroots compositors, else through the desktop's screen-sharing
+portal on GNOME and KDE, which asks once; that needs GStreamer's PipeWire plugin,
+`gstreamer1.0-pipewire`). Lighting zones and effects, brightness, report
 rate, Fn keys, game mode, Easy-Switch, power-saving and power-off timers, angle snapping, sidetone, on-board memory and battery. Devices with a USB sound card (headsets,
 speakers, Yeti mics) also get its controls. Yetis also get their own mute, gain, headphone level and mic monitoring over HID++,
 as G HUB sets them.
@@ -214,8 +216,7 @@ simulator. The webcam screenshot is a real camera.
 - Most devices here have only met the simulator. If something doesn't work on yours, open an
   issue with `journalctl --user -u lghub-bluevoice` and what the device's page says.
 - Still open, compared with G HUB: the 5-band PRO equalizer, the G735 / PRO X 2 protocol,
-  receiver pairing, keyboard onboard-profile editing, the screen sampler on GNOME and KDE, and
-  a few newer-mouse features. The full list is in [TODO.md](TODO.md).
+  receiver pairing, keyboard onboard-profile editing and a few newer-mouse features. The full list is in [TODO.md](TODO.md).
 
 ## If something's off
 

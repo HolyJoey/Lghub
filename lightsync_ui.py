@@ -161,12 +161,12 @@ def _chosen(effects, settings):
 def _intro(per_key):
 	if per_key:
 		return ('Effects the background service plays on the keys: G HUB’s own animations, starlight, colour '
-		        'cycle, echo press, the audio visualizer (bass left, treble right) and the screen sampler (needs '
-		        'grim: Hyprland, Sway). Your colours come back when it is off.')
+		        'cycle, echo press, the audio visualizer (bass left, treble right) and the screen sampler (grim, or '
+		        'the desktop’s screen sharing, which asks once). Your colours come back when it is off.')
 	return ('Effects the background service plays on the lighting zones: starlight, colour cycle, echo press '
-	        '(clicks), the audio visualizer and the screen sampler (needs grim: Hyprland, Sway). When it is off, a '
-	        'mouse with '
-	        'onboard memory gets its profile’s lighting back; on others set the zones again.')
+	        '(clicks), the audio visualizer and the screen sampler (grim, or the desktop’s screen sharing, which asks '
+	        'once). When it is off, a mouse with onboard memory gets its profile’s lighting back; on others set the '
+	        'zones again.')
 
 
 def _effects(per_key):

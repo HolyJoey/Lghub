@@ -470,23 +470,55 @@ class ScreenSampler(Visualizer):
 	def _run(self):
 		shown = None
 		regions, keys = self._ghub_regions()
-		while not self.stop_event.wait(1 / SCREEN_FPS):
-			try:
-				shot = subprocess.run(['grim', '-t', 'ppm', '-'], capture_output=True, timeout=5, check=True).stdout
-				colors = region_colors(*parse_ppm(shot), regions=regions)
-			except (OSError, subprocess.SubprocessError, ValueError):
-				print('lightsync: screen sampler needs grim (wlroots compositors)', flush=True)
-				return
-			colors = {k: boost(c, self.boost) for k, c in colors.items()}
-			if self.smoothing and shown:
-				colors = {k: [round(o + (n - o) * 0.3) for o, n in zip(shown[k], c)] for k, c in colors.items()}
-			if colors == shown:
-				continue
-			shown = colors
-			try:
-				self.target.send(self._frame(colors, keys))
-			except (OSError, hidpp.HidppError):
-				return
+		grab = self._grabber()
+		try:
+			while grab and not self.stop_event.wait(1 / SCREEN_FPS):
+				try:
+					colors = region_colors(*grab(), regions=regions)
+				except (OSError, subprocess.SubprocessError, ValueError) as e:
+					print(f'lightsync: screen sampler stopped: {e}', flush=True)
+					return
+				shown = self._show(colors, shown, keys)
+				if shown is False:
+					return
+		finally:
+			if self.screen:
+				self.screen.close()
+
+	def _grabber(self):
+		"""grab() -> (width, height, RGB bytes): grim on wlroots compositors (Hyprland, Sway), else
+		the screen-sharing portal (GNOME, KDE; asks once); None when neither works."""
+		self.screen = None
+
+		def grim():
+			shot = subprocess.run(['grim', '-t', 'ppm', '-'], capture_output=True, timeout=5, check=True).stdout
+			return parse_ppm(shot)
+
+		try:
+			grim()
+			return grim
+		except (OSError, subprocess.SubprocessError, ValueError):
+			pass
+		try:
+			import screencast
+			self.screen = screencast.Screen()
+			return self.screen.grab
+		except (OSError, ValueError, ImportError) as e:
+			print(f'lightsync: screen sampler needs grim or the screen-sharing portal: {e}', flush=True)
+			return None
+
+	def _show(self, colors, shown, keys):
+		"""Sends one frame if it changed; the colours shown, or False when the device is gone."""
+		colors = {k: boost(c, self.boost) for k, c in colors.items()}
+		if self.smoothing and shown:
+			colors = {k: [round(o + (n - o) * 0.3) for o, n in zip(shown[k], c)] for k, c in colors.items()}
+		if colors == shown:
+			return shown
+		try:
+			self.target.send(self._frame(colors, keys))
+		except (OSError, hidpp.HidppError):
+			return False
+		return colors
 
 
 class Animated(Visualizer):
