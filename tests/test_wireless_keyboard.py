@@ -19,6 +19,17 @@ class ReceiverTest(unittest.TestCase):
 		self.assertEqual([(p.index, p.kind) for p in paired], [(1, 'mouse')])
 		self.assertEqual(paired[0].name, 'G502 LIGHTSPEED Wireless Gaming Mouse')
 
+	def test_analog_switches(self):
+		kb = simulate.transport_for('046d:c35b', 'analog')
+		dev = hidpp.Device(kb)
+		self.assertTrue(dev.has(features.ANALOG_KEYS))
+		self.assertEqual(features.analog_switches(dev), {'rapid_trigger': False, 'key_priority': False})
+		features.set_rapid_trigger(dev, True)
+		self.assertEqual(features.analog_switches(dev), {'rapid_trigger': True, 'key_priority': False})
+		features.set_key_priority(dev, True)
+		features.set_rapid_trigger(dev, False)
+		self.assertEqual(features.analog_switches(dev), {'rapid_trigger': False, 'key_priority': True})
+
 	def test_battery(self):
 		receiver = simulate.FakeReceiver()
 		self.assertEqual(features.battery(hidpp.Device(receiver, 1)), (72, 'On battery'))

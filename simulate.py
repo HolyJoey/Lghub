@@ -389,6 +389,22 @@ class FakeMultiHostKeyboard(FakeKeyboard):
 		return bytes([p[0], p[1]]) + name[p[1]:p[1] + 14]
 
 
+class FakeAnalogKeyboard(FakeKeyboard):
+	"""A PRO X TKL RAPID-like keyboard: analog keys' switches (0x1B08)."""
+	FEATURES = FakeKeyboard.FEATURES + [features.ANALOG_KEYS]
+
+	def __init__(self):
+		super().__init__()
+		self.analog = {1: 0, 4: 0}      # get fn -> bit 0
+
+	def handle(self, feature, fn, p):
+		if feature != features.ANALOG_KEYS:
+			return super().handle(feature, fn, p)
+		if fn in (2, 5):
+			self.analog[fn - 1] = p[0] & 1
+		return bytes([self.analog.get(fn, 0)])
+
+
 class FakeKeyboardV1(FakeKeyboard):
 	"""A G810-like keyboard: per-key lighting over 0x8080 (keyboard keys, media keys, logo)."""
 	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, 0x8080, 0x4521]
@@ -548,6 +564,7 @@ class FakeReceiver:
 
 MICE = ('c08b', 'c08d', 'c332', 'c07d', 'c084', 'c092')
 KEYBOARDS = ('c33f', 'c339', 'c33c', 'c343', 'c33e')
+ANALOG_KEYBOARDS = ('c35b',)     # PRO X TKL RAPID
 YETIS = ('0aaf',)
 RECEIVERS = ('c539', 'c53a', 'c53f', 'c541', 'c545', 'c547', 'c548', 'c52b')
 _FAKES = {}
@@ -558,6 +575,7 @@ def transport_for(usb_id, port):
 	app's lifetime so changes stick while it runs."""
 	pid = usb_id.split(':')[1]
 	kinds = {**dict.fromkeys(MICE, FakeMouse), **dict.fromkeys(KEYBOARDS, FakeKeyboard),
+	         **dict.fromkeys(ANALOG_KEYBOARDS, FakeAnalogKeyboard),
 	         **dict.fromkeys(YETIS, FakeYeti),
 	         **dict.fromkeys(RECEIVERS, FakeReceiver)}
 	if pid not in kinds:

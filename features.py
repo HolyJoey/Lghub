@@ -20,6 +20,7 @@ SIDETONE = 0x8300
 POLAR_PATTERN = 0x8330
 ANGLE_SNAPPING = 0x2230
 FN_INVERSION = 0x40A3
+ANALOG_KEYS = 0x1B08
 DISABLE_KEYS = 0x4522
 DISABLE_KEYS_V1 = 0x4521
 CHANGE_HOST = 0x1814
@@ -198,6 +199,25 @@ def fn_inversion(dev, host=0):
 
 def set_fn_inversion(dev, on, host=0):
 	dev.call(FN_INVERSION, 1, bytes([host, 1 if on else 0]))
+
+
+# Analog keyboards' switches (0x1B08), as G HUB's Feature1B08AnalogKeys: fn 0 capabilities, fn 1 /
+# fn 2 get / set rapid trigger, fn 3 key-travel events, fn 4 / fn 5 get / set key priority; a set
+# sends one byte, bit 0 = on. That a get answers the same bit is ours (G HUB reads it in code not
+# decoded yet). Actuation points and rapid-trigger sensitivity per key live in the onboard profile
+# (0x8101 / 0x8102), not here.
+def analog_switches(dev):
+	"""{'rapid_trigger': bool, 'key_priority': bool}."""
+	return {'rapid_trigger': bool(dev.call(ANALOG_KEYS, 1)[0] & 1),
+	        'key_priority': bool(dev.call(ANALOG_KEYS, 4)[0] & 1)}
+
+
+def set_rapid_trigger(dev, on):
+	dev.call(ANALOG_KEYS, 2, bytes([1 if on else 0]))
+
+
+def set_key_priority(dev, on):
+	dev.call(ANALOG_KEYS, 5, bytes([1 if on else 0]))
 
 
 # The headset's own equalizer (0x8310), as G HUB's Feature8310Equalizer: fn 0 getEQInfo (count,

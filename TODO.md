@@ -90,7 +90,11 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   keyboard to test.
 - **0x8030 MR key** (record a macro on the keyboard): needs the keystrokes, which Lghub can't
   read without input-device access.
-- **Analog keyboards**: 0x1B08 / 0x1B0C analog keys, 0x80A3 / 0x80A4 actuation curves.
+- **Analog keyboards** (PRO X TKL RAPID, G515 RAPID TKL, G512 X, PRO X2 RAPID, ...): done:
+  rapid trigger and key priority on / off (0x1B08 fn 1/2 and 4/5, G HUB's Feature1B08AnalogKeys;
+  that a get answers in bit 0 is ours, check on a keyboard). Left: actuation point and
+  rapid-trigger sensitivity per key and globally (G HUB's AnalogSettings, written into the
+  onboard profile over 0x8101 / 0x8102), click haptics, 0x1B0C analog buttons, 0x80A4 curves.
 - **0x1B05 full key customization** (G HUB's "FKC": remap any key, per layer, with presets):
   large; needs a keyboard that has it. Not started.
 - 0x4521 game mode on older keyboards done (bits from G HUB, key names from Logitech's HID++
@@ -124,7 +128,9 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   - 0x0200 / 0x0201 / 0x020D volume and EQ sets, 0x020E mic test
   - 0x0800 / 0x0801 / 0x0809 mixer, 0x0900-0x0909 voice processing on the headset
   - 0x0920 Bluetooth EQ
-- **Blue VO!CE 2 on the PRO X 2**: no G HUB depot known for it.
+- **Blue VO!CE 2 on the newer devices** (PRO X 2, PRO X3, A50 X, Yeti GX, Yeti Orb, Yeti 2): their
+  depots (encrypted, readable now) hold Blue VO!CE presets under MICROPHONE_SETTINGS /
+  AUDIO_EFFECTS_SETTINGS, a newer layout than the BLUE_VOICE_2_SETTINGS presets bv2_presets reads.
 
 ### Mics (Yeti)
 - 0x8370 mic mute and gain done (G HUB: channel 0, gain x 100, mute flipped on 0AD1 / 0AD2).

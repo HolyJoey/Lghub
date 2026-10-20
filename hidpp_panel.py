@@ -242,6 +242,8 @@ class SettingsPanel(Gtk.Box):
 		if features.FN_INVERSION in have:
 			info['fn_inversion'] = features.fn_inversion(dev, host)
 			self.host = host
+		if features.ANALOG_KEYS in have:
+			info['analog'] = features.analog_switches(dev)
 		if features.DISABLE_KEYS in have or features.DISABLE_KEYS_V1 in have:
 			most, keys = features.game_mode_choices(dev)
 			info['game_mode'] = (most, features.game_mode_keys(self.device.model.key), keys)
@@ -280,6 +282,7 @@ class SettingsPanel(Gtk.Box):
 		for key, build in (('brightness', self._brightness_card), ('rates', self._rate_card),
 		                   ('sidetone', self._sidetone_card), ('patterns', self._pattern_card),
 		                   ('angle_snapping', self._angle_card), ('fn_inversion', self._fn_card),
+		                   ('analog', self._analog_card),
 		                   ('game_mode', self._game_mode_card), ('hosts', self._hosts_card),
 		                   ('device_eq', self._device_eq_card), ('charging', self._charging_card),
 		                   ('bass_tone', self._bass_card), ('mic', self._mic_card),
@@ -357,6 +360,16 @@ class SettingsPanel(Gtk.Box):
 		sw.connect(NOTIFY_ACTIVE, lambda w, _p: self.loading or self._do(
 			lambda on=w.get_active(): features.set_fn_inversion(self.dev, on, self.host)))
 		c.append(row('Media keys first', sw))
+		return c
+
+	def _analog_card(self, info):
+		c = card('Analog keys', 'Switches G HUB offers for keyboards with analog (magnetic) keys.')
+		for key, title, setter in (('rapid_trigger', 'Rapid trigger', features.set_rapid_trigger),
+		                           ('key_priority', 'Key priority', features.set_key_priority)):
+			sw = Gtk.Switch(active=info['analog'][key], valign=Gtk.Align.CENTER)
+			sw.connect(NOTIFY_ACTIVE, lambda w, _p, s=setter: self.loading or self._do(
+				lambda on=w.get_active(): s(self.dev, on)))
+			c.append(row(title, sw))
 		return c
 
 	def _game_mode_card(self, info):
