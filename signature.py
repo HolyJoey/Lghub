@@ -1,4 +1,4 @@
-"""G HUB's signature effect engine (Smooth Star, Smooth Wave, Pulsar Point, ... as software effects).
+"""G HUB's signature effect engine and its Smooth Star / Smooth Wave effects.
 
 G HUB builds each signature effect as a tree of frame handlers (namespace signature_effect in its
 agent) and steps the tree once per frame; every handler colours the LEDs it owns and says whether
@@ -16,7 +16,9 @@ it is still running. These are those handlers, from the agent's step functions:
 A gradient is G HUB's stop list (position, colour, bias); between two stops the colour follows
 cubic-bezier(0, 0, bias, 1 - bias) (FUN_142a43c50). Colours are (r, g, b, a) bytes, blended per
 channel and truncated (0x1410f6c20). LEDs are (id, x, y). The effect trees themselves come from
-G HUB's per-effect builders (not ported yet).
+G HUB's per-effect builders: Smooth Star and Smooth Wave (its effect types 14 / 15) are
+ported; the signature types 16-18 (Pulsar Point, G 3 Series, ... and the prefabs G HUB's UI also
+labels Smooth Star / Smooth Wave) are other builders, not yet.
 """
 import math
 
@@ -338,7 +340,7 @@ class Starlight:
 FPS = 30                        # ours: the rate G HUB steps its software engine at isn't known
 
 
-# --- Smooth Wave (SIGNATURE_ALGORITHMIC_INACTIVE), G HUB's builder 0x14121b700 ----------------
+# --- Smooth Wave (effect type SMOOTH_WAVE = 15), G HUB's builder 0x14121b700 -----------------
 # Tween keyframes (frames, line x1 y1 x2 y2, stops); stop colours are names filled in by
 # smooth_wave(): C1 = the effect's first colour, C2H = its second at half value, BLUE = #AFC9D5,
 # OFF = G HUB's constant colour (set at runtime; transparent black here, ours).
@@ -420,7 +422,7 @@ def smooth_wave(leds, accent=(), indicator=(), c1=(0, 127, 255, 255), c2=(255, 2
 	return Parallelizer([main, Parallelizer([accent_seq, indicator_seq])])
 
 
-# --- Smooth Star (SIGNATURE_ALGORITHMIC_ACTIVE), G HUB's builder 0x141218ff0 ------------------
+# --- Smooth Star (effect type SMOOTH_STAR = 14), G HUB's builder 0x141218ff0 ------------------
 # Gradient keyframes (frames, stops) swept left to right (angle 0), looping; C2 = the effect's second
 # colour (metadata +0xd8), OFF = G HUB's runtime constant (transparent black here, ours), the
 # other colours are G HUB's own (exact, from the builder's disassembly).

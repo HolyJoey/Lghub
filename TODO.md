@@ -251,8 +251,9 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   ours: the two-colour period fixed at G HUB's default 50 ms. Not yet: the same signature
   styles as *software* effects on per-key keyboards without them in firmware (G HUB's
   SignatureAlgorithmicEffect players, ~2000 lines of vector maths each), and Smooth Star /
-  Wave, which are the same thing: G HUB's UI names SIGNATURE_ALGORITHMIC_ACTIVE / _INACTIVE
-  "Smooth Star" / "Smooth Wave" (firmware ids 18 / 19, already played on keyboards that have them).
+  Wave: G HUB has both effect types SMOOTH_STAR / SMOOTH_WAVE (14 / 15, done below) and
+  signature types 16 / 17 that its UI also labels Smooth Star / Smooth Wave (firmware ids 18 / 19 on
+  keyboards that have them; the software versions are other builders, not ported).
   Started: G HUB's frame-handler engine is ported (signature.py: sequencer, parallel, pause,
   gradient, gradient sampler, gradient tween, colour blend, its gradient stops and colour blend;
   tests). Done: Smooth Wave (its whole tree from G HUB's builder 0x14121b700: 23 tween
@@ -261,8 +262,8 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   Smooth Star done the same way (builder 0x141218ff0: startup glow, the gradient sweep, G HUB's
   starlight twinkles; ported StartupFrameHandler and StarlightFrameHandler too). Its zonal roots
   (+0x190 / +0x1b0) not used yet.
-  Left (next: G HUB's factory that maps each effect type to its metadata class and builder;
-  re/notes/lighting.txt): the others (Pulsar Point, G 3 Series, Remind Me Of, Neon, Outer Space,
+  Factory found (0x1411e5db0: effect type -> builder; re/notes/lighting.txt). Left: the signature
+  types 16-18 (builders 0x141204170 / 0x14120fe90 / 0x141214500; styles Pulsar Point, G 3 Series, Remind Me Of, Neon, Outer Space,
   Astro Point) from their builders (re/notes/lighting.txt), check on a real keyboard. The keyframe editor (Freestyle) is done: frames,
   length, curve, order, preview; saved in G HUB's keyframe format. Effects on zonal devices done
   (starlight, colour cycle, audio, echo press on clicks, screen sampler with G HUB's zone regions). Per-key frames use
