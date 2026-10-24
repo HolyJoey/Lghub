@@ -88,6 +88,36 @@ class SignatureTest(unittest.TestCase):
 		self.assertLessEqual({'logo', 'ind'}, lit)
 		self.assertGreater(len(lit), 20)                    # the sweeps reach most of the keys
 
+	def test_startup_glows_from_the_top_centre(self):
+		group2 = [('top', 0.5, 0.0), ('corner', 0.0, 1.0)]
+		s = sig.Startup([], group2, RED, BLUE, 4)
+		for _ in range(3):
+			f = sig.Frame()
+			s.step(f)
+		self.assertGreater(f.colors['top'][2], f.colors['corner'][2])   # closer to B at the top centre
+
+	def test_starlight_twinkles(self):
+		import random
+		star = sig.Starlight(['a', 'b', 'c'], BLUE, 0, 37, 31, 20, rng=random.Random(1))
+		lit = set()
+		for _ in range(200):
+			f = sig.Frame()
+			star.step(f)
+			lit.update(k for k, c in f.colors.items() if c[2])
+		self.assertEqual(lit, {'a', 'b', 'c'})
+		self.assertLessEqual(len(star.stars), 20)
+
+	def test_smooth_star_runs(self):
+		import random
+		leds = [(f'k{x}{y}', x / 9, y / 4) for x in range(10) for y in range(5)]
+		tree = sig.smooth_star(leds, logo=['logo'], rng=random.Random(2))
+		lit = set()
+		for _ in range(500):
+			f = sig.Frame()
+			self.assertTrue(tree.step(f))                      # loops (the gradient and stars run on)
+			lit.update(k for k, c in f.colors.items() if any(c[:3]))
+		self.assertGreater(len(lit), 40)
+
 	def test_player_restarts(self):
 		calls = []
 

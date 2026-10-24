@@ -83,6 +83,11 @@ class Frame:
 			color = tuple(int(c * self.brightness / 100) for c in color[:3]) + tuple(color[3:])
 		self.colors[led] = color
 
+	def blend(self, led, color, alpha):
+		"""color over what this frame already has on the LED (FUN_1411e14e0; that it blends like
+		this is ours)."""
+		self.set(led, lerp(self.colors.get(led, (0, 0, 0, 0)), color, alpha))
+
 
 def _inside(area, x, y):
 	x0, y0, w, h = area
@@ -257,6 +262,79 @@ class GradientTween:
 		return self._advance(a[0])
 
 
+class Startup:
+	"""G HUB's StartupFrameHandler (0x1412215d0): group1 takes colour b; group2 glows from the top
+	centre of the area, lerp(a, b, 1 - (d / size)^p1 * t^p2)."""
+	ASPECT, WIDE = 0.357, 2.8011
+
+	def __init__(self, group1, group2, a, b, frames, area=(0.0, 0.0, 1.0, 1.0), p1=1.0, p2=1.0, reverse=False):
+		self.group1, self.group2, self.a, self.b, self.frames = group1, group2, a, b, frames
+		self.area, self.p1, self.p2, self.reverse = area, p1, p2, reverse
+		_x0, _y0, w, h = area
+		self.size = math.sqrt((w * self.WIDE * 0.5) ** 2 + (h * self.ASPECT) ** 2)
+		self.count = 0
+
+	def reset(self):
+		self.count = 0
+
+	def step(self, frame):
+		if self.count >= self.frames:
+			return False
+		x0, y0, w, _h = self.area
+		for led, x, y in self.group1:
+			if _inside(self.area, x, y):
+				frame.set(led, self.b)
+		t = self.count / self.frames
+		if self.reverse:
+			t = 1 - t
+		for led, x, y in self.group2:
+			if _inside(self.area, x, y):
+				dx = abs(x - x0 - w * 0.5)
+				d = math.sqrt((2 * dx / self.ASPECT) ** 2 + ((y0 - y) * self.ASPECT) ** 2)
+				frame.set(led, lerp(self.a, self.b, 1 - (d / self.size) ** self.p1 * t ** self.p2))
+		self.count += 1
+		return self.count < self.frames
+
+
+class Starlight:
+	"""G HUB's StarlightFrameHandler (0x141221140): up to max_stars twinkles on random LEDs, each
+	fading in, holding and fading out (frames), then moving to another LED. blend: the star goes
+	over what is already lit (G HUB's mode 1), else it is the colour at that brightness."""
+
+	def __init__(self, leds, color, fade_in, hold, fade_out, max_stars, blend=True, rng=None):
+		import random
+		self.leds, self.color, self.blend = list(leds), color, blend
+		self.fade_in, self.hold, self.fade_out, self.max_stars = fade_in, hold, fade_out, max_stars
+		self.cycle = fade_in + hold + fade_out
+		self.rng = rng or random.Random()
+		self.stars = []           # [led, age]
+		self.acc = 0
+
+	def _brightness(self, age):
+		if age < self.fade_in:
+			return age / self.fade_in
+		if age >= self.hold + self.fade_in:
+			return 1 - (age - self.hold - self.fade_in) / self.fade_out
+		return 1.0
+
+	def step(self, frame):
+		self.acc += self.max_stars
+		if self.acc >= self.cycle:
+			self.acc = 0
+			if len(self.stars) < self.max_stars and self.leds:
+				self.stars.append([self.leds[0], self.cycle])
+		for star in self.stars:
+			if star[1] >= self.cycle:
+				star[0], star[1] = self.rng.choice(self.leds), 0
+			b = max(0.0, min(1.0, self._brightness(star[1])))
+			if self.blend:
+				frame.blend(star[0], self.color, b)
+			else:                 # G HUB: HSV value (b * 0.5 + 0.5) x a constant; plain scaling here (ours)
+				frame.set(star[0], tuple(int(c * (b * 0.5 + 0.5)) for c in self.color[:3]) + (255,))
+			star[1] += 1
+		return True
+
+
 FPS = 30                        # ours: the rate G HUB steps its software engine at isn't known
 
 
@@ -340,6 +418,47 @@ def smooth_wave(leds, accent=(), indicator=(), c1=(0, 127, 255, 255), c2=(255, 2
 	indicator_seq = Sequencer(pulse + [Pause(100), ColorBlend(indicator, off, c1, 100), Pause(100),
 	                                   ColorBlend(indicator, c1, off, 97)])
 	return Parallelizer([main, Parallelizer([accent_seq, indicator_seq])])
+
+
+# --- Smooth Star (SIGNATURE_ALGORITHMIC_ACTIVE), G HUB's builder 0x141218ff0 ------------------
+# Gradient keyframes (frames, stops) swept left to right (angle 0), looping; C2 = the effect's second
+# colour (metadata +0xd8), OFF = G HUB's runtime constant (transparent black here, ours), the
+# other colours are G HUB's own (exact, from the builder's disassembly).
+C2 = 'C2'
+_SS_KEYFRAMES = (
+	(53, ((0, C2, 0.413), (1.0, C2, 0.5))),
+	(51, ((0, C2, 0.5), (0.21, OFF, 0.67), (0.67, C2, 0.5), (1.0, OFF, 0.5))),
+	(49, ((0, C2, 0.5), (0.3, (42, 58, 59, 255), 0.5), (0.63, (47, 65, 66, 255), 0.5), (0.79, C2, 0.5),
+	      (0.95, OFF, 0.5), (1.0, OFF, 0.5))),
+	(38, ((0, C2, 0.5), (0.07, (45, 63, 64, 255), 0.5), (0.25, C2, 0.5), (0.52, (85, 118, 120, 255), 0.5),
+	      (0.71, OFF, 0.5), (1.0, OFF, 0.5))),
+	(19, ((0, OFF, 0.5), (0.09, C2, 0.5), (0.25, C2, 0.5), (0.55, (85, 118, 120, 255), 0.5), (0.71, OFF, 0.5),
+	      (0.8, OFF, 0.5), (0.91, C2, 0.5), (1.0, OFF, 0.5))),
+	(21, ((0, OFF, 0.5), (0.04, C2, 0.5), (0.25, (14, 22, 23, 255), 0.5), (0.46, (77, 125, 128, 255), 0.5),
+	      (0.6, OFF, 0.5), (0.8, (93, 152, 156, 255), 0.5), (0.91, C2, 0.5), (1.0, OFF, 0.5))),
+	(27, ((0, OFF, 0.5), (0.13, (66, 107, 110, 255), 0.5), (0.25, (14, 22, 23, 255), 0.5),
+	      (0.46, (77, 125, 128, 255), 0.5), (0.64, C2, 0.5), (0.78, (90, 147, 150, 255), 0.5), (0.91, OFF, 0.5),
+	      (1.0, C2, 0.5))),
+	(26, ((0, OFF, 0.5), (0.13, (66, 107, 110, 255), 0.5), (0.25, C2, 0.5), (0.47, (13, 13, 13, 255), 0.5),
+	      (0.64, OFF, 0.5), (0.78, (98, 160, 163, 255), 0.5), (0.91, OFF, 0.5), (1.0, C2, 0.5))),
+)
+STAR_BLUE = (0, 184, 252, 255)          # G HUB's twinkle colour in Smooth Star (fixed)
+
+
+def smooth_star(leds, logo=(), c1=(0, 0, 0, 255), c2=STAR_BLUE, rng=None):
+	"""G HUB's Smooth Star for per-key keyboards (its root at metadata +0x1a0): a startup glow from
+	the top centre, then the gradient sweep with twinkles over it. LED groups +0xe0 / +0xf0 /
+	+0x100 taken as all keys and +0x110 as the logo (ours); default colours are ours."""
+	off = (0, 0, 0, 0)
+	c1, c2 = tuple(c1), tuple(c2)
+	frames = [(n, 0.0, [(p, c2 if c == C2 else off if c == OFF else c, b) for p, c, b in stops])
+	          for n, stops in _SS_KEYFRAMES]
+	ids = [led for led, _x, _y in leds]
+	return Sequencer([
+		Startup(leds, leds, c1, c2, 18),
+		Parallelizer([Gradient(leds, (0.0, 0.0, 1.0, 1.0), frames, loop=True),
+		              Starlight(ids, STAR_BLUE, 0, 37, 31, 20, rng=rng),
+		              ColorBlend(list(logo), c1, c1, 1, loop=True)])])
 
 
 class Player:
