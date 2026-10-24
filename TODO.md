@@ -179,7 +179,9 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   - Found: messages are HID++ without the device index, with an optional length byte and a
     per-device prefix (CenturionTransport::write 0x14200d030), split into fragments
     (CenturionPacketLayer 0x14200f3c0).
-  - Left: the per-device settings from their constructors (`re/notes/decompiled/centurion.c`).
+  - Left: the per-device settings: they come from a list of per-pid "centurion entries" that
+    DeviceManager::applyDeviceAdapters walks (0x141fb1da0); where that list is filled is not found
+    yet (re/notes/centurion.txt).
   - G HUB's layers: CenturionTransport on the HID collection G HUB calls "Avnera Centurion
     collection", a CenturionPacketLayer per pid, and Centurion0003SubdevicePlain for devices
     behind the 0x0003 bridge (it refuses packets larger than the adapter's size). G HUB's feature
