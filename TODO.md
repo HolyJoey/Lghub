@@ -252,7 +252,11 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   styles as *software* effects on per-key keyboards without them in firmware (G HUB's
   SignatureAlgorithmicEffect players, ~2000 lines of vector maths each), and Smooth Star /
   Wave, which are the same thing: G HUB's UI names SIGNATURE_ALGORITHMIC_ACTIVE / _INACTIVE
-  "Smooth Star" / "Smooth Wave" (firmware ids 18 / 19, already played on keyboards that have them). The keyframe editor (Freestyle) is done: frames,
+  "Smooth Star" / "Smooth Wave" (firmware ids 18 / 19, already played on keyboards that have them).
+  Started: G HUB's frame-handler engine is ported (signature.py: sequencer, parallel, pause,
+  gradient, gradient sampler, gradient tween, colour blend, its gradient stops and colour blend;
+  tests). Left: each effect's handler tree from its builder (Smooth Wave 0x14121b700 first;
+  re/notes/lighting.txt), then the effect on the per-key page. The keyframe editor (Freestyle) is done: frames,
   length, curve, order, preview; saved in G HUB's keyframe format. Effects on zonal devices done
   (starlight, colour cycle, audio, echo press on clicks, screen sampler with G HUB's zone regions). Per-key frames use
   G HUB's single-value call for shared colours; its other calls are in docs/protocol.md (fn 2
