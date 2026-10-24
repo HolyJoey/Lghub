@@ -1,2 +1,3 @@
 """Lghub's version: the release it was installed from (tags v<VERSION> on GitHub)."""
-VERSION = '0.9.8'
+# x.y.z or x.y.z.w (update.parse); Sonar reads four parts as an IP address
+VERSION = '0.9.8.1'  # NOSONAR

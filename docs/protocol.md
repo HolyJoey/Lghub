@@ -319,3 +319,14 @@ G HUB downloads its data from `https://updates.ghub.logitechg.com/depots/<uuid>/
   profile cycle, G-Shift, report-rate cycle, battery level, mute mic / speakers, volume, mic gain,
   sidetone, bass and treble up / down, equalizer cycle, advanced equalizer toggle, surround
   toggle, audio output / input cycle, media keys, wheel actions.
+
+### PRO equalizer (G Pro X's Conexant chip, `logi_audio_conexant.dll`)
+
+- CxAudioHidDev2089x = chip table entry 5 ("ANDRUS"). Memory space 1 (read / write,
+  0x0000-0x27FF): request report 4 `[4, flags, length ≤ 32, address high, address low, data…]`
+  (flags 0x40 write, 0x10 address above 0xFFFF), padded to the output report; reply report 5
+  `[5, data…]`. Protocol variant 1, no checksum.
+- Register 0x1152 (low 2 bits) = active EQ profile; command 0x1154 applies a change.
+- Band records: 5 × 11 bytes per profile at `profile × 0x37 + 0xFE9` (band 1 first): signed
+  16-bit b0, b1, b2, −a1, −a2 and a shift byte s, each word × 2^−(15 − (s − 2)); gains are
+  dB × 256 in G HUB's band parameters.

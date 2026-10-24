@@ -26,7 +26,7 @@ measurements.
 | Blue VO!CE (G Pro X, G733) | 100% | check on the G Pro X |
 | Blue VO!CE 2 (Yetis, G735, PRO X 2) | 95% | check against Logitech's APO under Wine; check on a mic |
 | Surround, equalizer | 100% | check on the G Pro X |
-| PRO 5-band equalizer | 20% | runs on the headset's Conexant chip (see below); needs the G Pro X |
+| PRO 5-band equalizer | 40% | read-only probe done (`proeq.py`); needs the G Pro X |
 | Mice | 94% | see "Mice" below |
 | Keyboards | 80% | analog keys' per-key settings, onboard profiles; see "Keyboards" below |
 | Headsets (other than the voice chain) | 50% | Centurion and the newer headsets; see "Headsets" below |
@@ -82,9 +82,14 @@ Everything below has only met the simulator (`simulate.py`) or the DLLs offline.
 ### PRO 5-band equalizer (G Pro X)
 G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 `logi_audio_conexant.dll` (class CxAudioHidDev2089x).
-- Found: the per-band write sequence and the gain format.
-- Left: the HID report layout from the DLL's per-chip table.
-- Plan: read-only first (read the band records), then writes. Notes: `re/notes/proeq.txt`.
+- Found: the per-band write sequence and the gain format; the HID report layout (chip table
+  entry 5 "ANDRUS": memory space 1, report 4 `[4, flags, length, address high, low]` out, report 5
+  `[5, data]` back, 32 bytes a report, no checksum); the band records' coefficient format.
+- Done (read-only): `proeq.py` reads the active profile (register 0x1152) and every profile's
+  five band records, and shows each band's peak frequency and gain (from the filter's response:
+  ours; G HUB fits type / frequency / Q with FUN_180002e00, not ported). Run
+  `python3 ~/.local/share/lghub/proeq.py` with the G Pro X plugged in and send the output.
+- Left: G HUB's filter fitting and design (for writes), then the page. Notes: `re/notes/proeq.txt`.
 
 ### Mice
 - **0x1B04 buttons on newer mice** (those without 0x8110, like the G502 X): done: macros on

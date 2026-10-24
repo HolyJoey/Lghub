@@ -264,10 +264,11 @@ simulator. The webcam screenshot is a real camera.
 - Most devices here have only met the simulator. If something doesn't work on yours (or does),
   open an issue with the "Device report" form: it asks for the model, the service log
   (`journalctl --user -u lghub`) and what the device's page says.
-- Still open, compared with G HUB: the 5-band PRO equalizer, the G735 / PRO X 2 protocol and
-  the newer headsets' settings (A50 X, G522, PRO X3), Blue VO!CE on the newer devices, per-key
-  actuation on analog keyboards, receiver pairing, keyboard onboard-profile editing and a few
-  newer-mouse features. The full list is in [TODO.md](TODO.md).
+- Still open, compared with G HUB: the 5-band PRO equalizer (a read-only check is in: with a
+  G Pro X plugged in, `python3 ~/.local/share/lghub/proeq.py` prints what its chip holds; please
+  send that output), the G735 / PRO X 2 protocol and the newer headsets' settings (A50 X, G522,
+  PRO X3), per-key actuation on analog keyboards, pairing on LSX / POWERPLAY receivers, keyboard
+  onboard-profile editing and a few newer-mouse features. The full list is in [TODO.md](TODO.md).
 
 ## If something's off
 
