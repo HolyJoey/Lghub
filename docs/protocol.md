@@ -274,6 +274,13 @@ sensitivity, `[control index, u16]` per key; 0x130 key-priority pairs `[control 
 index B, flavor (3 bits: 0 distance priority, 1 last input, 2 ordinal, 3 reverse ordinal,
 4 neutral), fully-pressed flag]`. Values are G HUB's settings × 100, u16 big-endian.
 
+### On-board macro steps (0x8102 MACROS_LIBRARY), from G HUB's sequence converter
+
+Not used by Lghub yet. Steps: 0x40 delay `[ms]`; 0x43 / 0x44 key down / up `[modifiers, HID
+usage]`; 0x41 / 0x42 mouse button down / up `[button mask]`; 0x45 / 0x46 consumer key down / up
+`[usage]`; 0x61 mouse move `[x, y]`. 16-bit values big-endian. The framing around the steps
+isn't known yet.
+
 ## Tag protocol (0x8102 / 0x8103)
 
 Shared by 0x8103 (global device settings) and 0x8102 (keyboard onboard profiles, with a profile

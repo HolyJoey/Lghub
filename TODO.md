@@ -139,7 +139,8 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   holds per-key "FKC" rows (5 x u16: opCode, actionBitfield, params, ...) and analog "MA" groups;
   G HUB's opcodes: 0x8002 key (+ modifiers), 0x8000 modifiers only, 0x8001 mouse button bitmask,
   0x8003 media usage, 0x9001-0x9007 wheel / DPI, 0x9008-0x900A / 0x900C / 0x9017 profile, battery,
-  report rate. Wire format of those rows found too ([groups u8], per group 2 bytes, per row a
+  report rate. Macro steps (MACROS_LIBRARY) found too: delay, key / mouse / consumer down-up,
+  mouse move (docs/protocol.md); their framing not yet. Wire format of those rows found too ([groups u8], per group 2 bytes, per row a
   byte + 4 big-endian u16; FUN_142b62090). Left: the row's first two fields, the MA bytes, the other tags, G HUB's
   v1 / v2 session paths, then a keyboard to test.
 - **0x8030 MR key** (record a macro on the keyboard): needs the keystrokes, which Lghub can't
