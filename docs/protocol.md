@@ -271,7 +271,8 @@ actionBitfield = modifiers), 0x8000 modifiers only (actionBitfield = modifiers |
 Not used by Lghub yet. 0x120 global actuation point `[u16]`; 0x121 / 0x122 global rapid trigger /
 key priority on `[byte]`; 0x123 per-key actuation points and 0x124 per-key rapid-trigger
 sensitivity, `[control index, u16]` per key; 0x130 key-priority pairs `[control index A, control
-index B, mode (3 bits), flag]`. Values are G HUB's settings × 100, u16 big-endian.
+index B, flavor (3 bits: 0 distance priority, 1 last input, 2 ordinal, 3 reverse ordinal,
+4 neutral), fully-pressed flag]`. Values are G HUB's settings × 100, u16 big-endian.
 
 ## Tag protocol (0x8102 / 0x8103)
 
