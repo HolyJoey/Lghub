@@ -44,9 +44,14 @@ class UpdateTest(unittest.TestCase):
 		return r.stdout
 
 	def test_versions(self):
-		self.assertEqual(update.parse('v1.2.3'), (1, 2, 3))
+		self.assertEqual(update.parse('v1.2.3'), (1, 2, 3, 0))
+		self.assertEqual(update.parse('1.2.3.4'), (1, 2, 3, 4))
 		self.assertIsNone(update.parse('1.2'))
+		self.assertIsNone(update.parse('1.2.3.4.5'))
 		self.assertTrue(update.newer('0.10.0', '0.9.9'))
+		self.assertTrue(update.newer('0.9.8.1', '0.9.8'))
+		self.assertTrue(update.newer('0.9.9', '0.9.8.3'))
+		self.assertFalse(update.newer('0.9.8.0', '0.9.8'))
 		self.assertFalse(update.newer('0.9.0', '0.9.0'))
 		self.assertFalse(update.newer('garbage', '0.9.0'))
 

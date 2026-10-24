@@ -173,7 +173,7 @@ def zone_card(zone, loading, do, dev):
 class SettingsPanel(Gtk.Box):
 	"""on_status(title, detail) gets the device's own name and its battery/firmware line.
 	quiet: show nothing at all when the device doesn't speak HID++ (for pages that have other
-	settings anyway)."""
+	settings anyway), only why a headset has no sidetone unless set_sidetone_elsewhere(True)."""
 
 	def __init__(self, win, device, on_status=None, quiet=False):
 		super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=20)
@@ -186,12 +186,19 @@ class SettingsPanel(Gtk.Box):
 		self.loading = False
 		self.worker = Worker()
 		self.body = self
+		self.no_sidetone = None     # the "why no sidetone" card, hidden when the sound card has one
+		self.sidetone_elsewhere = False
 		if not quiet:
 			self.append(label('Asking the device what it can do…', ['muted']))
 		self.worker.submit(self._connect, self._connected, self._no_hidpp)
 
 	def close(self):
 		self.worker.stop()
+
+	def set_sidetone_elsewhere(self, elsewhere):
+		self.sidetone_elsewhere = elsewhere
+		if self.no_sidetone:
+			self.no_sidetone.set_visible(not elsewhere)
 
 	def apply_perkey(self, colors):
 		"""Per-key colours ({"group:id": [r, g, b]}) to the device, if it has per-key lighting."""
@@ -279,6 +286,8 @@ class SettingsPanel(Gtk.Box):
 	def _no_hidpp(self, error):
 		self._clear()
 		if self.quiet:
+			if self.device.model.type == 'headset':
+				self.body.append(self._no_sidetone_card(f'its HID++ connection didn’t answer ({error})'))
 			return
 		self.on_status('Connected', 'No HID++ settings')
 		facts = []
@@ -315,6 +324,8 @@ class SettingsPanel(Gtk.Box):
 		                   ('mode', self._mode_card)):
 			if info.get(key) not in (None, []) or key in ('charging', 'bass_tone') and key in info:
 				cards.append(build(info))
+		if self.device.model.type == 'headset' and 'sidetone' not in info:
+			cards.append(self._no_sidetone_card('it doesn’t report a sidetone setting over HID++'))
 		if not cards and not self.quiet:
 			self.body.append(label('This device has no settings Lghub can change yet.', ['muted'], wrap=True))
 		for c in cards + ([] if self.quiet else [self._features_card(info)]):
@@ -370,6 +381,15 @@ class SettingsPanel(Gtk.Box):
 			lambda r=rates[w.get_selected()]: self.dev.call(features.REPORT_RATE, 2, bytes([round(1000 / r)]))))
 		c.append(row('Reports per second', dd))
 		return c
+
+	def _no_sidetone_card(self, why):
+		"""Why there's no sidetone slider: G HUB sets it over HID++ only (0x8300, or 0x0604 on
+		Centurion headsets), never through the sound card."""
+		self.no_sidetone = card('Sidetone', f'Not over HID++: {why}. That is the only way G HUB sets sidetone (feature '
+		                        '0x8300); a sidetone control on the headset’s sound card shows with its sound '
+		                        'settings.')
+		self.no_sidetone.set_visible(not self.sidetone_elsewhere)
+		return self.no_sidetone
 
 	def _sidetone_card(self, info):
 		c = card('Sidetone', 'Hear your own voice in the headset.')

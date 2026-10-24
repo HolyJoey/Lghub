@@ -57,6 +57,7 @@ class GenericView(Gtk.Box):
 		self.audio = None
 		if not device.wireless and headset.alsa_card(device.port) is not None:
 			self.audio = headset_ui.HeadsetPage(win, hidpp=False)
+			self.audio.sidetone_panel = self.panel
 			self.stack.add_named(scrolled(self.audio), 'audio')
 			self._add_nav('audio', 'Sound', 'audio-volume-high-symbolic')
 			self.audio.set_device(device)

@@ -151,20 +151,16 @@ class Runner:
 		active = now - self.last_playing < IDLE_GRACE
 		if active and not playing:
 			self.next_check = self.last_playing + IDLE_GRACE + 0.1   # unlink when the grace ends
-		for c in CHANNELS:
-			src, dst = f'{SINK}:monitor_{c}', f'{DSP}:in_{c}'
+		# DSP -> headset first: inputs linked while the DSP has no driver yet stall after one
+		# buffer and stay silent (measured on PipeWire 1.4.2); unlinking goes the other way round.
+		inputs = [(f'{SINK}:monitor_{c}', f'{DSP}:in_{c}') for c in CHANNELS]
+		outputs = [(f'{DSP}:out_{c}', f"{headset['name']}:playback_{c}") for c in ('FL', 'FR')]
+		for src, dst in outputs + inputs if active else inputs + outputs:
 			linked = src in pw.links_into(dst, objs)
 			if active and not linked:
 				pw.link(src, dst)
 			elif linked and not active:
 				pw.unlink(src, dst)
-		for c in ('FL', 'FR'):
-			out, port = f'{DSP}:out_{c}', f"{headset['name']}:playback_{c}"
-			linked = out in pw.links_into(port, objs)
-			if active and not linked:
-				pw.link(out, port)
-			elif linked and not active:
-				pw.unlink(out, port)
 
 	def stop(self, objs=None):
 		if not self.proc:

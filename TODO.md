@@ -4,6 +4,18 @@ Only what is still open. What works is in the README; how things were found is i
 comments. Checked against the device features G HUB's agent knows (its 212 `Feature####`
 classes, G HUB 2026.6) and its app features.
 
+## Check first: G Pro X headset (mic, Blue VO!CE, surround)
+
+- Sidetone slider is missing. G HUB sets sidetone only over HID++ (0x8300; 0x0604 on Centurion),
+  never through the sound card. Since 0.9.8 the page says why there's no slider (HID++ didn't
+  answer, or the headset doesn't report 0x8300): read that on the PC, and the user's own sidetone
+  script there.
+- Surround was silent: fixed in 0.9.8. The DSP's inputs stalled after one buffer when linked
+  before its outputs (PipeWire 1.4.2, measured with a test tone into a null sink); the engine now
+  links DSP -> headset first. Check by ear on the G Pro X.
+- Versions: 0.9.8's updater reads four-part versions, so small fixes can ship as 0.9.8.x
+  (0.9.7 and older only see three-part ones).
+
 ## Progress (overall about 84%)
 
 The percentages are rough estimates of how much of each area's G HUB features Lghub has, not

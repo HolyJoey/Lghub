@@ -314,6 +314,7 @@ class HeadsetPage(Gtk.Box):
 		self.device = None
 		self.use_hidpp = hidpp
 		self.panel = None
+		self.sidetone_panel = None   # another page's SettingsPanel to tell about the sound card's sidetone
 		self.worker = Worker()
 		self.card = None
 		self.loading = False
@@ -383,6 +384,8 @@ class HeadsetPage(Gtk.Box):
 			self.body.remove(child)
 		self.loading = True
 		side = [c for c in ctrls if c.is_sidetone]
+		for panel in filter(None, (self.panel, self.sidetone_panel)):
+			panel.set_sidetone_elsewhere(bool(side))
 		if side:
 			self.body.append(self._sidetone_card(side))
 		for title, group in (('Microphone', [c for c in ctrls if c.capture and not c.is_sidetone]),

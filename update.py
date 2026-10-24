@@ -40,9 +40,10 @@ NEEDS_ROOT = 3          # install.sh's exit status when something needs root (LG
 
 
 def parse(version):
-	"""(major, minor, patch) of '1.2.3' / 'v1.2.3'; None for anything else."""
-	m = re.fullmatch(r'v?(\d+)\.(\d+)\.(\d+)', version.strip())
-	return tuple(int(x) for x in m.groups()) if m else None
+	"""(major, minor, patch, build) of '1.2.3' / 'v1.2.3.4' (build 0 when left out); None for anything
+	else. Installs before 0.9.8 only read three parts, so they never see a four-part release."""
+	m = re.fullmatch(r'v?(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?', version.strip())
+	return tuple(int(x or 0) for x in m.groups()) if m else None
 
 
 def newer(candidate, current=VERSION):

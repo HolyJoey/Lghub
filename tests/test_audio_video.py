@@ -2,6 +2,7 @@
 import os
 import sys
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
@@ -97,6 +98,28 @@ class SurroundTest(unittest.TestCase):
 		with_eq = surround.params_text(settings, {'enabled': True, 'gains': [3.0] * 10})
 		self.assertIn('eq 1', with_eq)
 		self.assertIn('eq_10 3.00', with_eq)
+
+	def test_links_headset_side_first(self):
+		"""DSP -> headset before the 7.1 monitor -> DSP (inputs linked first stall), and back."""
+		runner, calls = surround.Runner(), []
+		headset_sink = {'name': 'hs', 'description': 'PRO X'}
+		with mock.patch.object(surround.pw, 'links_into_node', return_value=1), \
+		     mock.patch.object(surround.pw, 'links_into', return_value=[]), \
+		     mock.patch.object(surround.pw, 'link', side_effect=lambda a, b: calls.append(('link', a, b))):
+			runner._link([], headset_sink)
+		self.assertEqual(calls[:2], [('link', 'lghub_surround_dsp:out_FL', 'hs:playback_FL'),
+		                             ('link', 'lghub_surround_dsp:out_FR', 'hs:playback_FR')])
+		self.assertEqual(len(calls), 10)
+		calls.clear()
+		runner.last_playing = 0.0
+		with mock.patch.object(surround.pw, 'links_into_node', return_value=0), \
+		     mock.patch.object(surround.pw, 'links_into', side_effect=lambda dst, objs: [
+		         f'{surround.DSP}:{dst.split(":")[1].replace("playback", "out")}' if dst.startswith('hs:')
+		         else f'{surround.SINK}:{dst.split(":")[1].replace("in", "monitor")}']), \
+		     mock.patch.object(surround.pw, 'unlink', side_effect=lambda a, b: calls.append(('unlink', a, b))):
+			runner._link([], headset_sink)
+		self.assertEqual(len(calls), 10)
+		self.assertEqual(calls[-1], ('unlink', 'lghub_surround_dsp:out_FR', 'hs:playback_FR'))
 
 
 class FakeCamera:
