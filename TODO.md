@@ -135,8 +135,13 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   0x0113 macros, 0x0120-0x0130 analog keys, 0xFF01 profile checksum. Formats found: 0x0003 name =
   32 UTF-16BE characters (64 bytes, zero-padded, "…" at 32 when longer, all 0xFF when empty);
   0x0100 report rate = 1 byte, log2(Hz / 125). fn 6 start read = [profile, tag u16]; fn 9 start
-  write = [u16, u16, data]. Left: the other tags' formats, G HUB's v1 / v2 session paths, then a
-  keyboard to test.
+  write = [u16, u16, data]. Found 2026-10-24 (re/notes/keyboard_profiles.txt): the base layer tag 0x110
+  holds per-key "FKC" rows (5 x u16: opCode, actionBitfield, params, ...) and analog "MA" groups;
+  G HUB's opcodes: 0x8002 key (+ modifiers), 0x8000 modifiers only, 0x8001 mouse button bitmask,
+  0x8003 media usage, 0x9001-0x9007 wheel / DPI, 0x9008-0x900A / 0x900C / 0x9017 profile, battery,
+  report rate. Wire format of those rows found too ([groups u8], per group 2 bytes, per row a
+  byte + 4 big-endian u16; FUN_142b62090). Left: the row's first two fields, the MA bytes, the other tags, G HUB's
+  v1 / v2 session paths, then a keyboard to test.
 - **0x8030 MR key** (record a macro on the keyboard): needs the keystrokes, which Lghub can't
   read without input-device access.
 - **Analog keyboards** (PRO X TKL RAPID, G515 RAPID TKL, G512 X, PRO X2 RAPID, ...): done:

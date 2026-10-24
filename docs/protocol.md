@@ -255,6 +255,17 @@ Levels are G HUB's 0-1 values × 100.
   choices in minutes: power saving Never / 1 / 2 / 5 / 10 / 15, power off Never / 1 / 2 / 5 /
   10 / 15 / 30 (Never / 5 / 15 / 30 / 60 on mice without the advanced timer). Never = 0.
 
+## Keyboard base layer tag (0x8102 tag 0x110), from G HUB's AssignmentsBaseLayerTag
+
+Not used by Lghub yet (no keyboard to check it on). Per-key "FKC" part: `[group count]`, then
+per group `[byte, control index]`, then per row `[byte, u16, actionBitfield, opCode, params]`
+(u16 big-endian). Opcodes (G HUB's cardIdToFkcRow): 0x8002 key (params = HID usage,
+actionBitfield = modifiers), 0x8000 modifiers only (actionBitfield = modifiers | 0x4000),
+0x8001 mouse button (params = 1 << (button - 1)), 0x8003 media (params = consumer usage),
+0x9001 / 0x9002 wheel left / right, 0x9003 DPI up, 0x9004 DPI down, 0x9005 DPI cycle,
+0x9006 DPI default, 0x9007 DPI shift, 0x9008 next profile, 0x9009 previous profile,
+0x900A profile cycle, 0x900C battery level, 0x9017 report-rate cycle.
+
 ## Tag protocol (0x8102 / 0x8103)
 
 Shared by 0x8103 (global device settings) and 0x8102 (keyboard onboard profiles, with a profile
