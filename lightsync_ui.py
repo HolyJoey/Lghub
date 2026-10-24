@@ -36,6 +36,8 @@ def card(model, restore, per_key=True):
 	echo = _color_button(settings.get('echo', [255, 255, 255]))
 	rest = _color_button(settings.get('rest', [0, 0, 0]))
 	echo_speed = _slider(*softlight.STAR_SPEED, settings.get('speed', 1000), ' ms')
+	wave1 = _color_button(settings.get('color', [0, 127, 255]))       # ours: G HUB's defaults not known
+	wave2 = _color_button(settings.get('color2', [255, 255, 255]))
 	regions = Gtk.Button(label='Edit regions')
 
 	def edit_regions(_b):
@@ -47,7 +49,8 @@ def card(model, restore, per_key=True):
 	        'screen': [('Colour boost', boost), ('Smoothing', smoothing), ('Screen regions', regions)],
 	        'starlight': [('Star colour', star), ('Sky colour', sky), ('Stars', count), ('Speed', speed)],
 	        'cycle': [('Speed', cycle_speed)],
-	        'echo': [('Echo colour', echo), ('Rest colour', rest), ('Fade', echo_speed)]}
+	        'echo': [('Echo colour', echo), ('Rest colour', rest), ('Fade', echo_speed)],
+	        'smooth_wave': [('Colour', wave1), ('Second colour', wave2)]}
 	widgets = _add_rows(card, rows)
 
 	def show():
@@ -65,6 +68,7 @@ def card(model, restore, per_key=True):
 		                                'speed': round(speed.get_value())},
 		          'cycle': lambda: {'speed': round(cycle_speed.get_value())},
 		          'echo': lambda: {'echo': _rgb(echo), 'rest': _rgb(rest), 'speed': round(echo_speed.get_value())},
+		          'smooth_wave': lambda: {'color': _rgb(wave1), 'color2': _rgb(wave2)},
 		          'keyframe': lambda: {'file': effects[effect.get_selected()][1]},
 		          'custom': lambda: {'custom': effects[effect.get_selected()][1]}}
 		if kind:
@@ -160,8 +164,8 @@ def _chosen(effects, settings):
 
 def _intro(per_key):
 	if per_key:
-		return ('Effects the background service plays on the keys: G HUB’s own animations, starlight, colour '
-		        'cycle, echo press, the audio visualizer (bass left, treble right) and the screen sampler (grim, or '
+		return ('Effects the background service plays on the keys: G HUB’s own animations, Smooth Wave, '
+		        'starlight, colour cycle, echo press, the audio visualizer (bass left, treble right) and the screen sampler (grim, or '
 		        'the desktop’s screen sharing, which asks once). Your colours come back when it is off.')
 	return ('Effects the background service plays on the lighting zones: starlight, colour cycle, echo press '
 	        '(clicks), the audio visualizer and the screen sampler (grim, or the desktop’s screen sharing, which asks '
@@ -179,7 +183,7 @@ def _effects(per_key, model=None):
 	if per_key:
 		own = [('device', name, SIGNATURE_NAMES.get(name, name.replace('_', ' ').capitalize()))
 		       for name, _e in softlight.device_effects(model)] if model else []
-		return effects + own + _keyframe_effects() + [('custom', file, name) for name, file in softlight.custom_effects()]
+		return effects + [('smooth_wave', None, 'Smooth Wave')] + own + _keyframe_effects() + [('custom', file, name) for name, file in softlight.custom_effects()]
 	return effects                                     # G HUB: no keyframe animations on zones
 
 

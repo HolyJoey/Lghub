@@ -76,6 +76,28 @@ class SignatureTest(unittest.TestCase):
 		self.assertEqual(colors[-1], BLUE)
 		self.assertFalse(blend.step(sig.Frame()))
 
+	def test_smooth_wave_runs_and_colours_the_keys(self):
+		leds = [(f'k{x}{y}', x / 9, y / 4) for x in range(10) for y in range(5)]
+		tree = sig.smooth_wave(leds, accent=['logo'], indicator=['ind'], c1=(0, 127, 255, 255))
+		lit, steps = set(), 0
+		while tree.step(f := sig.Frame()):
+			lit.update(k for k, c in f.colors.items() if any(c[:3]))
+			steps += 1
+			self.assertLess(steps, 2000)
+		self.assertGreaterEqual(steps, 794)                 # the background blend's length
+		self.assertLessEqual({'logo', 'ind'}, lit)
+		self.assertGreater(len(lit), 20)                    # the sweeps reach most of the keys
+
+	def test_player_restarts(self):
+		calls = []
+
+		def build():
+			calls.append(1)
+			return sig.Pause(2)
+		p = sig.Player(build)
+		p.frame(1.0)                                        # 30 steps
+		self.assertGreater(len(calls), 5)
+
 	def test_brightness(self):
 		f = sig.Frame(brightness=50)
 		f.set('k', (200, 100, 0, 255))

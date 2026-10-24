@@ -257,6 +257,112 @@ class GradientTween:
 		return self._advance(a[0])
 
 
+FPS = 30                        # ours: the rate G HUB steps its software engine at isn't known
+
+
+# --- Smooth Wave (SIGNATURE_ALGORITHMIC_INACTIVE), G HUB's builder 0x14121b700 ----------------
+# Tween keyframes (frames, line x1 y1 x2 y2, stops); stop colours are names filled in by
+# smooth_wave(): C1 = the effect's first colour, C2H = its second at half value, BLUE = #AFC9D5,
+# OFF = G HUB's constant colour (set at runtime; transparent black here, ours).
+C1, C2H, BLUE, OFF = 'C1', 'C2H', 'BLUE', 'OFF'
+_SW_FADE = ((0, OFF, 0.5), (1.0, OFF, 0.5))
+_SW_HEAD = ((0, C1, 0.5), (0.82, C1, 0.54), (1.0, OFF, 0.5))
+_SW_A = (
+	(39, (1.03, 0.91, 1.0, 1.0), _SW_FADE),
+	(27, (0.77, 0.75, 1.0, 1.0), _SW_HEAD),
+	(12, (0.59, 0.81, 1.0, 1.0), ((0, C2H, 0.51), (0.81, BLUE, 0.54), (1.0, OFF, 0.5))),
+	(50, (0.57, 0.83, 1.0, 1.0), ((0, C2H, 0.77), (0.82, BLUE, 0.65), (1.0, OFF, 0.5))),
+	(81, (0.47, 0.9, 1.0, 1.0), ((0, C2H, 0.77), (0.82, BLUE, 0.65), (1.0, OFF, 0.5))),
+	(0, (-0.26, 1.03, 1.0, 1.0), _SW_FADE),
+)
+_SW_TAIL = ((0, C1, 0.77), (0.82, BLUE, 0.65), (1.0, OFF, 0.5))
+_SW_MID = ((0, C1, 0.51), (0.81, BLUE, 0.54), (1.0, OFF, 0.5))
+_SW_B = (
+	(53, (-0.03, 0.86, -0.01, 0.98), _SW_FADE),
+	(44, (0.33, 0.45, -0.01, 0.98), _SW_HEAD),
+	(23, (0.33, 0.25, -0.01, 0.98), _SW_MID),
+	(67, (0.29, 0.06, -0.01, 0.98), _SW_TAIL),
+	(0, (0, -0.8, -0.01, 0.98), _SW_FADE),
+)
+_SW_C = (
+	(45, (1.42, 1.41, 0.99, 0.96), _SW_FADE),
+	(37, (0.5, 0.43, 0.99, 0.96), _SW_HEAD),
+	(15, (0.49, 0.33, 0.99, 0.96), _SW_MID),
+	(88, (0.56, 0.14, 0.99, 0.96), _SW_TAIL),
+	(0, (1.63, -1.04, 0.99, 0.96), _SW_FADE),
+)
+_SW_D = (
+	(51, (-0.51, 1.23, 0.02, 0.92), _SW_FADE),
+	(37, (0.63, 0.31, 0.02, 0.92), _SW_HEAD),
+	(14, (0.72, 0.6, 0.02, 0.92), _SW_MID),
+	(33, (0.75, 0.7, 0.02, 0.92), _SW_TAIL),
+	(43, (0.89, 1.0, 0.02, 0.92), _SW_TAIL),
+	(45, (1.06, 1.12, 0.02, 0.92), _SW_TAIL),
+	(0, (1.4, 1.3, 0.02, 0.92), _SW_FADE),
+)
+# (pause before, keyframes) of the four sweeps that run side by side
+_SW_SWEEPS = ((35, _SW_A), (215, _SW_B), (417, _SW_C), (571, _SW_D))
+
+
+def half_value(color):
+	"""G HUB's colour at half its HSV value (0x1410f78d0 x 0.5, rebuilt by FUN_1410f6380)."""
+	return tuple(int(c * 0.5) for c in color[:3]) + tuple(color[3:])
+
+
+def layout_leds(layout):
+	"""(leds [(id, x, y)] in 0-1, accent ids, indicator ids) from a per-key layout (perkey.py);
+	G HUB's two extra LED groups taken as the branding and indicator keys (ours)."""
+	w, h, keys = layout
+	leds = [(f'{g}:{k}', (x + kw / 2) / w, (y + kh / 2) / h) for g, k, x, y, kw, kh in keys
+	        if g in softlight.KEY_GROUPS]
+	accent = [f'{g}:{k}' for g, k, *_r in keys if g == 'PERKEY_BRANDING']
+	indicator = [f'{g}:{k}' for g, k, *_r in keys if g == 'PERKEY_INDICATOR']
+	return leds, accent, indicator
+
+
+def smooth_wave(leds, accent=(), indicator=(), c1=(0, 127, 255, 255), c2=(255, 255, 255, 255)):
+	"""G HUB's Smooth Wave as a handler tree. leds = [(id, x, y)] in 0-1 coordinates; accent and
+	indicator = led ids of G HUB's two other LED groups (metadata +0x100 / +0x110; which LEDs
+	those are isn't read yet: ours). Default colours are ours."""
+	off = (0, 0, 0, 0)
+	names = {C1: tuple(c1), C2H: half_value(c2), BLUE: (0xAF, 0xC9, 0xD5, 0xFF), OFF: off}
+
+	def frames(kfs):
+		return [(n, line, [(p, names[c], b) for p, c, b in stops]) for n, line, stops in kfs]
+	area = (0.0, 0.0, 1.0, 1.0)
+	ids = [led for led, _x, _y in leds]
+	main = Parallelizer([ColorBlend(ids, off, off, 794)] + [
+		Sequencer([Pause(pause), GradientTween(leds, area, frames(kfs), clip=True)])
+		for pause, kfs in _SW_SWEEPS])
+	accent_seq = Sequencer([ColorBlend(accent, off, c1, 100), Pause(200), ColorBlend(accent, c1, off, 97),
+	                        Pause(200), ColorBlend(accent, off, c2, 100), ColorBlend(accent, c2, off, 97)])
+	pulse = [Pause(100), ColorBlend(indicator, off, c1, 100), Pause(100), ColorBlend(indicator, c1, off, 97)]
+	indicator_seq = Sequencer(pulse + [Pause(100), ColorBlend(indicator, off, c1, 100), Pause(100),
+	                                   ColorBlend(indicator, c1, off, 97)])
+	return Parallelizer([main, Parallelizer([accent_seq, indicator_seq])])
+
+
+class Player:
+	"""Steps a handler tree at FPS and restarts it when it ends (ours); frame(seconds) -> {led: rgb},
+	like softlight's effects."""
+
+	def __init__(self, build):
+		self.build = build
+		self.tree = build()
+		self.steps = 0
+		self.colors = {}
+
+	def frame(self, t):
+		target = int(t * FPS)
+		while self.steps < target:
+			f = Frame()
+			if not self.tree.step(f):
+				self.tree = self.build()
+			self.colors.update(f.colors)
+			self.steps += 1
+		return {led: tuple(c[:3]) for led, c in self.colors.items()}
+
+
 class ColorBlend:
 	def __init__(self, leds, start, end, frames, easing=0, loop=False, reverse=False):
 		self.leds, self.start, self.end, self.frames = leds, start, end, frames

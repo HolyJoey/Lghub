@@ -522,7 +522,8 @@ class ScreenSampler(Visualizer):
 
 
 class Animated(Visualizer):
-	"""Streams one of softlight's effects (G HUB's keyframe effects, Starlight, Color cycle)."""
+	"""Streams one of softlight's effects (G HUB's keyframe effects, Starlight, Color cycle) or a
+	signature effect (signature.py: Smooth Wave)."""
 
 	def __init__(self, dev, model, settings, port=None):
 		super().__init__(dev, model, None)
@@ -538,6 +539,11 @@ class Animated(Visualizer):
 		if s['effect'] == 'starlight':
 			return softlight.Starlight(keys, s.get('star', (255, 255, 255)), s.get('sky', (0, 0, 40)),
 			                           s.get('count', 50), s.get('speed', 2000))
+		if s['effect'] == 'smooth_wave' and not self.target.zonal:
+			import signature
+			leds, accent, indicator = signature.layout_leds(self.layout)
+			c1, c2 = (tuple(s.get(k, d)) + (255,) for k, d in (('color', (0, 127, 255)), ('color2', (255, 255, 255))))
+			return signature.Player(lambda: signature.smooth_wave(leds, accent, indicator, c1, c2))
 		if s['effect'] == 'echo':
 			return softlight.EchoPress(keys, s.get('echo', (255, 255, 255)), s.get('rest', (0, 0, 0)),
 			                           s.get('speed', 1000))
@@ -615,7 +621,7 @@ class Animated(Visualizer):
 				return
 
 
-ANIMATED = ('keyframe', 'device', 'starlight', 'cycle', 'echo')
+ANIMATED = ('keyframe', 'device', 'starlight', 'cycle', 'echo', 'smooth_wave')
 
 
 def devices_open(device):
