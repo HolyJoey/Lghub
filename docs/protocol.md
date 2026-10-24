@@ -266,6 +266,13 @@ actionBitfield = modifiers), 0x8000 modifiers only (actionBitfield = modifiers |
 0x9006 DPI default, 0x9007 DPI shift, 0x9008 next profile, 0x9009 previous profile,
 0x900A profile cycle, 0x900C battery level, 0x9017 report-rate cycle.
 
+### Analog keys (0x8102 tags 0x120-0x130), from G HUB's IFeature8102AnalogProfileTag classes
+
+Not used by Lghub yet. 0x120 global actuation point `[u16]`; 0x121 / 0x122 global rapid trigger /
+key priority on `[byte]`; 0x123 per-key actuation points and 0x124 per-key rapid-trigger
+sensitivity, `[control index, u16]` per key; 0x130 key-priority pairs `[control index A, control
+index B, mode (3 bits), flag]`. Values are G HUB's settings × 100, u16 big-endian.
+
 ## Tag protocol (0x8102 / 0x8103)
 
 Shared by 0x8103 (global device settings) and 0x8102 (keyboard onboard profiles, with a profile

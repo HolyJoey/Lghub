@@ -149,10 +149,10 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   that a get answers in bit 0 is ours, check on a keyboard). Left: actuation point and
   rapid-trigger sensitivity per key and globally (G HUB's AnalogSettings, written into the
   onboard profile over 0x8101 / 0x8102), click haptics, 0x1B0C analog buttons, 0x80A4 curves.
-  Found (profile_management_tag_helper_analog_preset, 0x14235ff40): values go in as u16 of
-  the value x 100 (millimetres, probably; global, then per key), per-key entries by the keyboard's control index
-  (CIDX, from the device; entries without one are dropped); the bytes come from a field-tree
-  writer below it (not followed yet). Not built: a wrong write breaks the onboard profile and
+  Found: all six tags and their bytes (docs/protocol.md, re/notes/keyboard_profiles.txt):
+  0x120 global actuation u16, 0x121 / 0x122 global rapid trigger / key priority on, 0x123 / 0x124
+  per-key [control index, u16] (value x 100), 0x130 key-priority pairs. Left: 0x130's mode values,
+  the keyboard's control-index table (read from the device). Not built: a wrong write breaks the onboard profile and
   there's no keyboard here to check.
 - **0x1B05 full key customization** (G HUB's "FKC": remap any key, per layer, with presets):
   large; needs a keyboard that has it. Not started.
