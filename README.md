@@ -75,7 +75,8 @@ lights), with G HUB's own ids, lighting zones and capabilities. Models it doesn'
 under the name they give.
 Mice that have them also get the scroll wheel (ratchet or free spin, SmartShift, ratchet
 force), bunny hopping, surface tuning, angle snapping, left-handed buttons and hybrid tracking; newer mice get
-their 2-8 kHz report rates and extended DPI range.
+their 2-8 kHz report rates and extended DPI range, and G HUB's XY Split (a separate vertical DPI)
+on mice without onboard memory whose sensor has it.
 **Macros** like G HUB's: keystrokes, text, media and system actions, apps, web pages and
 recorded sequences (once, while held, or on/off), put on any button but the left one. They
 run in the background service, the same way G HUB does it (HID++ 0x8110, or 0x1B04 on newer

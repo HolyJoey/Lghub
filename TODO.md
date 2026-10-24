@@ -94,8 +94,9 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   mice keep their buttons' jobs in the onboard profile, which the Buttons page edits.
 - **0x2240 surface tuning**: done as G HUB's routine (fn 2 / 3, shutter event, fn 4, squal, fn 5,
   event, fn 6; fn 1 sets the three values). Factory surface from fn 0 bytes 6-8, active one found
-  by bytes 3-5 (as G HUB). Left: G HUB's hard / soft presets (source not found) and a check on a
-  mouse that has it. Lghub reads the movement from the
+  by bytes 3-5 (as G HUB). G HUB's PRESET_HARD / PRESET_SOFT surface types exist in its protocol but
+  nothing in G HUB 2026.6 creates them (surface_tuning_control 0x1417f9fc0 builds the factory
+  surface and custom ones only), so there is nothing to copy. Left: a check on a mouse that has it. Lghub reads the movement from the
   mouse's own reports instead of the pointer (ours).
 - Left out on purpose: 0x8111 latency monitoring (no setting in G HUB's app), 0x8120 gaming
   attachments (pedals / shifter on racing wheels, not planned).
@@ -116,7 +117,9 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 - **G HUB's sensitivity presets** (MOUSE_SETTINGS_ADVANCED in defaults_override.json: Default,
   First Person, Third Person, MMORPG, MOBA, RTS, Simulation, Productivity, pro players' ones):
   done on onboard mice' Sensitivity page ("Use" puts them in the profile). Left out: the "XY
-  Split" ones (separate X / Y DPI; a profile has one per level).
+  Split" ones (separate X / Y DPI; our known profile layout has one per level). XY Split itself
+  is done for live DPI (0x2202 caps bit 0, G HUB's supports_asymmetric) on mice without onboard
+  memory; whether newer mice' profiles hold a Y DPI isn't known.
 
 ### Keyboards
 - **Onboard profiles**: switching the active one works. Editing goes through 0x8102 with the same
@@ -197,7 +200,8 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   on the receiver's page and in Settings; G HUB's HPP10Command lock on register 0xB2: open 1 on
   LS1, 7 on LS2, close 2; which receiver is which from G HUB's receivers list). Check on a
   receiver. Left: LSX (c54f) and the POWERPLAY hybrid, probably over 0x1894 (fn 2 open lock,
-  3 bytes not found); unpairing (G HUB's own unpair is a stub for these receivers).
+  3 bytes not found); unpairing: G HUB has none for LS1 / LS2 / LSX / hybrid receivers (its unpair code is for
+  Windows Bluetooth and "BLE Pro" receivers, none of which are in its receiver list); not planned.
 - **Sleep / power-off timers** (0x8103 GlobalDeviceSettings tags 1 / 2): done with G HUB's tag
   protocol (sessions, tag read / write, CRC-32 commit) and its minute choices. Ours: first data
   bytes in the start-write call. The screen tags (16-19) aren't used (no device with a screen).
@@ -236,8 +240,9 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   Wave (software only). The keyframe editor (Freestyle) is done: frames,
   length, curve, order, preview; saved in G HUB's keyframe format. Effects on zonal devices done
   (starlight, colour cycle, audio, echo press on clicks, screen sampler with G HUB's zone regions). Per-key frames use
-  G HUB's single-value call for shared colours; its delta-compressed calls (0x8081 fn 3 / 4) aren't
-  used yet: check animation smoothness on a real keyboard first.
+  G HUB's single-value call for shared colours; its other calls are in docs/protocol.md (fn 2
+  consecutive, fn 5 ranges; fn 3 / 4 delta-compressed, whose packing wasn't found). Not used: little
+  gain over fn 1 / 6 and nothing to check it on; check animation smoothness on a real keyboard first.
 
 ### App
 - **Update notice and "Update now"**: built (update.py, update_ui.py; GitHub releases with a

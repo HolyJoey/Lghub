@@ -358,7 +358,7 @@ class Mouse:
 	# axis, page -> the same three bytes, then 16-bit words: 0xE0nn = step nn, others DPI values,
 	# 0 = end), fn 5 GetSensorDpiParameters (sensor, DPI X, default X, DPI Y, default Y, lift-off),
 	# fn 6 SetSensorDpiParameters (sensor, DPI X, DPI Y or 0, lift-off or 0). Sensor 0, X axis;
-	# Y follows X (ours).
+	# Y follows X unless XY Split gives it its own value (fn 5 bytes 5-6 read it back).
 
 	def _read_sensor(self):
 		if EXT_DPI in self.features:
@@ -384,11 +384,20 @@ class Mouse:
 		r = self.dev.call(DPI, 2, b'\0')
 		return struct.unpack('>H', r[1:3])[0]
 
-	def set_dpi(self, value):
+	def asymmetric(self):
+		"""Whether the sensor takes its own Y DPI (0x2202 caps bit 0; G HUB's supports_asymmetric,
+		its "XY Split")."""
+		return EXT_DPI in self.features and bool(self.dev.call(EXT_DPI, 1, b'\0')[2] & 1)
+
+	def current_dpi_y(self):
+		return struct.unpack('>H', self.dev.call(EXT_DPI, 5, b'\0')[5:7])[0]
+
+	def set_dpi(self, value, y=None):
+		"""y: the Y DPI on sensors with their own (asymmetric); None = the same as X."""
 		if EXT_DPI in self.features:
 			caps = self.dev.call(EXT_DPI, 1, b'\0')[2]
 			lod = self.dev.call(EXT_DPI, 5, b'\0')[9] if caps & 2 else 0
-			y = value if caps & 1 else 0
+			y = (y or value) if caps & 1 else 0
 			self.dev.call(EXT_DPI, 6, b'\0' + struct.pack('>HH', value, y) + bytes([lod]))
 			return
 		self.dev.call(DPI, 3, b'\0' + struct.pack('>H', value))

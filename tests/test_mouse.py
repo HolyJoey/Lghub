@@ -118,6 +118,10 @@ class WheelTest(unittest.TestCase):
 		self.assertEqual(m.current_dpi(), 1600)
 		m.set_dpi(3200)
 		self.assertEqual(fake.ext_dpi, (3200, 3200, 2))     # Y follows X, lift-off kept
+		self.assertTrue(m.asymmetric())
+		m.set_dpi(3200, 1600)                               # XY Split
+		self.assertEqual(fake.ext_dpi, (3200, 1600, 2))
+		self.assertEqual(m.current_dpi_y(), 1600)
 
 	def test_bunny_hopping(self):
 		fake = simulate.FakeWheelMouse()

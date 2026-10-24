@@ -74,7 +74,8 @@ both.
 - **0x2202** (newer mice): fn 1 sensor capabilities (byte 2: bit 0 separate Y DPI, bit 1
   lift-off setting); fn 2 `[sensor, axis, page]` → the same 3 bytes, then 16-bit words (`0xE0nn`
   = step, others DPI values, 0 = end); fn 5 current values `[sensor]` → DPI X, default X, DPI Y,
-  default Y, lift-off; fn 6 sets `[sensor, DPI X, DPI Y or 0, lift-off or 0]`.
+  default Y, lift-off; fn 6 sets `[sensor, DPI X, DPI Y or 0, lift-off or 0]`. Bit 0 is G HUB's `supports_asymmetric`
+  (its XY Split: `Dpi.AdvancedEntry` has `asymmetric`, `dpi_x`, `dpi_y`).
 - **0x8060**: report rate in milliseconds.
 - **0x8061** (up to 8 kHz): rate numbers 0-6 = 125, 250, 500, 1000, 2000, 4000, 8000 Hz. fn 1 →
   byte 1 is a bitmask of supported rates; fn 2 current; fn 3 set. Event 0 `[connection, rate]`
@@ -168,9 +169,13 @@ Other tags' formats are still unknown.
 
 ### Per-key (0x8081, 0x8080)
 
-- **0x8081**: fn 1 SetIndividualRgbZones `[zone, r, g, b] × 4`; fn 6 SetRgbZonesSingleValue
-  `[r, g, b, up to 13 zone ids]`; fn 7 FrameEnd `[persistence, 0, 0, 0, 0]`. G HUB turns each
-  key of its layout into a zone number with a built-in table.
+- **0x8081**: fn 1 SetIndividualRgbZones `[zone, r, g, b] × 4`; fn 2 SetConsecutiveRgbZones
+  `[first zone, (r, g, b) × up to 5]`; fn 3 / fn 4 SetConsecutiveRgbZonesDeltaCompression 5-bit /
+  4-bit (16 bytes packed by G HUB's caller, packing not found); fn 5 SetRangeRgbZones
+  `[first zone, last zone, r, g, b] × up to 3`; fn 6 SetRgbZonesSingleValue
+  `[r, g, b, up to 13 zone ids]`; fn 7 FrameEnd `[persistence, 0, 0, 0, 0]` (G HUB's
+  Feature8081PerKeyLighting senders). Lghub uses fn 1, 6 and 7. G HUB turns each key of its
+  layout into a zone number with a built-in table.
 - **0x8080** (G910, G810, G410): fn 0 info (bytes 0-1: key types as bits); fn 3 SetKeyColors
   `[type u16, count u16, (key, r, g, b) × up to 14]`; fn 5 flush. Types: keyboard 1,
   consumer 2, G-key 4, button 8, logo 0x10, other keys 0x40.

@@ -192,9 +192,7 @@ class MouseView(Gtk.Box):
 			state['active'] = m.current_profile()
 			state['slot'] = m.current_dpi_slot()
 		else:
-			state['dpi'] = m.current_dpi() if m.sensor else None
-			state['zones'] = _zones(m)
-			state['rate'] = m.current_rate() if m.rates else None
+			state.update(self._live_state(m))
 		active = next((p for p in m.profiles if p.number == state.get('active')), None)
 		rate = state.get('rate') or (active.report_rate if active else None)
 		state['life'] = battery_model.life_for(self.device, state['battery'], rate)
@@ -202,6 +200,16 @@ class MouseView(Gtk.Box):
 			import depots
 			depots.fetch_defaults(self.device.model.key)        # G HUB's presets, before the page is built
 		return m, state
+
+	@staticmethod
+	def _live_state(m):
+		"""DPI (and its own Y DPI on XY Split sensors), zones and report rate of a mouse without
+		onboard memory."""
+		state = {'dpi': m.current_dpi() if m.sensor else None, 'zones': _zones(m),
+		         'rate': m.current_rate() if m.rates else None}
+		if m.sensor and m.asymmetric():
+			state['dpi_y'] = m.current_dpi_y()
+		return state
 
 	def _connected(self, result):
 		self.mouse, state = result
@@ -412,19 +420,41 @@ class MouseView(Gtk.Box):
 			self.profile.default_dpi = 0
 		self.rebuild()
 
+	@staticmethod
+	def _dpi_row(parent, sensor, value):
+		"""A DPI slider + number in parent; returns its Gtk.Adjustment."""
+		adj = Gtk.Adjustment(value=value, lower=sensor.low, upper=sensor.high,
+		                     step_increment=sensor.step, page_increment=sensor.step * 10)
+		r = box(Gtk.Orientation.HORIZONTAL, 14)
+		r.append(Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=adj, hexpand=True, draw_value=False))
+		r.append(Gtk.SpinButton(adjustment=adj, numeric=True, width_chars=6))
+		parent.append(r)
+		return adj
+
 	def _live_sensitivity(self, page):
 		sensor = self.mouse.sensor
 		if sensor:
 			c = card('DPI', 'Applies right away, until the mouse is unplugged.')
-			adj = Gtk.Adjustment(value=self.state.get('dpi') or 800, lower=sensor.low, upper=sensor.high,
-			                     step_increment=sensor.step, page_increment=sensor.step * 10)
-			scale = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=adj, hexpand=True, draw_value=False)
-			spin = Gtk.SpinButton(adjustment=adj, numeric=True, width_chars=6)
-			r = box(Gtk.Orientation.HORIZONTAL, 14)
-			r.append(scale)
-			r.append(spin)
-			c.append(r)
-			adj.connect('value-changed', lambda a: self._live(lambda: self.mouse.set_dpi(sensor.clamp(a.get_value()))))
+			x = self._dpi_row(c, sensor, self.state.get('dpi') or 800)
+			y = None
+			if 'dpi_y' in self.state:      # the sensor takes its own Y DPI: G HUB's XY Split
+				split = Gtk.Switch(active=self.state['dpi_y'] not in (0, self.state.get('dpi')))
+				c.append(row('XY Split (separate vertical DPI)', split))
+				y_row = box(spacing=8)
+				y_row.append(label('Vertical (Y)', ['muted', 'small']))
+				y = self._dpi_row(y_row, sensor, self.state['dpi_y'] or self.state.get('dpi') or 800)
+				y_row.set_visible(split.get_active())
+				c.append(y_row)
+
+				def apply(*_a):
+					y_row.set_visible(split.get_active())
+					dpi_y = sensor.clamp(y.get_value()) if split.get_active() else None
+					self._live(lambda: self.mouse.set_dpi(sensor.clamp(x.get_value()), dpi_y))
+				split.connect('notify::active', apply)
+				y.connect('value-changed', apply)
+				x.connect('value-changed', apply)
+			else:
+				x.connect('value-changed', lambda a: self._live(lambda: self.mouse.set_dpi(sensor.clamp(a.get_value()))))
 			page.append(c)
 		if self.mouse.rates:
 			c = card('Report rate')
