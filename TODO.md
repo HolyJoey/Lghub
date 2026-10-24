@@ -261,7 +261,8 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   Smooth Star done the same way (builder 0x141218ff0: startup glow, the gradient sweep, G HUB's
   starlight twinkles; ported StartupFrameHandler and StarlightFrameHandler too). Its zonal roots
   (+0x190 / +0x1b0) not used yet.
-  Left: the others (Pulsar Point, G 3 Series, Remind Me Of, Neon, Outer Space,
+  Left (next: G HUB's factory that maps each effect type to its metadata class and builder;
+  re/notes/lighting.txt): the others (Pulsar Point, G 3 Series, Remind Me Of, Neon, Outer Space,
   Astro Point) from their builders (re/notes/lighting.txt), check on a real keyboard. The keyframe editor (Freestyle) is done: frames,
   length, curve, order, preview; saved in G HUB's keyframe format. Effects on zonal devices done
   (starlight, colour cycle, audio, echo press on clicks, screen sampler with G HUB's zone regions). Per-key frames use
