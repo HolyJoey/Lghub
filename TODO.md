@@ -204,8 +204,9 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
 - **Pairing a device to a receiver**: done for LS1 / LS2 LIGHTSPEED receivers ("Pair a device"
   on the receiver's page and in Settings; G HUB's HPP10Command lock on register 0xB2: open 1 on
   LS1, 7 on LS2, close 2; which receiver is which from G HUB's receivers list). Check on a
-  receiver. Left: LSX (c54f) and the POWERPLAY hybrid, probably over 0x1894 (fn 2 open lock,
-  3 bytes not found); unpairing: G HUB has none for LS1 / LS2 / LSX / hybrid receivers (its unpair code is for
+  receiver. Left: LSX (c54f): only one device pairs with it (PRO X3 SUPERSTRIKE); G HUB's
+  0x1894 fn 2 openLock takes 3 bytes from a caller not found yet (re/notes/pairing.txt). The
+  POWERPLAY hybrid: closed, no device in G HUB's list pairs with it; unpairing: G HUB has none for LS1 / LS2 / LSX / hybrid receivers (its unpair code is for
   Windows Bluetooth and "BLE Pro" receivers, none of which are in its receiver list); not planned.
 - **Sleep / power-off timers** (0x8103 GlobalDeviceSettings tags 1 / 2): done with G HUB's tag
   protocol (sessions, tag read / write, CRC-32 commit) and its minute choices. Ours: first data
