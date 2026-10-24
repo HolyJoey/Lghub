@@ -278,8 +278,8 @@ index B, flavor (3 bits: 0 distance priority, 1 last input, 2 ordinal, 3 reverse
 
 Not used by Lghub yet. Steps: 0x40 delay `[ms]`; 0x43 / 0x44 key down / up `[modifiers, HID
 usage]`; 0x41 / 0x42 mouse button down / up `[button mask]`; 0x45 / 0x46 consumer key down / up
-`[usage]`; 0x61 mouse move `[x, y]`. 16-bit values big-endian. The framing around the steps
-isn't known yet.
+`[usage]`; 0x61 mouse move `[x, y]`. 16-bit values big-endian. Each step is its opcode byte and its operands (0x20 / 0x21: 1 byte,
+0x40-0x46: 2, 0x60 / 0x61: 4); the macro ends with 0xFF, and G HUB keeps a CRC-32 of the bytes.
 
 ## Tag protocol (0x8102 / 0x8103)
 
