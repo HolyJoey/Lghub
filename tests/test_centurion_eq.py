@@ -56,6 +56,19 @@ class CenturionEqTest(unittest.TestCase):
 		self.assertGreater(len(fake.sent), 3)
 		self.assertTrue(all(len(p) <= 3 + PRO_X2[4] for p in fake.sent))
 
+	def test_agent_download_gets_its_own_size_limit(self):
+		import hashlib
+		import depots
+		data = b'agent'
+		with tempfile.TemporaryDirectory() as tmp, \
+		     mock.patch.object(centurion_eq, 'AGENT', os.path.join(tmp, 'apo', 'lghub_agent.exe')), \
+		     mock.patch.object(centurion_eq, 'AGENT_SHA256', hashlib.sha256(data).hexdigest()), \
+		     mock.patch.object(depots, 'files_cached', return_value={centurion_eq.AGENT_PATH: (0, 97271448)}), \
+		     mock.patch.object(depots, '_read', return_value=data) as read:
+			path = centurion_eq.fetch_agent()
+			self.assertTrue(os.path.exists(path))
+		self.assertGreater(read.call_args[0][2], 97271448)             # above the 8 MB picture limit
+
 	@unittest.skipUnless(os.path.exists(AGENT), 'needs G HUB\'s agent (local only)')
 	def test_g_hub_designer(self):
 		with tempfile.TemporaryDirectory() as tmp:

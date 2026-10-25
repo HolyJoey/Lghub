@@ -175,12 +175,12 @@ def _failed_marker(model):
 	return os.path.join(store.IMAGE_DIR, f'.{model}.failed')
 
 
-def _get(url, start, length):
-	if length <= 0 or length > MAX_BYTES:
+def _get(url, start, length, limit=MAX_BYTES, timeout=TIMEOUT):
+	if length <= 0 or length > limit:
 		raise ValueError(f'unexpected size {length}')
 	req = urllib.request.Request(url, headers={'Range': f'bytes={start}-{start + length - 1}',
 	                                           'User-Agent': 'Lghub'})
-	with urllib.request.urlopen(req, timeout=TIMEOUT) as r:  # noqa: S310 - fixed https server
+	with urllib.request.urlopen(req, timeout=timeout) as r:  # noqa: S310 - fixed https server
 		if r.status != 206:
 			raise OSError('the server ignored the range request')
 		data = r.read(length + 1)
@@ -272,11 +272,11 @@ def _unseal(data):
 	return _decrypt(data[12 + header_len:12 + header_len + size], header['file-sha'], header['key-id'])
 
 
-def _read(url, entry):
+def _read(url, entry, limit=MAX_BYTES, timeout=TIMEOUT):
 	"""A depot file's bytes, decrypted when it comes from a capsule. Some capsule files (the larger
 	pictures) are sealed files inside: the hash in the capsule is the one of the file within."""
 	import hashlib
-	data = _get(url, entry[0], entry[1])
+	data = _get(url, entry[0], entry[1], limit, timeout)
 	if len(entry) == 2:
 		return data
 	try:

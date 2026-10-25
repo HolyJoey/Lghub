@@ -21,6 +21,7 @@ RATES = (0, 96000, 88200, 48000, 44100, 24000, 16000, 8000)
 GAIN_RANGE = (-12, 12)                     # ours: G HUB's dB range for these isn't read yet
 AGENT_PATH = 'LGHUB/lghub_agent.exe'      # in G HUB's core depot
 AGENT_SHA256 = '1fe8d2e0da5acea8829eb96fcf65e8b7efa4f03a5eff53ffae15469de6c9a22b'
+AGENT_MAX_BYTES, AGENT_TIMEOUT = 128 << 20, 600     # one large file (about 93 MB): its own limits
 AGENT = os.path.join(store.DATA_DIR, 'apo', 'lghub_agent.exe')
 HELPER = os.path.join(store.DATA_DIR, 'bin', 'centurion-eq')
 
@@ -31,7 +32,7 @@ def fetch_agent():
 		return AGENT
 	import depots
 	url = depots.SERVER + depots.CORE_DEPOT
-	data = depots._read(url, depots.files_cached(url)[AGENT_PATH])
+	data = depots._read(url, depots.files_cached(url)[AGENT_PATH], AGENT_MAX_BYTES, AGENT_TIMEOUT)
 	if hashlib.sha256(data).hexdigest() != AGENT_SHA256:
 		raise OSError('G HUB ships another build of its agent; the equalizer maths may have moved')
 	os.makedirs(os.path.dirname(AGENT), exist_ok=True)

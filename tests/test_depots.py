@@ -63,7 +63,7 @@ class ImagesTest(unittest.TestCase):
 		                   ('manifest.json', manifest)])
 		self.reads = 0
 
-		def fake_get(_url, start, length):
+		def fake_get(_url, start, length, *_limits):
 			self.reads += 1
 			return self.data[start:start + length]
 		self.real_get = depots._get
