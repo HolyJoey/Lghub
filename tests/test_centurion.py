@@ -124,6 +124,22 @@ class CenturionTest(unittest.TestCase):
 		headset.set_anc_button(dev, [1, 2], 0)
 		self.assertEqual(calls[-1], (0x0605, 3, b'\x06\x00'))
 
+	def test_headset_switches(self):
+		calls = []
+
+		class Dev:
+			def has(self, feature):
+				return feature in (0x060E, 0x0639)
+
+			def call(self, feature, fn, params=b''):
+				calls.append((feature, fn, bytes(params)))
+				return {(0x060E, 0): b'\x01', (0x060E, 2): b'\x02', (0x0639, 0): b'\x00'}.get((feature, fn), b'').ljust(16, b'\0')
+		dev = Dev()
+		self.assertEqual(headset.switches(dev), {0x060E: True, 0x0639: False, 'ai_level': 2})
+		headset.set_switch(dev, 0x0639, True)
+		headset.set_ai_nr_level(dev, 9)
+		self.assertEqual(calls[-2:], [(0x0639, 1, b'\x01'), (0x060E, 3, b'\x03')])
+
 	def test_descriptor_collection(self):
 		desc = bytes([0x06, 0xA0, 0xFF, 0x09, 0x01, 0xA1, 0x01, 0x85, 0x51, 0xC0])
 		self.assertEqual(centurion._collection(desc), (0xFFA0, 1, 0x51))

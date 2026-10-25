@@ -259,6 +259,8 @@ class SettingsPanel(Gtk.Box):
 			info['light'] = features.illumination(dev)
 		info['life'] = battery_model.life_for(self.device, info['battery'], info.get('rate'))
 		self._read_mic(dev, have, info)
+		if any(f in have for f in headset.SWITCHES):
+			info['headset_switches'] = headset.switches(dev)
 		if device_settings.GLOBAL_SETTINGS in have:
 			info['power'] = device_settings.power_timers(dev) or None
 		if features.ONBOARD in have:
@@ -361,7 +363,7 @@ class SettingsPanel(Gtk.Box):
 		                   ('game_mode', self._game_mode_card), ('hosts', self._hosts_card),
 		                   ('device_eq', self._device_eq_card), ('charging', self._charging_card),
 		                   ('bass_tone', self._bass_card), ('mic', self._mic_card), ('anc', self._anc_card),
-		                   ('onboard_eq', self._onboard_eq_card),
+		                   ('onboard_eq', self._onboard_eq_card), ('headset_switches', self._switches_card),
 		                   ('power', lambda i: power_card(i['power'], self._do, self.dev)),
 		                   ('battery', lambda _i: battery_warnings_card()),
 		                   ('mode', self._mode_card)):
@@ -495,6 +497,25 @@ class SettingsPanel(Gtk.Box):
 			sw = Gtk.Switch(active=usage in chosen, valign=Gtk.Align.CENTER)
 			sw.connect(NOTIFY_ACTIVE, lambda w, _p, u=usage: self.loading or self._game_key(u, w.get_active()))
 			c.append(row(f'Turn off {name}', sw))
+		return c
+
+	def _switches_card(self, info):
+		"""The newer headsets' AI noise reduction, battery saver and footstep detection."""
+		state = info['headset_switches']
+		c = card('Headset features', 'Settings kept in the headset.')
+		for feature, title in headset.SWITCHES.items():
+			if feature not in state:
+				continue
+			sw = Gtk.Switch(active=state[feature], valign=Gtk.Align.CENTER)
+			sw.connect(NOTIFY_ACTIVE, lambda w, _p, f=feature: self.loading or self._do(
+				lambda on=w.get_active(): headset.set_switch(self.dev, f, on)))
+			c.append(row(title, sw))
+		if 'ai_level' in state:
+			dd = Gtk.DropDown.new_from_strings(list(headset.AI_NR_LEVELS))
+			dd.set_selected(min(state['ai_level'], len(headset.AI_NR_LEVELS) - 1))
+			dd.connect(NOTIFY_SELECTED, lambda w, _p: self.loading or self._do(
+				lambda lv=w.get_selected(): headset.set_ai_nr_level(self.dev, lv)))
+			c.append(row('AI noise reduction level', dd))
 		return c
 
 	def _onboard_eq_card(self, info):

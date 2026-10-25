@@ -204,6 +204,40 @@ def set_anc_button(dev, short_modes, long_mode):
 	dev.call(CENTURION_ANC, 3, bytes([sum(1 << m for m in short_modes), long_mode]))
 
 
+# Switches of the newer headsets, as G HUB's devio classes send them (request function numbers from
+# their methods; device values = G HUB's protobuf enum - 1, its toDevio / toProto): 0x060E AI noise
+# reduction (fn 0 / 1 get / set on, fn 2 / 3 get / set level: off, low, medium, high), 0x0618 battery
+# saver ("eco mode", fn 0 / 1), 0x0639 footstep detection (fn 0 / 1). That a get answers in byte 0 is ours.
+AI_NOISE_REDUCTION, BATTERY_SAVER, FOOTSTEP_DETECTION = 0x060E, 0x0618, 0x0639
+AI_NR_LEVELS = ('Off', 'Low', 'Medium', 'High')
+SWITCHES = {AI_NOISE_REDUCTION: 'AI noise reduction', BATTERY_SAVER: 'Battery saver',
+            FOOTSTEP_DETECTION: 'Footstep detection'}
+
+
+def switch_state(dev, feature):
+	return bool(dev.call(feature, 0)[0])
+
+
+def set_switch(dev, feature, on):
+	dev.call(feature, 1, bytes([1 if on else 0]))
+
+
+def ai_nr_level(dev):
+	return dev.call(AI_NOISE_REDUCTION, 2)[0]
+
+
+def set_ai_nr_level(dev, level):
+	dev.call(AI_NOISE_REDUCTION, 3, bytes([max(0, min(len(AI_NR_LEVELS) - 1, level))]))
+
+
+def switches(dev):
+	"""{feature: on} for the switches this headset has, plus 'ai_level' with AI noise reduction."""
+	out = {f: switch_state(dev, f) for f in SWITCHES if dev.has(f)}
+	if AI_NOISE_REDUCTION in out:
+		out['ai_level'] = ai_nr_level(dev)
+	return out
+
+
 # 0x0604 HeadsetAudioSidetone (Centurion headsets; G HUB's FeatureC0604HeadsetSidetone): fn 0 get
 # = [n, n x (mic, level)] ([mic, ?, level] from version 2), fn 1 set = [mic, 0xFF (version 2+),
 # level], fn 2 settings: byte 2 = the number of steps (version 2+; 101 before). G HUB shows
