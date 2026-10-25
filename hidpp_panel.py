@@ -525,26 +525,9 @@ class SettingsPanel(Gtk.Box):
 		mic = info['mic']
 		c = card('Microphone', 'The mic\'s own mute, gain, headphone level and how much of the mic you hear (its knob does the same).')
 		if 'muted' in mic:
-			sw = Gtk.Switch(active=mic['muted'], valign=Gtk.Align.CENTER)
-			if mic.get('centurion'):
-				set_muted = headset.set_centurion_mic_muted
-			else:
-				def set_muted(dev, on):
-					features.set_mic_muted(dev, on, self.device.usb_id)
-			sw.connect(NOTIFY_ACTIVE, lambda w, _p: self.loading or self._do(
-				lambda on=w.get_active(): set_muted(self.dev, on)))
-			c.append(row('Mute', sw))
+			c.append(self._mic_mute_row(mic))
 		if 'gain' in mic:
-			if 'gain_range' in mic:                       # the headset's own units (0x0611)
-				s = slider(*mic['gain_range'], mic['gain'])
-				s.connect('value-changed', lambda w: self.loading or self._do(
-					lambda v=int(w.get_value()): headset.set_centurion_mic_gain(self.dev, v)))
-				c.append(row('Gain', s))
-			else:
-				s = slider(0, 100, mic['gain'])
-				s.connect('value-changed', lambda w: self.loading or self._do(
-					lambda v=int(w.get_value()): features.set_mic_gain(self.dev, v, mic['gain_type'])))
-				c.append(row('Gain (%)', s))
+			c.append(self._mic_gain_row(mic))
 		if 'plugged' in mic:
 			c.append(row('Headphones', label('Plugged in' if mic['plugged'] else 'Not plugged in', ['muted'])))
 		if 'headphones' in mic:
@@ -558,6 +541,28 @@ class SettingsPanel(Gtk.Box):
 				lambda v=int(w.get_value()): features.set_mic_monitoring(self.dev, v)))
 			c.append(row('Mic monitoring (%)', m))
 		return c
+
+	def _mic_mute_row(self, mic):
+		sw = Gtk.Switch(active=mic['muted'], valign=Gtk.Align.CENTER)
+		if mic.get('centurion'):
+			set_muted = headset.set_centurion_mic_muted
+		else:
+			def set_muted(dev, on):
+				features.set_mic_muted(dev, on, self.device.usb_id)
+		sw.connect(NOTIFY_ACTIVE, lambda w, _p: self.loading or self._do(
+			lambda on=w.get_active(): set_muted(self.dev, on)))
+		return row('Mute', sw)
+
+	def _mic_gain_row(self, mic):
+		if 'gain_range' in mic:                           # the headset's own units (0x0611)
+			s = slider(*mic['gain_range'], mic['gain'])
+			s.connect('value-changed', lambda w: self.loading or self._do(
+				lambda v=int(w.get_value()): headset.set_centurion_mic_gain(self.dev, v)))
+			return row('Gain', s)
+		s = slider(0, 100, mic['gain'])
+		s.connect('value-changed', lambda w: self.loading or self._do(
+			lambda v=int(w.get_value()): features.set_mic_gain(self.dev, v, mic['gain_type'])))
+		return row('Gain (%)', s)
 
 	def _charging_card(self, info):
 		c = card('Charging', 'Let the device charge from this computer.')
