@@ -630,11 +630,11 @@ class Animated(Visualizer):
 				return
 
 
-# signature effects and their default colours (ours)
-SIGNATURE = {'smooth_wave': ((0, 127, 255), (255, 255, 255)), 'smooth_star': ((0, 0, 0), (0, 184, 252)),
-             'pulsar_point': ((0, 127, 255), (0, 127, 255)), 'remind_me_of': ((255, 64, 0), (0, 0, 0)),
-             'g_3_series': ((255, 0, 80), (0, 90, 255)), 'neon': ((255, 0, 200), (0, 0, 0)),
-             'outer_space': ((120, 0, 255), (0, 0, 0))}
+# signature effects and their default colours: G HUB's #FF00AB / #00B8FC (dualColorParams of its
+# signature presets in the keyboards' defaults_override.json)
+GHUB_PINK, GHUB_BLUE = (0xFF, 0x00, 0xAB), (0x00, 0xB8, 0xFC)
+SIGNATURE = dict.fromkeys(('smooth_wave', 'smooth_star', 'pulsar_point', 'remind_me_of', 'g_3_series', 'neon',
+                           'outer_space'), (GHUB_PINK, GHUB_BLUE))
 ANIMATED = ('keyframe', 'device', 'starlight', 'cycle', 'echo') + tuple(SIGNATURE)
 
 

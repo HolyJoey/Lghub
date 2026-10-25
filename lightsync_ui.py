@@ -36,17 +36,17 @@ def card(model, restore, per_key=True):
 	echo = _color_button(settings.get('echo', [255, 255, 255]))
 	rest = _color_button(settings.get('rest', [0, 0, 0]))
 	echo_speed = _slider(*softlight.STAR_SPEED, settings.get('speed', 1000), ' ms')
-	wave1 = _color_button(settings.get('color', [0, 127, 255]))       # ours: G HUB's defaults not known
-	wave2 = _color_button(settings.get('color2', [255, 255, 255]))
-	star1 = _color_button(settings.get('color', [0, 0, 0]))           # ours (the start colour)
-	star2 = _color_button(settings.get('color2', [0, 184, 252]))      # G HUB's twinkle blue as the default (ours)
-	pulse1 = _color_button(settings.get('color', [0, 127, 255]))      # ours
-	pulse2 = _color_button(settings.get('color2', [0, 127, 255]))
-	remind = _color_button(settings.get('color', [255, 64, 0]))       # ours
-	g3a = _color_button(settings.get('color', [255, 0, 80]))          # ours
-	g3b = _color_button(settings.get('color2', [0, 90, 255]))
-	neon_c = _color_button(settings.get('color', [255, 0, 200]))      # ours
-	space_c = _color_button(settings.get('color', [120, 0, 255]))     # ours
+	wave1 = _color_button(settings.get('color', list(lightsync.GHUB_PINK)))
+	wave2 = _color_button(settings.get('color2', list(lightsync.GHUB_BLUE)))
+	star1 = _color_button(settings.get('color', list(lightsync.GHUB_PINK)))
+	star2 = _color_button(settings.get('color2', list(lightsync.GHUB_BLUE)))
+	pulse1 = _color_button(settings.get('color', list(lightsync.GHUB_PINK)))
+	pulse2 = _color_button(settings.get('color2', list(lightsync.GHUB_BLUE)))
+	remind = _color_button(settings.get('color', list(lightsync.GHUB_PINK)))
+	g3a = _color_button(settings.get('color', list(lightsync.GHUB_PINK)))
+	g3b = _color_button(settings.get('color2', list(lightsync.GHUB_BLUE)))
+	neon_c = _color_button(settings.get('color', list(lightsync.GHUB_PINK)))
+	space_c = _color_button(settings.get('color', list(lightsync.GHUB_PINK)))
 	regions = Gtk.Button(label='Edit regions')
 
 	def edit_regions(_b):

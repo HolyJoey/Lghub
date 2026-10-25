@@ -257,7 +257,8 @@ copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
   gradient, gradient sampler, gradient tween, colour blend, its gradient stops and colour blend;
   tests). Done: Smooth Wave (its whole tree from G HUB's builder 0x14121b700: 23 tween
   keyframes, the blends and pauses) on per-key keyboards. Ours: 30 fps, which LEDs make G HUB's
-  two extra groups (taken as the logo / indicator keys), default colours, restarting at the end.
+  two extra groups (taken as the logo / indicator keys), restarting at the end. Default colours are
+  G HUB's (#FF00AB / #00B8FC, from its keyboards' signature presets).
   Smooth Star done the same way (builder 0x141218ff0: startup glow, the gradient sweep, G HUB's
   starlight twinkles; ported StartupFrameHandler and StarlightFrameHandler too). Its zonal roots
   (+0x190 / +0x1b0) not used yet.

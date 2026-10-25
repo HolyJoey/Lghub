@@ -25,6 +25,9 @@ import math
 
 import softlight
 
+# G HUB's default signature colours (#FF00AB / #00B8FC, its keyboards' defaults_override.json)
+GHUB_PINK, GHUB_BLUE = (0xFF, 0x00, 0xAB, 255), (0x00, 0xB8, 0xFC, 255)
+
 # Qt's QEasingCurve order, which G HUB's easing function (FUN_142a44080) switches on
 EASINGS = ['LINEAR'] + [prefix + name for name in ('QUAD', 'CUBIC', 'QUART', 'QUINT', 'SINE', 'EXPO', 'CIRC',
                                                    'ELASTIC', 'BACK', 'BOUNCE')
@@ -401,10 +404,10 @@ def layout_leds(layout):
 	return leds, accent, indicator
 
 
-def smooth_wave(leds, accent=(), indicator=(), c1=(0, 127, 255, 255), c2=(255, 255, 255, 255)):
+def smooth_wave(leds, accent=(), indicator=(), c1=GHUB_PINK, c2=GHUB_BLUE):
 	"""G HUB's Smooth Wave as a handler tree. leds = [(id, x, y)] in 0-1 coordinates; accent and
 	indicator = led ids of G HUB's two other LED groups (metadata +0x100 / +0x110; which LEDs
-	those are isn't read yet: ours). Default colours are ours."""
+	those are isn't read yet: ours). Default colours are G HUB's signature defaults."""
 	off = (0, 0, 0, 0)
 	names = {C1: tuple(c1), C2H: half_value(c2), BLUE: (0xAF, 0xC9, 0xD5, 0xFF), OFF: off}
 
@@ -448,10 +451,10 @@ _SS_KEYFRAMES = (
 STAR_BLUE = (0, 184, 252, 255)          # G HUB's twinkle colour in Smooth Star (fixed)
 
 
-def smooth_star(leds, logo=(), c1=(0, 0, 0, 255), c2=STAR_BLUE, rng=None):
+def smooth_star(leds, logo=(), c1=GHUB_PINK, c2=GHUB_BLUE, rng=None):
 	"""G HUB's Smooth Star for per-key keyboards (its root at metadata +0x1a0): a startup glow from
 	the top centre, then the gradient sweep with twinkles over it. LED groups +0xe0 / +0xf0 /
-	+0x100 taken as all keys and +0x110 as the logo (ours); default colours are ours."""
+	+0x100 taken as all keys and +0x110 as the logo (ours); default colours are G HUB's."""
 	off = (0, 0, 0, 0)
 	c1, c2 = tuple(c1), tuple(c2)
 	frames = [(n, 0.0, [(p, c2 if c == C2 else off if c == OFF else c, b) for p, c, b in stops])
@@ -475,7 +478,7 @@ def stops(*items):
 	return sorted(items, key=lambda s: s[0])
 
 
-def pulsar_point(leds, logo=(), indicator=(), c1=(0, 127, 255, 255), c2=(0, 127, 255, 255)):
+def pulsar_point(leds, logo=(), indicator=(), c1=GHUB_PINK, c2=GHUB_BLUE):
 	"""G HUB's Pulsar Point (signature style 1, per-key case in 0x1412084c0): a pulse of the colour
 	with two dim bands sweeping across the keys, looping. Its colour is the second one (G HUB uses
 	the first only for a device kind with LED group +0x108 and +0xe4 == 0x80); the logo keeps the
@@ -490,7 +493,7 @@ def pulsar_point(leds, logo=(), indicator=(), c1=(0, 127, 255, 255), c2=(0, 127,
 	return Parallelizer(children)
 
 
-def remind_me_of(leds, c1=(255, 64, 0, 255)):
+def remind_me_of(leds, c1=GHUB_PINK):
 	"""G HUB's Remind Me Of (signature style 3, per-key case in 0x1412084c0): a band of the colour
 	sweeps in from the left, then one from the right (each 30 frames, clipped). One colour (the
 	effect's first); logo and indicators aren't part of it in G HUB."""
@@ -504,7 +507,7 @@ def remind_me_of(leds, c1=(255, 64, 0, 255)):
 	                  Parallelizer([GradientTween(leds, area, right, clip=True)])])
 
 
-def g_3_series(leds, c1=(255, 0, 80, 255), c2=(0, 90, 255, 255)):
+def g_3_series(leds, c1=GHUB_PINK, c2=GHUB_BLUE):
 	"""G HUB's G 3 Series (signature style 2, per-key case in 0x1412084c0): a vertical gradient that
 	breathes from the second colour at the centre to the first and back (two gradients of 4
 	keyframes each, run one after the other). D1 / D2 = the colours at 70 %."""
@@ -539,7 +542,7 @@ _NEON = ((20, 1), -2, (1, 0.9), -3, (1, 0.5), -1, (1, 0.9), -3, (1, 0.8), -1, (1
          (1, 0.8), -1, (1, 1), -25)
 
 
-def neon(leds, c1=(255, 0, 200, 255)):
+def neon(leds, c1=GHUB_PINK):
 	"""G HUB's Neon (signature style 4, per-key case in 0x1412084c0): the keys flicker like a neon
 	tube at G HUB's brightness steps, then hold, in one sequence."""
 	ids = [led for led, _x, _y in leds]
@@ -554,7 +557,7 @@ _OUTER_SPACE = ((40, 0), (3, 1), (3, 0), (9, 1), (3, 0), (3, 1), (3, 0), (3, 1),
                 (3, 0), (9, 1), (9, 0), (9, 1), (3, 0), (9, 1), (3, 0), (9, 0), (3, 1), (3, 0), (3, 1), (30, 0))
 
 
-def outer_space(leds, c1=(120, 0, 255, 255)):
+def outer_space(leds, c1=GHUB_PINK):
 	"""G HUB's Outer Space (signature style 5, per-key case in 0x1412084c0): the keys flash the
 	colour in G HUB's on / off rhythm."""
 	ids = [led for led, _x, _y in leds]

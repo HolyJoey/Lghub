@@ -128,7 +128,7 @@ class SignatureTest(unittest.TestCase):
 			for k, c in f.colors.items():
 				seen.setdefault(k, set()).add(c[2])
 		self.assertGreater(len(seen['k5']), 3)              # the key's brightness changes as bands pass
-		self.assertEqual(seen['logo'], {255})               # the logo keeps the first colour
+		self.assertEqual(seen['logo'], {sig.GHUB_PINK[2]})  # the logo keeps the first colour (G HUB's default)
 		self.assertEqual(sig.stops((1, 'b', 0.5), (0, 'a', 0.5))[0][1], 'a')
 
 	def test_neon_flickers_then_holds(self):
