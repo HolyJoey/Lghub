@@ -16,7 +16,7 @@ classes, G HUB 2026.6) and its app features.
 - Versions: 0.9.8's updater reads four-part versions, so small fixes can ship as 0.9.8.x
   (0.9.7 and older only see three-part ones).
 
-## Progress (overall about 84%)
+## Progress (overall about 85%)
 
 The percentages are rough estimates of how much of each area's G HUB features Lghub has, not
 measurements.
@@ -28,14 +28,14 @@ measurements.
 | Surround, equalizer | 100% | check on the G Pro X |
 | PRO 5-band equalizer | 40% | read-only probe done (`proeq.py`); needs the G Pro X |
 | Mice | 94% | see "Mice" below |
-| Keyboards | 80% | analog keys' per-key settings, onboard profiles; see "Keyboards" below |
+| Keyboards | 80% | analog keys' per-key settings and onboard-profile editing (formats found, not built); see "Keyboards" below |
 | Headsets (other than the voice chain) | 50% | Centurion and the newer headsets; see "Headsets" below |
 | Yeti controls | 100% | check on a Yeti |
 | Litra lights | 90% | check on a Litra Glow / Beam |
 | Webcams | 90% | check on the C920 |
 | Wireless (receivers, Bluetooth, power) | 80% | pairing; see "Wireless and power" below |
 | Device catalog | 100% | 11 of G HUB's device files have keys outside its public channel (unreleased?) |
-| Lighting | 98% | screen sampler portal on GNOME / KDE |
+| Lighting | 96% | signature effects' zonal versions, G Tide; screen sampler portal on GNOME / KDE |
 | App features | 85% | see "App" below |
 | Background service | 95% | re-measured 2026-10-20: 0.2% CPU, 28 MB idle |
 
@@ -253,7 +253,10 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   SignatureAlgorithmicEffect players, ~2000 lines of vector maths each), and Smooth Star /
   Wave: G HUB has both effect types SMOOTH_STAR / SMOOTH_WAVE (14 / 15, done below) and
   signature types 16 / 17 that its UI also labels Smooth Star / Smooth Wave (firmware ids 18 / 19 on
-  keyboards that have them; the software versions are other builders, not ported).
+  keyboards that have them). Type 17's builder is identical to Smooth Wave's, and type 16's style 0 (its
+  Smooth Star) builds the same tree as Smooth Star, so both are done; type 16's other per-key styles are done too (Pulsar Point, G 3 Series, Remind Me
+  Of, Neon, Outer Space; signature.py). Left: their zonal versions, Astro Point (headsets), G Tide
+  (type 18).
   Started: G HUB's frame-handler engine is ported (signature.py: sequencer, parallel, pause,
   gradient, gradient sampler, gradient tween, colour blend, its gradient stops and colour blend;
   tests). Done: Smooth Wave (its whole tree from G HUB's builder 0x14121b700: 23 tween

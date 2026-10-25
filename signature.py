@@ -17,8 +17,9 @@ A gradient is G HUB's stop list (position, colour, bias); between two stops the 
 cubic-bezier(0, 0, bias, 1 - bias) (FUN_142a43c50). Colours are (r, g, b, a) bytes, blended per
 channel and truncated (0x1410f6c20). LEDs are (id, x, y). The effect trees themselves come from
 G HUB's per-effect builders: Smooth Star and Smooth Wave (its effect types 14 / 15) are
-ported; the signature types 16-18 (Pulsar Point, G 3 Series, ... and the prefabs G HUB's UI also
-labels Smooth Star / Smooth Wave) are other builders, not yet.
+ported; G HUB's signature versions of both (type 17, and type 16's style 0) build the same trees.
+Type 16's other per-key styles are here too (Pulsar Point, G 3 Series, Remind Me Of, Neon,
+Outer Space); their zonal versions and type 18 (G Tide) aren't yet.
 """
 import math
 
@@ -461,6 +462,116 @@ def smooth_star(leds, logo=(), c1=(0, 0, 0, 255), c2=STAR_BLUE, rng=None):
 		Parallelizer([Gradient(leds, (0.0, 0.0, 1.0, 1.0), frames, loop=True),
 		              Starlight(ids, STAR_BLUE, 0, 37, 31, 20, rng=rng),
 		              ColorBlend(list(logo), c1, c1, 1, loop=True)])])
+
+
+def dim(color, k):
+	"""G HUB's brightness scale (FUN_1410f70c0): r, g, b x k, clamped; alpha kept."""
+	return tuple(min(255, int(c * k)) for c in color[:3]) + tuple(color[3:])
+
+
+def stops(*items):
+	"""A gradient's stops sorted by position, as G HUB's gradient constructor (FUN_142a46680 ->
+	FUN_142a463a0) does."""
+	return sorted(items, key=lambda s: s[0])
+
+
+def pulsar_point(leds, logo=(), indicator=(), c1=(0, 127, 255, 255), c2=(0, 127, 255, 255)):
+	"""G HUB's Pulsar Point (signature style 1, per-key case in 0x1412084c0): a pulse of the colour
+	with two dim bands sweeping across the keys, looping. Its colour is the second one (G HUB uses
+	the first only for a device kind with LED group +0x108 and +0xe4 == 0x80); the logo keeps the
+	first colour and the indicators the pulse colour (LED groups +0x118 / +0x128: ours)."""
+	c = tuple(c2)
+	band = stops((0, c, 0.5), (1.0, c, 0.5), (0.5, c, 0.5), (0.25, dim(c, 0.25), 0.5), (0.75, dim(c, 0.25), 0.5))
+	keyframes = [(69, (-1.0287, 0.9531, 1.0032, 0.9698), band), (1, (-0.0033, 1.0015, 2.0339, 1.0268), band)]
+	children = [GradientTween(leds, (0.0, 0.0, 1.0, 1.0), keyframes, loop=True, clip=True),
+	            ColorBlend(list(logo), tuple(c1), tuple(c1), 60, loop=True)]
+	if indicator:
+		children.append(ColorBlend(list(indicator), c, c, 60, loop=True))
+	return Parallelizer(children)
+
+
+def remind_me_of(leds, c1=(255, 64, 0, 255)):
+	"""G HUB's Remind Me Of (signature style 3, per-key case in 0x1412084c0): a band of the colour
+	sweeps in from the left, then one from the right (each 30 frames, clipped). One colour (the
+	effect's first); logo and indicators aren't part of it in G HUB."""
+	c = tuple(c1)
+	off = (0, 0, 0, 0)
+	band = stops((0, c, 0.5), (1.0, off, 0.5), (0.4, dim(c, 0.8), 0.5), (0.3, c, 0.5), (0.94, off, 0.5))
+	area = (0.0, 0.0, 1.0, 1.0)
+	left = [(30, (-0.4269, 0.4743, 0.1159, 0.4743), band), (1, (0.7233, 0.4536, 1.0368, 0.4564), band)]
+	right = [(30, (1.4622, 0.5138, 0.8992, 0.512), band), (1, (0.2519, 0.4937, -0.0406, 0.491), band)]
+	return Sequencer([Parallelizer([GradientTween(leds, area, left, clip=True)]),
+	                  Parallelizer([GradientTween(leds, area, right, clip=True)])])
+
+
+def g_3_series(leds, c1=(255, 0, 80, 255), c2=(0, 90, 255, 255)):
+	"""G HUB's G 3 Series (signature style 2, per-key case in 0x1412084c0): a vertical gradient that
+	breathes from the second colour at the centre to the first and back (two gradients of 4
+	keyframes each, run one after the other). D1 / D2 = the colours at 70 %."""
+	a, b = tuple(c1), tuple(c2)
+	d1, d2 = dim(a, 0.7), dim(b, 0.7)
+	up = math.pi / 2                            # G HUB's 1.57
+	centre_b = stops((0, d1, 0.5), (0.14, d2, 0.33), (0.5, b, 0.66), (0.86, d2, 0.5), (1.0, d1, 0.5))
+	centre_a = stops((0, d2, 0.5), (0.14, d1, 0.5), (0.49, a, 0.5), (0.86, d1, 0.5), (1.0, d2, 0.5))
+	to_a = [(15, up, centre_b),
+	        (30, up, stops((0, d2, 0.5), (0.23, b, 0.5), (0.37, d2, 0.5), (0.5, d1, 0.5), (0.63, d2, 0.5),
+	                       (0.77, b, 0.5), (1.0, d2, 0.5))),
+	        (30, up, stops((0, b, 0.5), (0.19, d2, 0.5), (0.37, d1, 0.5), (0.5, a, 0.5), (0.63, d1, 0.5),
+	                       (0.81, d2, 0.5), (1.0, b, 0.5))),
+	        (30, up, centre_a)]
+	to_b = [(15, up, centre_a),
+	        (30, up, stops((0, d1, 0.5), (0.23, a, 0.5), (0.37, d1, 0.5), (0.5, d2, 0.5), (0.63, d1, 0.5),
+	                       (0.77, a, 0.5), (1.0, d1, 0.5))),
+	        (30, up, stops((0, a, 0.5), (0.19, d1, 0.5), (0.37, d2, 0.5), (0.5, b, 0.5), (0.62, d2, 0.5),
+	                       (0.81, d1, 0.5), (1.0, a, 0.5))),
+	        (30, up, centre_b)]
+	area = (0.0, 0.0, 1.0, 1.0)
+	return Sequencer([Gradient(leds, area, to_a), Gradient(leds, area, to_b)])
+
+
+# Neon's steps (signature style 4): (frames, brightness) = the colour at that brightness, -n = a
+# pause of n frames (G HUB's sequence, re/notes/signature_neon_sequence.txt)
+_NEON = ((20, 1), -2, (1, 0.9), -3, (1, 0.5), -1, (1, 0.9), -3, (1, 0.8), -1, (1, 0.7), -2, -1, (1, 0.5), -2,
+         (1, 0.6), -2, (1, 0.7), -1, (1, 0.8), -3, (1, 0.9), -1, (1, 0.8), -2, (1, 0.5), -3, (1, 0.7), -2,
+         (1, 0.6), -3, (1, 1), -57, (1, 0.8), -1, (1, 0.8), -2, (1, 0.7), -1, (1, 0.6), -3, (1, 0.5), -1,
+         (1, 0.8), -2, (1, 0.5), -3, (1, 0.7), -2, (1, 1), -42, (1, 0.7), -3, (1, 0.6), -2, (1, 1), -73,
+         (1, 0.5), -3, (1, 0.9), -1, (1, 0.8), -2, (1, 0.7), -3, (1, 0.6), -1, (1, 0.5), -2, (1, 0.9), -3,
+         (1, 0.8), -1, (1, 1), -25)
+
+
+def neon(leds, c1=(255, 0, 200, 255)):
+	"""G HUB's Neon (signature style 4, per-key case in 0x1412084c0): the keys flicker like a neon
+	tube at G HUB's brightness steps, then hold, in one sequence."""
+	ids = [led for led, _x, _y in leds]
+	c = tuple(c1)
+	steps = [Pause(-s) if isinstance(s, int) else ColorBlend(ids, dim(c, s[1]), dim(c, s[1]), s[0]) for s in _NEON]
+	return Sequencer(steps)
+
+
+# Outer Space's steps (signature style 5): (frames, on) - G HUB's sequence of the colour and off,
+# 3- and 9-frame flashes like Morse code (re/notes/signature_outer_space_sequence.txt)
+_OUTER_SPACE = ((40, 0), (3, 1), (3, 0), (9, 1), (3, 0), (3, 1), (3, 0), (3, 1), (9, 0), (9, 1), (3, 0), (9, 1),
+                (3, 0), (9, 1), (9, 0), (9, 1), (3, 0), (9, 1), (3, 0), (9, 0), (3, 1), (3, 0), (3, 1), (30, 0))
+
+
+def outer_space(leds, c1=(120, 0, 255, 255)):
+	"""G HUB's Outer Space (signature style 5, per-key case in 0x1412084c0): the keys flash the
+	colour in G HUB's on / off rhythm."""
+	ids = [led for led, _x, _y in leds]
+	c, off = tuple(c1), (0, 0, 0, 0)
+	return Sequencer([ColorBlend(ids, c if on else off, c if on else off, n) for n, on in _OUTER_SPACE])
+
+
+# name -> build(leds, logo ids, indicator ids, c1, c2), for lightsync
+EFFECTS = {
+	'smooth_wave': lambda leds, logo, ind, c1, c2: smooth_wave(leds, logo, ind, c1, c2),
+	'smooth_star': lambda leds, logo, _ind, c1, c2: smooth_star(leds, logo, c1, c2),
+	'pulsar_point': pulsar_point,
+	'remind_me_of': lambda leds, _logo, _ind, c1, _c2: remind_me_of(leds, c1),
+	'g_3_series': lambda leds, _logo, _ind, c1, c2: g_3_series(leds, c1, c2),
+	'neon': lambda leds, _logo, _ind, c1, _c2: neon(leds, c1),
+	'outer_space': lambda leds, _logo, _ind, c1, _c2: outer_space(leds, c1),
+}
 
 
 class Player:

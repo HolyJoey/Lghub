@@ -571,9 +571,8 @@ class Animated(Visualizer):
 		leds, logo, indicator = signature.layout_leds(self.layout)
 		d1, d2 = SIGNATURE[s['effect']]
 		c1, c2 = tuple(s.get('color', d1)) + (255,), tuple(s.get('color2', d2)) + (255,)
-		if s['effect'] == 'smooth_star':
-			return signature.Player(lambda: signature.smooth_star(leds, logo, c1, c2))
-		return signature.Player(lambda: signature.smooth_wave(leds, logo, indicator, c1, c2))
+		build = signature.EFFECTS[s['effect']]
+		return signature.Player(lambda: build(leds, logo, indicator, c1, c2))
 
 	def start(self):
 		if not self.target:
@@ -632,7 +631,10 @@ class Animated(Visualizer):
 
 
 # signature effects and their default colours (ours)
-SIGNATURE = {'smooth_wave': ((0, 127, 255), (255, 255, 255)), 'smooth_star': ((0, 0, 0), (0, 184, 252))}
+SIGNATURE = {'smooth_wave': ((0, 127, 255), (255, 255, 255)), 'smooth_star': ((0, 0, 0), (0, 184, 252)),
+             'pulsar_point': ((0, 127, 255), (0, 127, 255)), 'remind_me_of': ((255, 64, 0), (0, 0, 0)),
+             'g_3_series': ((255, 0, 80), (0, 90, 255)), 'neon': ((255, 0, 200), (0, 0, 0)),
+             'outer_space': ((120, 0, 255), (0, 0, 0))}
 ANIMATED = ('keyframe', 'device', 'starlight', 'cycle', 'echo') + tuple(SIGNATURE)
 
 

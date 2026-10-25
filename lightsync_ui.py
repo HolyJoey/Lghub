@@ -40,6 +40,13 @@ def card(model, restore, per_key=True):
 	wave2 = _color_button(settings.get('color2', [255, 255, 255]))
 	star1 = _color_button(settings.get('color', [0, 0, 0]))           # ours (the start colour)
 	star2 = _color_button(settings.get('color2', [0, 184, 252]))      # G HUB's twinkle blue as the default (ours)
+	pulse1 = _color_button(settings.get('color', [0, 127, 255]))      # ours
+	pulse2 = _color_button(settings.get('color2', [0, 127, 255]))
+	remind = _color_button(settings.get('color', [255, 64, 0]))       # ours
+	g3a = _color_button(settings.get('color', [255, 0, 80]))          # ours
+	g3b = _color_button(settings.get('color2', [0, 90, 255]))
+	neon_c = _color_button(settings.get('color', [255, 0, 200]))      # ours
+	space_c = _color_button(settings.get('color', [120, 0, 255]))     # ours
 	regions = Gtk.Button(label='Edit regions')
 
 	def edit_regions(_b):
@@ -53,7 +60,12 @@ def card(model, restore, per_key=True):
 	        'cycle': [('Speed', cycle_speed)],
 	        'echo': [('Echo colour', echo), ('Rest colour', rest), ('Fade', echo_speed)],
 	        'smooth_wave': [('Colour', wave1), ('Second colour', wave2)],
-	        'smooth_star': [('Start colour', star1), ('Colour', star2)]}
+	        'smooth_star': [('Start colour', star1), ('Colour', star2)],
+	        'pulsar_point': [('Logo colour', pulse1), ('Pulse colour', pulse2)],
+	        'remind_me_of': [('Colour', remind)],
+	        'g_3_series': [('Colour', g3a), ('Centre colour', g3b)],
+	        'neon': [('Colour', neon_c)],
+	        'outer_space': [('Colour', space_c)]}
 	widgets = _add_rows(card, rows)
 
 	def show():
@@ -73,6 +85,11 @@ def card(model, restore, per_key=True):
 		          'echo': lambda: {'echo': _rgb(echo), 'rest': _rgb(rest), 'speed': round(echo_speed.get_value())},
 		          'smooth_wave': lambda: {'color': _rgb(wave1), 'color2': _rgb(wave2)},
 		          'smooth_star': lambda: {'color': _rgb(star1), 'color2': _rgb(star2)},
+		          'pulsar_point': lambda: {'color': _rgb(pulse1), 'color2': _rgb(pulse2)},
+		          'remind_me_of': lambda: {'color': _rgb(remind)},
+		          'g_3_series': lambda: {'color': _rgb(g3a), 'color2': _rgb(g3b)},
+		          'neon': lambda: {'color': _rgb(neon_c)},
+		          'outer_space': lambda: {'color': _rgb(space_c)},
 		          'keyframe': lambda: {'file': effects[effect.get_selected()][1]},
 		          'custom': lambda: {'custom': effects[effect.get_selected()][1]}}
 		if kind:
@@ -168,8 +185,8 @@ def _chosen(effects, settings):
 
 def _intro(per_key):
 	if per_key:
-		return ('Effects the background service plays on the keys: G HUB’s own animations, Smooth Star and '
-		        'Smooth Wave, '
+		return ('Effects the background service plays on the keys: G HUB’s own animations, its signature '
+		        'effects, '
 		        'starlight, colour cycle, echo press, the audio visualizer (bass left, treble right) and the screen sampler (grim, or '
 		        'the desktop’s screen sharing, which asks once). Your colours come back when it is off.')
 	return ('Effects the background service plays on the lighting zones: starlight, colour cycle, echo press '
@@ -188,7 +205,10 @@ def _effects(per_key, model=None):
 	if per_key:
 		own = [('device', name, SIGNATURE_NAMES.get(name, name.replace('_', ' ').capitalize()))
 		       for name, _e in softlight.device_effects(model)] if model else []
-		return effects + [('smooth_star', None, 'Smooth Star'), ('smooth_wave', None, 'Smooth Wave')] + own + _keyframe_effects() + [('custom', file, name) for name, file in softlight.custom_effects()]
+		return effects + [('smooth_star', None, 'Smooth Star'), ('smooth_wave', None, 'Smooth Wave'),
+		                  ('pulsar_point', None, 'Pulsar Point'), ('remind_me_of', None, 'Remind Me Of'),
+		                  ('g_3_series', None, 'G 3 Series'), ('neon', None, 'Neon'),
+		                  ('outer_space', None, 'Outer Space')] + own + _keyframe_effects() + [('custom', file, name) for name, file in softlight.custom_effects()]
 	return effects                                     # G HUB: no keyframe animations on zones
 
 

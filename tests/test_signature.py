@@ -118,6 +118,39 @@ class SignatureTest(unittest.TestCase):
 			lit.update(k for k, c in f.colors.items() if any(c[:3]))
 		self.assertGreater(len(lit), 40)
 
+	def test_pulsar_point_sweeps(self):
+		leds = [(f'k{x}', x / 9, 0.5) for x in range(10)]
+		tree = sig.pulsar_point(leds, logo=['logo'], c2=(0, 100, 200, 255))
+		seen = {}
+		for _ in range(70):
+			f = sig.Frame()
+			self.assertTrue(tree.step(f))
+			for k, c in f.colors.items():
+				seen.setdefault(k, set()).add(c[2])
+		self.assertGreater(len(seen['k5']), 3)              # the key's brightness changes as bands pass
+		self.assertEqual(seen['logo'], {255})               # the logo keeps the first colour
+		self.assertEqual(sig.stops((1, 'b', 0.5), (0, 'a', 0.5))[0][1], 'a')
+
+	def test_neon_flickers_then_holds(self):
+		tree = sig.neon([('k', 0.5, 0.5)], c1=(200, 0, 100, 255))
+		levels, steps = [], 0
+		while tree.step(f := sig.Frame()):
+			if 'k' in f.colors:
+				levels.append(f.colors['k'][0])
+			steps += 1
+		# each child also takes the frame in which it reports it is done (G HUB's sequencer)
+		self.assertEqual(steps, sum(s[0] if isinstance(s, tuple) else -s for s in sig._NEON) + len(sig._NEON))
+		self.assertEqual(set(levels), {200, 180, 160, 140, 120, 100})
+
+	def test_remind_me_of_and_g3(self):
+		leds = [(f'k{x}', x / 9, 0.5) for x in range(10)]
+		for name, build in sig.EFFECTS.items():
+			tree = build(leds, ['logo'], ['ind'], (200, 0, 0, 255), (0, 0, 200, 255))
+			self.assertIn(name, ('smooth_wave', 'smooth_star', 'pulsar_point', 'remind_me_of', 'g_3_series', 'neon',
+			                     'outer_space'))
+			for _ in range(120):
+				tree.step(sig.Frame())
+
 	def test_player_restarts(self):
 		calls = []
 
