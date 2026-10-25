@@ -15,6 +15,20 @@ import depots
 import hidpp
 import store
 
+def _box(r):
+	"""(x, y, w, h) of a rendering: a rect, or a round LED (centre and radius -> its box, ours). G HUB
+	writes circles as {"circle": {cx, cy, r}} or, on some mice, {"rect": {x, y, r}}."""
+	rect = r.get('rect', {})
+	if r.get('type') == 'rect':
+		return rect['x'], rect['y'], rect['width'], rect['height']
+	if r.get('type') == 'circle':
+		c = r.get('circle') or {}
+		cx, cy, rad = c.get('cx', rect.get('x')), c.get('cy', rect.get('y')), c.get('r', rect.get('r'))
+		if None not in (cx, cy, rad):
+			return cx - rad, cy - rad, 2 * rad, 2 * rad
+	return None
+
+
 def load_layout(model):
 	"""(width, height, [(group, id, x, y, w, h)]) from G HUB's metadata, or None."""
 	path = depots.metadata_path(model)
@@ -23,15 +37,8 @@ def load_layout(model):
 			image = json.load(f)['images'][0]
 	except (OSError, ValueError, KeyError, IndexError):
 		return None
-	keys = []
-	for zone in image.get('zones', []):
-		for comp in zone.get('components', []):
-			for r in comp.get('renderings', []):
-				rect = r.get('rect', {})
-				if r.get('type') == 'rect':
-					keys.append((zone['id'], comp['id'], rect['x'], rect['y'], rect['width'], rect['height']))
-				elif r.get('type') == 'circle' and 'r' in rect:      # a mouse's LED: centre and radius (ours: its box)
-					keys.append((zone['id'], comp['id'], rect['x'] - rect['r'], rect['y'] - rect['r'], 2 * rect['r'], 2 * rect['r']))
+	keys = [(zone['id'], comp['id'], *box) for zone in image.get('zones', []) for comp in zone.get('components', [])
+	        for box in map(_box, comp.get('renderings', [])) if box]
 	origin = image.get('origin', {})
 	return origin.get('width', 1), origin.get('height', 1), keys
 

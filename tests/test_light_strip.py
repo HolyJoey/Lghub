@@ -44,6 +44,16 @@ class LightStripTest(unittest.TestCase):
 		self.assertEqual((width, height), (1391, 2700))
 		self.assertEqual(leds[0], ('PERKEY_COSMETIC', 1, 120, 1590, 620, 620))     # centre and radius -> box
 
+	def test_layout_reads_g_hubs_other_circle_format(self):
+		import tempfile
+		data = {'images': [{'origin': {'width': 100, 'height': 50}, 'zones': [{'id': 'PERKEY_COSMETIC_3', 'components': [
+			{'id': 160, 'renderings': [{'type': 'circle', 'circle': {'cx': 60, 'cy': 30, 'r': 5}}]}]}]}]}
+		with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False) as f:
+			json.dump(data, f)
+		self.addCleanup(os.unlink, f.name)
+		with mock.patch('depots.metadata_path', return_value=f.name):
+			self.assertEqual(perkey.load_layout('g316x')[2], [('PERKEY_COSMETIC_3', 160, 55, 25, 10, 10)])
+
 	def test_colours_go_through_the_light_map(self):
 		fake = simulate.FakeMouseXPlus()
 		colors = {'PERKEY_COSMETIC:1': [1, 2, 3], 'PERKEY_COSMETIC:2': [4, 5, 6]}

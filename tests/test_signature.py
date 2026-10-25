@@ -152,10 +152,11 @@ class SignatureTest(unittest.TestCase):
 				tree.step(sig.Frame())
 
 	def test_g_tide_grows_sweeps_and_shrinks(self):
-		leds = [(f'k{x}{y}', x / 19, y / 5) for x in range(20) for y in range(6)] + [('far', -0.5, -0.5)]
+		ids = sorted({k for group in sig._G_TIDE_LISTS for k in group})
+		leds = [(f'PERKEY_KEYBOARD:{k}', (k % 20) / 19, (k // 20) / 11) for k in ids] + [('PERKEY_KEYBOARD:250', 0, 0)]
 		rings = sig.g_tide_rings(leds)
-		self.assertEqual([len(r) for r in rings][:3], [1, 2, 6])         # G HUB's 1, 2, 5 scaled to 121 keys
-		self.assertNotIn('far', rings[-2])
+		self.assertEqual([len(r) for r in rings], [len(set(g)) for g in sig._G_TIDE_LISTS])   # G HUB's lists
+		self.assertIn('PERKEY_KEYBOARD:154', rings[0])
 		tree = sig.g_tide(leds, c1=(200, 0, 0, 255), c2=(0, 0, 200, 255))
 		first, steps, colors = [], 0, {}
 		while tree.step(f := sig.Frame()):
@@ -164,10 +165,10 @@ class SignatureTest(unittest.TestCase):
 			colors.update(f.colors)
 			steps += 1
 			self.assertLess(steps, 1000)
-		self.assertEqual(first[0], set(rings[0]))                          # starts at the middle key
+		self.assertEqual(first[0], set(rings[0]))
 		# each sampler takes one more frame to report it is done, like the Sequencer's other children
 		self.assertEqual(steps, sum(n + 1 for *_r, n in sig._G_TIDE_OUT + sig._G_TIDE_BACK) + 121 + 1)
-		self.assertEqual(colors['far'][:3], (0, 0, 0))                      # ends black outside the rings
+		self.assertEqual(colors['PERKEY_KEYBOARD:250'][:3], (0, 0, 0))     # ends black outside the lists
 		self.assertIn('g_tide', sig.EFFECTS)
 
 	def test_player_restarts(self):

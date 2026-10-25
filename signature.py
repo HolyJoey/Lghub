@@ -565,11 +565,38 @@ def outer_space(leds, c1=GHUB_PINK):
 	return Sequencer([ColorBlend(ids, c if on else off, c if on else off, n) for n, on in _OUTER_SPACE])
 
 
-# G Tide's 12 key rings (signature type 18, its ctor 0x141213170): G HUB hard-codes 12 lists of LED ids
-# of these sizes (re/notes/g_tide_key_lists.json). Which LED id space they use isn't read yet: on
-# our layouts they aren't zones, HID usages or light-map indexes, so the rings are made here as the
-# keys nearest the keyboard's middle, scaled to the layout's key count (ours).
-_G_TIDE_RING_SIZES = (1, 2, 5, 14, 23, 29, 44, 51, 57, 69, 87, 103)
+# G Tide's 12 key lists (signature type 18, its ctor 0x141213170, offered on the G316 / G316 X only):
+# the key ids G HUB hard-codes; the builder 0x141214500 puts each per-key LED whose id (as a byte) is
+# in list n into group n, whatever its PerKey type (the G316 X's light strip LEDs are 160-179 / 212-221)
+_G_TIDE_LISTS = (
+	(154,),
+	(162, 9,),
+	(162, 9, 18, 51, 212,),
+	(162, 170, 176, 212, 28, 9, 10, 51, 111, 39, 90, 107, 58, 63,),
+	(212, 179, 178, 177, 176, 73, 63, 58, 170, 162, 83, 90, 39, 32, 28, 54, 18, 9, 10, 51, 41, 111, 107,),
+	(162, 170, 212, 179, 178, 177, 176, 219, 58, 63, 65, 73, 28, 32, 39, 18, 9, 46, 10, 54, 22, 51, 41,
+	 107, 111, 78, 83, 90, 85,),
+	(56, 58, 63, 65, 73, 162, 163, 164, 165, 170, 212, 179, 178, 177, 176, 219, 50, 28, 32, 39, 43, 46, 18,
+	 25, 9, 16, 54, 7, 10, 109, 51, 22, 24, 107, 41, 111, 76, 78, 80, 82, 90, 85, 96, 83,),
+	(160, 161, 162, 163, 164, 165, 170, 212, 179, 178, 177, 176, 219, 56, 58, 62, 63, 65, 73, 50, 28, 32,
+	 39, 43, 42, 46, 16, 9, 25, 18, 54, 4, 7, 10, 12, 109, 108, 111, 51, 22, 24, 107, 41, 78, 76, 80, 83,
+	 82, 90, 85, 96,),
+	(160, 161, 162, 163, 164, 165, 170, 212, 179, 178, 177, 176, 215, 219, 56, 58, 62, 63, 65, 73, 50, 28,
+	 32, 34, 39, 43, 42, 46, 16, 9, 25, 18, 23, 54, 4, 7, 8, 10, 12, 109, 108, 111, 76, 78, 41, 51, 22, 24,
+	 107, 106, 80, 83, 82, 94, 90, 85, 96,),
+	(160, 161, 162, 163, 164, 165, 170, 169, 168, 212, 179, 178, 177, 176, 215, 219, 56, 58, 59, 60, 62,
+	 63, 65, 73, 50, 40, 54, 28, 23, 17, 4, 24, 3, 22, 41, 106, 107, 7, 8, 10, 25, 18, 30, 32, 34, 9, 12,
+	 36, 39, 43, 42, 46, 109, 49, 110, 111, 108, 76, 78, 51, 16, 80, 82, 94, 90, 96, 88, 83, 85,),
+	(160, 161, 162, 163, 164, 165, 170, 169, 168, 212, 179, 178, 177, 176, 215, 216, 217, 218, 219, 220,
+	 221, 55, 56, 58, 59, 60, 62, 63, 65, 66, 73, 50, 54, 40, 105, 106, 107, 41, 28, 30, 31, 32, 34, 36,
+	 42, 43, 39, 17, 23, 18, 20, 25, 9, 16, 44, 45, 46, 19, 4, 7, 8, 10, 12, 49, 24, 3, 22, 13, 51, 52,
+	 109, 108, 111, 110, 76, 78, 80, 81, 82, 83, 93, 94, 90, 87, 85, 96, 88,),
+	(170, 169, 168, 167, 166, 165, 164, 163, 162, 161, 160, 177, 178, 179, 212, 213, 214, 215, 216, 217,
+	 218, 219, 220, 221, 176, 55, 56, 58, 59, 60, 61, 62, 63, 73, 66, 65, 50, 27, 28, 30, 31, 32, 34, 35,
+	 36, 42, 43, 39, 40, 17, 23, 18, 20, 25, 21, 9, 46, 45, 44, 16, 54, 1, 19, 4, 7, 8, 10, 11, 12, 48, 49,
+	 105, 26, 24, 3, 22, 13, 51, 52, 109, 107, 104, 106, 41, 110, 111, 108, 76, 78, 83, 82, 81, 80, 92, 89,
+	 90, 93, 91, 94, 85, 88, 87, 96,),
+)
 # its two sampler runs: (ring index or None = every key, position on the gradient, frames)
 # (phase 1 0x1412158e0 grows outwards, phase 2 0x1412168e0 shrinks back; ring 8 twice is G HUB's)
 _G_TIDE_OUT = ((0, 0, 5), (1, 0, 4), (2, 0.09, 5), (3, 0.18, 4), (4, 0.27, 5), (5, 0.36, 4), (6, 0.45, 5),
@@ -580,21 +607,19 @@ _G_TIDE_BACK = ((None, 0, 56), (11, 0.09, 4), (10, 0.18, 5), (9, 0.27, 4), (8, 0
 
 
 def g_tide_rings(leds):
-	"""The 12 rings: the keys nearest the middle of the LEDs, growing to G HUB's ring sizes (ours)."""
-	if not leds:
-		return [[] for _n in _G_TIDE_RING_SIZES]
-	cx = sum(x for _l, x, _y in leds) / len(leds)
-	cy = sum(y for _l, _x, y in leds) / len(leds)
-	near = [led for led, _x, _y in sorted(leds, key=lambda e: (e[1] - cx) ** 2 + (e[2] - cy) ** 2)]
-	scale = len(leds) / _G_TIDE_RING_SIZES[-1]
-	return [near[:max(1, round(n * scale))] for n in _G_TIDE_RING_SIZES]
+	"""G HUB's 12 groups: the LEDs whose key id ("<PerKey type>:<id>", as a byte) is in each list."""
+	def key_id(led):
+		_kind, _sep, key = led.partition(':')
+		return int(key) & 0xFF if key.isdigit() else None
+	ids = [(led, key_id(led)) for led, _x, _y in leds]
+	return [[led for led, k in ids if k in group] for group in map(set, _G_TIDE_LISTS)]
 
 
 def g_tide(leds, c1=GHUB_PINK, c2=GHUB_BLUE):
 	"""G HUB's G Tide (signature type 18, builder 0x141214500 -> FUN_141217ec0): a C1 -> C2 -> C1
-	tide grows ring by ring from the keyboard's middle, a gradient sweeps across (FUN_141218220),
-	then the rings shrink back over black. Timing, gradients and positions are G HUB's; the rings
-	are g_tide_rings (ours)."""
+	tide spreads over G HUB's 12 growing key groups, a gradient sweeps across (FUN_141218220),
+	then the groups go back over black. All G HUB's: timing, gradients, positions and its key
+	lists (g_tide_rings)."""
 	c1, c2, black = tuple(c1), tuple(c2), (0, 0, 0, 255)      # black: G HUB's (0, 0, 0, 1.0) constant
 	ids = [led for led, _x, _y in leds]
 	rings = g_tide_rings(leds)

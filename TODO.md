@@ -35,7 +35,7 @@ measurements.
 | Webcams | 90% | check on the C920 |
 | Wireless (receivers, Bluetooth, power) | 80% | pairing; see "Wireless and power" below |
 | Device catalog | 100% | 11 of G HUB's device files have keys outside its public channel (unreleased?) |
-| Lighting | 97% | signature effects on the G735 / G512 X / G713 / G715 light strips (their per-LED order isn't found), G Tide's key-list ids (rings are ours for now); screen sampler portal on GNOME / KDE |
+| Lighting | 97% | signature effects on the G735 / G512 X / G713 / G715 light strips (their per-LED order isn't found); screen sampler portal on GNOME / KDE |
 | App features | 85% | see "App" below |
 | Background service | 95% | re-measured 2026-10-20: 0.2% CPU, 28 MB idle |
 
@@ -253,9 +253,11 @@ copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
   Of, Neon, Outer Space; signature.py). Done: G HUB's per-model default colours and effect list (its device list, fetched once).
   Left: the strip trees (G HUB's "zonal" groups exist only for the G735 / G512 X bottom strip and the G713 /
   G715 halo; plain zone devices get no signature effect in G HUB either; the strips' per-LED order isn't
-  found yet). Neutron Null (in G HUB's device list) isn't in its 2026.6 program yet: nothing to port. Astro Point (headsets), and G Tide's
-  key lists (type 18: G Tide itself is done, signature.g_tide, with G HUB's timing and gradients; the
-  id space of its 12 hard-coded key lists isn't found, so the rings are ours: nearest keys to the middle).
+  found yet). Neutron Null (in G HUB's device list) isn't in its 2026.6 program yet: nothing to port. Astro Point (headsets). G Tide
+  (type 18, G HUB offers it on the G316 / G316 X) is done fully as G HUB's: timing, gradients and its 12
+  key lists matched against key ids.
+  Next: the per-key effects' extra groups are now read (WASD, logo, light strips; re/notes/lighting.txt
+  'PER-KEY GROUPS READ'); signature.py still uses our guesses (branding / indicator) for them.
   Started: G HUB's frame-handler engine is ported (signature.py: sequencer, parallel, pause,
   gradient, gradient sampler, gradient tween, colour blend, its gradient stops and colour blend;
   tests). Done: Smooth Wave (its whole tree from G HUB's builder 0x14121b700: 23 tween
