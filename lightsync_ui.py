@@ -36,19 +36,19 @@ def card(model, restore, per_key=True):
 	echo = _color_button(settings.get('echo', [255, 255, 255]))
 	rest = _color_button(settings.get('rest', [0, 0, 0]))
 	echo_speed = _slider(*softlight.STAR_SPEED, settings.get('speed', 1000), ' ms')
-	wave1 = _color_button(settings.get('color', list(lightsync.GHUB_PINK)))
-	wave2 = _color_button(settings.get('color2', list(lightsync.GHUB_BLUE)))
-	star1 = _color_button(settings.get('color', list(lightsync.GHUB_PINK)))
-	star2 = _color_button(settings.get('color2', list(lightsync.GHUB_BLUE)))
-	pulse1 = _color_button(settings.get('color', list(lightsync.GHUB_PINK)))
-	pulse2 = _color_button(settings.get('color2', list(lightsync.GHUB_BLUE)))
-	remind = _color_button(settings.get('color', list(lightsync.GHUB_PINK)))
-	g3a = _color_button(settings.get('color', list(lightsync.GHUB_PINK)))
-	g3b = _color_button(settings.get('color2', list(lightsync.GHUB_BLUE)))
-	neon_c = _color_button(settings.get('color', list(lightsync.GHUB_PINK)))
-	space_c = _color_button(settings.get('color', list(lightsync.GHUB_PINK)))
-	tide1 = _color_button(settings.get('color', list(lightsync.GHUB_PINK)))
-	tide2 = _color_button(settings.get('color2', list(lightsync.GHUB_BLUE)))
+	wave1 = _color_button(settings.get('color', list(lightsync.signature_defaults(model, 'smooth_wave')[0])))
+	wave2 = _color_button(settings.get('color2', list(lightsync.signature_defaults(model, 'smooth_wave')[1])))
+	star1 = _color_button(settings.get('color', list(lightsync.signature_defaults(model, 'smooth_star')[0])))
+	star2 = _color_button(settings.get('color2', list(lightsync.signature_defaults(model, 'smooth_star')[1])))
+	pulse1 = _color_button(settings.get('color', list(lightsync.signature_defaults(model, 'pulsar_point')[0])))
+	pulse2 = _color_button(settings.get('color2', list(lightsync.signature_defaults(model, 'pulsar_point')[1])))
+	remind = _color_button(settings.get('color', list(lightsync.signature_defaults(model, 'remind_me_of')[0])))
+	g3a = _color_button(settings.get('color', list(lightsync.signature_defaults(model, 'g_3_series')[0])))
+	g3b = _color_button(settings.get('color2', list(lightsync.signature_defaults(model, 'g_3_series')[1])))
+	neon_c = _color_button(settings.get('color', list(lightsync.signature_defaults(model, 'neon')[0])))
+	space_c = _color_button(settings.get('color', list(lightsync.signature_defaults(model, 'outer_space')[0])))
+	tide1 = _color_button(settings.get('color', list(lightsync.signature_defaults(model, 'g_tide')[0])))
+	tide2 = _color_button(settings.get('color2', list(lightsync.signature_defaults(model, 'g_tide')[1])))
 	regions = Gtk.Button(label='Edit regions')
 
 	def edit_regions(_b):
@@ -210,10 +210,14 @@ def _effects(per_key, model=None):
 	if per_key:
 		own = [('device', name, SIGNATURE_NAMES.get(name, name.replace('_', ' ').capitalize()))
 		       for name, _e in softlight.device_effects(model)] if model else []
-		return effects + [('smooth_star', None, 'Smooth Star'), ('smooth_wave', None, 'Smooth Wave'),
-		                  ('pulsar_point', None, 'Pulsar Point'), ('remind_me_of', None, 'Remind Me Of'),
-		                  ('g_3_series', None, 'G 3 Series'), ('neon', None, 'Neon'),
-		                  ('outer_space', None, 'Outer Space'), ('g_tide', None, 'G Tide')] + own + _keyframe_effects() + [
+		signature = [('smooth_star', None, 'Smooth Star'), ('smooth_wave', None, 'Smooth Wave'),
+		             ('pulsar_point', None, 'Pulsar Point'), ('remind_me_of', None, 'Remind Me Of'),
+		             ('g_3_series', None, 'G 3 Series'), ('neon', None, 'Neon'),
+		             ('outer_space', None, 'Outer Space'), ('g_tide', None, 'G Tide')]
+		offered = lightsync.signature_effects(model) if model else None     # G HUB's list for this model
+		if offered is not None:
+			signature = [e for e in signature if e[0] in offered]
+		return effects + signature + own + _keyframe_effects() + [
 			('custom', file, name) for name, file in softlight.custom_effects()]
 	return effects                                     # G HUB: no keyframe animations on zones
 

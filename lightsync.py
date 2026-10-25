@@ -13,6 +13,7 @@ keyboard without saving them in it (per-key lighting, 0x8081 / 0x8080).
 lightsync.json in the config folder: {model key: {"effect": "audio", "color": [r, g, b]}} or
 {model key: {"effect": "screen", "color_boost": 0-100, "smoothing": bool}}.
 """
+import json
 import math
 import os
 import subprocess
@@ -569,7 +570,7 @@ class Animated(Visualizer):
 			return None
 		import signature
 		leds, logo, indicator = signature.layout_leds(self.layout)
-		d1, d2 = SIGNATURE[s['effect']]
+		d1, d2 = signature_defaults(self.model, s['effect'])
 		c1, c2 = tuple(s.get('color', d1)) + (255,), tuple(s.get('color2', d2)) + (255,)
 		build = signature.EFFECTS[s['effect']]
 		return signature.Player(lambda: build(leds, logo, indicator, c1, c2))
@@ -636,6 +637,37 @@ GHUB_PINK, GHUB_BLUE = (0xFF, 0x00, 0xAB), (0x00, 0xB8, 0xFC)
 SIGNATURE = dict.fromkeys(('smooth_wave', 'smooth_star', 'pulsar_point', 'remind_me_of', 'g_3_series', 'neon',
                            'outer_space', 'g_tide'), (GHUB_PINK, GHUB_BLUE))
 ANIMATED = ('keyframe', 'device', 'starlight', 'cycle', 'echo') + tuple(SIGNATURE)
+
+
+def _rgb(hex_color):
+	h = (hex_color or '').lstrip('#')
+	return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)) if len(h) == 6 else None
+
+
+def _catalog(model):
+	import depots
+	try:
+		with open(depots.signature_colors_path()) as f:
+			return json.load(f).get(model)
+	except (OSError, ValueError):
+		return None
+
+
+def signature_effects(model):
+	"""The signature effects G HUB offers this model (its device list), or None when it isn't known."""
+	listed = _catalog(model)
+	return None if listed is None else [e for e in SIGNATURE if e in listed]
+
+
+def signature_defaults(model, effect):
+	"""(colour one, colour two) G HUB gives this model for a signature effect (its device list:
+	e.g. #FE8385 / #CBE8CE on the G713 / G735, red for Remind Me Of on the G512 X), else G HUB's
+	#FF00AB / #00B8FC."""
+	d1, d2 = SIGNATURE.get(effect, (GHUB_PINK, GHUB_BLUE))
+	colors = (_catalog(model) or {}).get(effect)
+	if colors:
+		d1, d2 = _rgb(colors[0]) or d1, _rgb(colors[1] if len(colors) > 1 else None) or d2
+	return d1, d2
 
 
 def devices_open(device):

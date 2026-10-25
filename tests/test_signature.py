@@ -184,3 +184,30 @@ class SignatureTest(unittest.TestCase):
 		f = sig.Frame(brightness=50)
 		f.set('k', (200, 100, 0, 255))
 		self.assertEqual(f.colors['k'], (100, 50, 0, 255))
+
+
+class SignatureCatalogTest(unittest.TestCase):
+	def test_colours_and_effects_from_g_hubs_device_list(self):
+		import json
+		import tempfile
+		from unittest import mock
+		import depots
+		import lightsync
+		dev = {'modelId': 'g512_x_75', 'capabilities': {'lightingSupport': {'zones': [{'supportedEffects': [
+			{'id': 'SIGNATURE_ALGORITHMIC_ACTIVE', 'signature': True, 'name': 'REMIND_ME_OF',
+			 'signatureSupport': {'signatureColorOne': {'hex': '#FF0000'}}},
+			{'id': 'FIXED'}]}]}}}
+		out = {}
+		depots._signature_colors(dev, out)
+		self.assertEqual(out, {'g512_x_75': {'remind_me_of': ['#FF0000', None]}})
+		with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False) as f:
+			json.dump(out, f)
+		try:
+			with mock.patch.object(depots, 'signature_colors_path', return_value=f.name):
+				self.assertEqual(lightsync.signature_defaults('g512_x_75', 'remind_me_of'),
+				                 ((255, 0, 0), lightsync.GHUB_BLUE))
+				self.assertEqual(lightsync.signature_effects('g512_x_75'), ['remind_me_of'])
+				self.assertIsNone(lightsync.signature_effects('g815'))
+				self.assertEqual(lightsync.signature_defaults('g815', 'neon'), (lightsync.GHUB_PINK, lightsync.GHUB_BLUE))
+		finally:
+			os.unlink(f.name)

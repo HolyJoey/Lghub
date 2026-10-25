@@ -35,7 +35,7 @@ measurements.
 | Webcams | 90% | check on the C920 |
 | Wireless (receivers, Bluetooth, power) | 80% | pairing; see "Wireless and power" below |
 | Device catalog | 100% | 11 of G HUB's device files have keys outside its public channel (unreleased?) |
-| Lighting | 97% | signature effects' zonal versions, G Tide's key-list ids (rings are ours for now); screen sampler portal on GNOME / KDE |
+| Lighting | 97% | signature effects on the G735 / G512 X / G713 / G715 light strips, Neutron Null, G Tide's key-list ids (rings are ours for now); screen sampler portal on GNOME / KDE |
 | App features | 85% | see "App" below |
 | Background service | 95% | re-measured 2026-10-20: 0.2% CPU, 28 MB idle |
 
@@ -250,8 +250,9 @@ copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
   signature types 16 / 17 that its UI also labels Smooth Star / Smooth Wave (firmware ids 18 / 19 on
   keyboards that have them). Type 17's builder is identical to Smooth Wave's, and type 16's style 0 (its
   Smooth Star) builds the same tree as Smooth Star, so both are done; type 16's other per-key styles are done too (Pulsar Point, G 3 Series, Remind Me
-  Of, Neon, Outer Space; signature.py). Left: their zonal versions (the builder's zone groups are
-  read: G HUB picks them by the device's zone mask, SIX / LEFT_SIDE / BOTTOM / HALO; the trees aren't ported), Astro Point (headsets), and G Tide's
+  Of, Neon, Outer Space; signature.py). Done: G HUB's per-model default colours and effect list (its device list, fetched once).
+  Left: the strip trees (G HUB's "zonal" groups exist only for the G735 / G512 X bottom strip and the G713 /
+  G715 halo; plain zone devices get no signature effect in G HUB either), the Neutron Null style, Astro Point (headsets), and G Tide's
   key lists (type 18: G Tide itself is done, signature.g_tide, with G HUB's timing and gradients; the
   id space of its 12 hard-coded key lists isn't found, so the rings are ours: nearest keys to the middle).
   Started: G HUB's frame-handler engine is ported (signature.py: sequencer, parallel, pause,

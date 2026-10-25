@@ -522,6 +522,49 @@ def fetch_eq_presets(path):
 	return True
 
 
+def signature_colors_path():
+	return os.path.join(store.IMAGE_DIR, 'signature_colors.json')
+
+
+def fetch_signature_colors():
+	"""{model: {effect name: [colour one, colour two]}} from G HUB's device list (data/devices in its
+	core depot: lightingSupport zones' signature effects and their signatureSupport colours),
+	fetched once (about 0.9 MB) and kept small. Path, or None. Blocks."""
+	path = signature_colors_path()
+	if os.path.exists(path):
+		return path
+	url = SERVER + CORE_DEPOT
+	out = {}
+	try:
+		files = files_cached(url)
+		for name in sorted(k for k in files if k.startswith('data/devices/devices_')):
+			try:
+				catalog = json.loads(_unseal(_read(url, files[name])))
+			except (OSError, ValueError, KeyError):
+				continue                                   # a file under a key G HUB doesn't publish
+			for dev in catalog.get('devices', []):
+				_signature_colors(dev, out)
+	except (OSError, ValueError) as e:
+		print(f'lghub: no signature colours from G HUB: {e}', flush=True)
+		return None
+	os.makedirs(os.path.dirname(path), exist_ok=True)
+	with open(path + '.tmp', 'w') as f:
+		json.dump(out, f)
+	os.replace(path + '.tmp', path)
+	return path
+
+
+def _signature_colors(dev, out):
+	lighting = (dev.get('capabilities') or {}).get('lightingSupport') or {}
+	for zone in lighting.get('zones', []):
+		for effect in zone.get('supportedEffects', []):
+			support = effect.get('signatureSupport') or {}
+			if not effect.get('signature') or not effect.get('name'):
+				continue
+			colors = [support.get(k, {}).get('hex') for k in ('signatureColorOne', 'signatureColorTwo')]
+			out.setdefault(dev.get('modelId', ''), {}).setdefault(effect['name'].lower(), colors)
+
+
 def fetch_presets(model):
 	"""Path of the headset's G HUB preset file, downloading it if needed, or None. Blocks."""
 	name, preset_set = PRESET_FILES[model]

@@ -271,7 +271,16 @@ class MainWindow(Adw.ApplicationWindow):
 		self._show_devices()
 		return True
 
+	def _fetch_signature_colors(self, shown):
+		"""G HUB's per-model signature effect colours, once, when a lit device shows up."""
+		if 'signature colours' in self.asked or not any(d.model.lighting for d in shown):
+			return
+		self.asked.add('signature colours')
+		if not os.path.exists(depots.signature_colors_path()):
+			self.pictures.submit(depots.fetch_signature_colors)
+
 	def _fetch_pictures(self, shown):
+		self._fetch_signature_colors(shown)
 		for d in shown:
 			key = d.model.key
 			if key in self.asked:
