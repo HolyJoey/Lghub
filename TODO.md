@@ -254,7 +254,7 @@ copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
   keyboards that have them). Type 17's builder is identical to Smooth Wave's, and type 16's style 0 (its
   Smooth Star) builds the same tree as Smooth Star, so both are done; type 16's other per-key styles are done too (Pulsar Point, G 3 Series, Remind Me
   Of, Neon, Outer Space; signature.py). Left: their zonal versions, Astro Point (headsets), G Tide
-  (type 18: draws on 13 per-device key lists, source not found yet; re/notes/lighting.txt).
+  (type 18: its 12 key lists found, hard-coded zone rings; phase 1 half read; re/notes/lighting.txt).
   Started: G HUB's frame-handler engine is ported (signature.py: sequencer, parallel, pause,
   gradient, gradient sampler, gradient tween, colour blend, its gradient stops and colour blend;
   tests). Done: Smooth Wave (its whole tree from G HUB's builder 0x14121b700: 23 tween
