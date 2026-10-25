@@ -182,7 +182,7 @@ copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
     report id. Check on a G735 / PRO X 2 / G325.
   - Left: the other 0x06xx features,
     read the same way from G HUB's decoders; Centurion0003SubdevicePlain (devices behind the 0x0003
-    bridge). Notes: re/notes/centurion.txt.
+    bridge: write 0x141fea530 and its creator found; the sub-device discovery flow 0x141f837e1 is next). Notes: re/notes/centurion.txt.
 - **Others**:
   - 0x8320 jack detection done (headphone bit ours); 0x8305 bass tone done
   - 0x0200 / 0x0201 / 0x020D volume and EQ sets, 0x020E mic test
