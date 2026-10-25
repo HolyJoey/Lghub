@@ -12,7 +12,9 @@ classes, G HUB 2026.6) and its app features.
    logo and light-strip groups, signature.key_groups). Smooth Wave: its two extra groups are only
    filled on six-zone devices, so on per-key boards it is the sweep alone, as in G HUB.
 2. Keyboards: the analog keys' per-key editor (actuation point, rapid trigger) and onboard-profile
-   editing (formats mostly found; see "Keyboards").
+   editing (formats mostly found; see "Keyboards"). The write is read (fn 9 [u16, u16, data], fn 10
+   fragments, fn 11 CRC-32 commit, as 0x8103's) except how a write picks its profile: fn 9 has no
+   profile byte (re/notes/keyboard_profiles.txt "0x8102 WRITE PATH").
 3. Signature effects on the light strips (G735 / G512 X bottom, G713 / G715 halo): G HUB's per-LED
    order for them isn't found yet.
 
