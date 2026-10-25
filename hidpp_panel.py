@@ -237,7 +237,14 @@ class SettingsPanel(Gtk.Box):
 		dev = self.dev
 		if dev is not None:
 			light_map = perkey.load_light_map(self.device.model.key)
-			self._do(lambda: perkey.apply(dev, colors, light_map=light_map))
+
+			def send():
+				if not dev.has(perkey.PERKEY) and dev.has(perkey.HOST_MODE):     # a newer headset (0x0620)
+					dev.call(perkey.HOST_MODE, perkey.HM_SET_STATE, bytes([1]))
+					perkey.apply_host_mode(dev, colors, persist=True, light_map=light_map)
+				else:
+					perkey.apply(dev, colors, light_map=light_map)
+			self._do(send)
 
 	# --- talking to the device ------------------------------------------------------------
 

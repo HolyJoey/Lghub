@@ -54,6 +54,12 @@ class LightStripTest(unittest.TestCase):
 		with mock.patch('depots.metadata_path', return_value=f.name):
 			self.assertEqual(perkey.load_layout('g316x')[2], [('PERKEY_COSMETIC_3', 160, 55, 25, 10, 10)])
 
+	def test_layout_reads_path_leds(self):
+		import perkey
+		self.assertEqual(perkey._path_box('M 10 10 l 5 0 l 0 5 Z'), (10.0, 10.0, 5.0, 5.0))
+		self.assertEqual(perkey._path_box('m 1,2 h 3 v 4 z'), (1.0, 2.0, 3.0, 4.0))
+		self.assertEqual(perkey._box({'type': 'path', 'd': 'M 0 0 C 0 10 10 10 10 0'}), (0.0, 0.0, 10.0, 10.0))
+
 	def test_colours_go_through_the_light_map(self):
 		fake = simulate.FakeMouseXPlus()
 		colors = {'PERKEY_COSMETIC:1': [1, 2, 3], 'PERKEY_COSMETIC:2': [4, 5, 6]}

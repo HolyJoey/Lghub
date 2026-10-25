@@ -173,3 +173,20 @@ class CenturionTest(unittest.TestCase):
 
 if __name__ == '__main__':
 	unittest.main()
+
+
+class HostModeTest(unittest.TestCase):
+	def test_host_mode_frames(self):
+		import perkey
+		calls = []
+
+		class Dev:
+			def call(self, feature, fn, params=b''):
+				calls.append((feature, fn, bytes(params)))
+				return bytes(16)
+		colors = {f'PERKEY_COSMETIC:{i}': [10, 20, 30] for i in range(1, 6)}
+		colors['PERKEY_COSMETIC:9'] = [1, 2, 3]
+		self.assertEqual(perkey.apply_host_mode(Dev(), colors), 1)
+		self.assertEqual(calls[0], (0x0620, 5, bytes([10, 20, 30, 5, 1, 2, 3, 4, 5])))
+		self.assertEqual(calls[1], (0x0620, 4, bytes([1, 9, 9, 1, 2, 3])))
+		self.assertEqual(calls[2], (0x0620, 6, bytes(4)))

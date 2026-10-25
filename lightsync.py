@@ -288,6 +288,17 @@ class PerKeyTarget:
 		perkey.apply(self.dev, colors, persist=False, light_map=self.light_map)
 
 
+class HostModeTarget(PerKeyTarget):
+	"""A newer headset's LEDs over 0x0620 RGB host mode (Centurion): host mode on once, then frames."""
+
+	def __init__(self, dev, layout, light_map=None):
+		super().__init__(dev, layout, light_map)
+		dev.call(perkey.HOST_MODE, perkey.HM_SET_STATE, bytes([1]))
+
+	def send(self, colors):
+		perkey.apply_host_mode(self.dev, colors, light_map=self.light_map)
+
+
 # G HUB's zone names (lighting_support Zone.Type) for HID++ 0x8070 / 0x8071 zone locations; which
 # location is which name is ours
 ZONE_NAMES = {0: 'ZONE_PRIMARY', 1: 'ZONE_PRIMARY', 2: 'ZONE_BRANDING', 3: 'ZONE_ONE', 4: 'ZONE_TWO',
@@ -335,6 +346,8 @@ def make_target(dev, model):
 	layout = perkey.load_layout(model)
 	if layout and (dev.has(perkey.PERKEY) or dev.has(perkey.PERKEY_V1)):
 		return PerKeyTarget(dev, layout, perkey.load_light_map(model))
+	if layout and dev.has(perkey.HOST_MODE):
+		return HostModeTarget(dev, layout, perkey.load_light_map(model))
 	try:
 		import features
 		if dev.has(features.COLOR_LED_EFFECTS) or dev.has(features.RGB_EFFECTS):

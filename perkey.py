@@ -15,6 +15,52 @@ import depots
 import hidpp
 import store
 
+_PATH_ARGS = {'M': 2, 'L': 2, 'T': 2, 'H': 1, 'V': 1, 'C': 6, 'S': 4, 'Q': 4}
+
+
+def _path_commands(d):
+	"""(command letter, its numbers) of an SVG path, repeated commands split (M then implicit L)."""
+	import re
+	cmd, args = None, []
+	for tok in re.findall(r'[A-Za-z]|[-+]?[\d.]+(?:[eE][-+]?\d+)?', d):
+		if tok.isalpha():
+			cmd, args = (tok if tok.upper() in _PATH_ARGS else None), []
+			continue
+		if cmd is None:
+			continue
+		args.append(float(tok))
+		if len(args) == _PATH_ARGS[cmd.upper()]:
+			yield cmd, args
+			args = []
+			cmd = {'M': 'L', 'm': 'l'}.get(cmd, cmd)
+
+
+def _path_points(d):
+	"""Every point of an SVG path in absolute coordinates (control points too)."""
+	x = y = 0.0
+	for cmd, a in _path_commands(d):
+		dx, dy = (x, y) if cmd.islower() else (0.0, 0.0)
+		kind = cmd.upper()
+		if kind == 'H':
+			x = a[0] + dx
+		elif kind == 'V':
+			y = a[0] + dy
+		else:
+			pts = [(a[i] + dx, a[i + 1] + dy) for i in range(0, len(a), 2)]
+			yield from pts[:-1]
+			x, y = pts[-1]
+		yield x, y
+
+
+def _path_box(d):
+	"""(x, y, w, h) around an SVG path's points (ours, for placing the LED), or None."""
+	pts = list(_path_points(d))
+	if not pts:
+		return None
+	xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+	return min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys)
+
+
 def _box(r):
 	"""(x, y, w, h) of a rendering: a rect, or a round LED (centre and radius -> its box, ours). G HUB
 	writes circles as {"circle": {cx, cy, r}} or, on some mice, {"rect": {x, y, r}}."""
@@ -26,6 +72,8 @@ def _box(r):
 		cx, cy, rad = c.get('cx', rect.get('x')), c.get('cy', rect.get('y')), c.get('r', rect.get('r'))
 		if None not in (cx, cy, rad):
 			return cx - rad, cy - rad, 2 * rad, 2 * rad
+	if r.get('type') == 'path' and r.get('d'):                # a shaped LED (the newer headsets' lights)
+		return _path_box(r['d'])
 	return None
 
 
@@ -158,6 +206,35 @@ def apply_v1(dev, colors, persist=True):
 			sent += len(batch)
 	dev.call(PERKEY_V1, V1_FLUSH, bytes([1 if persist else 0]))
 	return sent
+
+
+# 0x0620 RGB host mode (the newer headsets' per-LED lighting over Centurion; G HUB's Feature0620RGBHostmode):
+# fn 3 SetConsecutiveRgbZones [first, count, rgb x count], fn 4 SetRangeRgbZones [count, (first, last, rgb)
+# x count], fn 5 SetRgbZonesSingleValue [rgb, count, zones], fn 6 FrameEnd [4 bytes], fn 7 / 8 get / set
+# host mode [state]. Ours: host mode on = 1, frame end [persist, 0, 0, 0], at most SINGLE_MAX zones / ranges
+# per message (as 0x8081).
+HOST_MODE = 0x0620
+HM_RANGE, HM_SINGLE, HM_FRAME_END, HM_SET_STATE = 4, 5, 6, 8
+
+
+def apply_host_mode(dev, colors, persist=False, light_map=None):
+	"""The colours over 0x0620, grouped like apply(); returns how many zones went one by one."""
+	by_color = {}
+	for e in zones(colors, light_map):
+		by_color.setdefault(tuple(e[1:]), []).append(e[0])
+	singles = []
+	for rgb, ids in by_color.items():
+		if len(ids) < SINGLE_FROM:
+			singles += [(z, rgb) for z in ids]
+			continue
+		for i in range(0, len(ids), SINGLE_MAX):
+			part = ids[i:i + SINGLE_MAX]
+			dev.call(HOST_MODE, HM_SINGLE, bytes(rgb) + bytes([len(part)]) + bytes(part))
+	for i in range(0, len(singles), SINGLE_MAX):
+		part = singles[i:i + SINGLE_MAX]
+		dev.call(HOST_MODE, HM_RANGE, bytes([len(part)]) + b''.join(bytes([z, z, *rgb]) for z, rgb in part))
+	dev.call(HOST_MODE, HM_FRAME_END, bytes([1 if persist else 0, 0, 0, 0]))
+	return len(singles)
 
 
 def apply(dev, colors, persist=True, light_map=None):

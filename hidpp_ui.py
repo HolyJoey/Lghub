@@ -39,6 +39,10 @@ class GenericView(Gtk.Box):
 		page.append(self.panel)
 		self.stack.add_named(scrolled(page), 'settings')
 		self._add_nav('settings', 'Settings', 'emblem-system-symbolic')
+		if device.model.type == 'headset' and self._centurion(device) and perkey_ui.load_layout(device.model.key):
+			self.perkey = perkey_ui.PerKeyPage(win, device, self._apply_perkey)   # its LEDs over 0x0620
+			self.stack.add_named(scrolled(self.perkey), 'perkey')
+			self._add_nav('perkey', 'Lighting', 'weather-clear-symbolic')
 		if device.model.type == 'keyboard':
 			if perkey_ui.load_layout(device.model.key):
 				self.perkey = perkey_ui.PerKeyPage(win, device, self._apply_perkey)
@@ -70,6 +74,14 @@ class GenericView(Gtk.Box):
 			self.bv2.close()
 		if self.audio:
 			self.audio.close()
+
+	@staticmethod
+	def _centurion(device):
+		import centurion
+		try:
+			return int(device.usb_id.split(':')[1], 16) in centurion.ENTRIES
+		except (IndexError, ValueError):
+			return False
 
 	def _apply_perkey(self, colors):
 		"""Send per-key colours to the keyboard (HID++ 0x8081; see perkey.py)."""

@@ -292,7 +292,7 @@ class MainWindow(Adw.ApplicationWindow):
 			if key in depots.DEPOTS and not os.path.exists(depots.path_for(key)):
 				self.pictures.submit(lambda k=key: depots.fetch_picture(k),
 				                     lambda path, k=key: path and self._got_picture(k))
-			if d.model.type in ('keyboard', 'mouse') and key in depots.DEPOTS:
+			if d.model.type in ('keyboard', 'mouse', 'headset') and key in depots.DEPOTS:
 				# the per-key page's layout, the device's own LED map and effects, before its page opens
 				self.pictures.submit(lambda k=key: (depots.fetch_metadata(k), depots.fetch_light_map(k),
 				                                    depots.fetch_device_effects(k), depots.fetch_defaults(k)))
