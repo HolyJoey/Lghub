@@ -316,10 +316,15 @@ onboard equalizer, and others.
 - 0x0604 sidetone: fn 0 get `[n, n x (mic, level)]` (`[mic, ?, level]` from version 2), fn 1 set
   `[mic, 0xFF (version 2+), level]`, fn 2 settings (byte 2 = number of steps; 101 on version 1).
   G HUB shows `round(level * 100 / (steps - 1))`.
+- 0x0601 mic mute: fn 0 get (byte 0 bit 0), fn 1 set `[muted]`. 0x0611 mic gain: fn 0 info
+  `[min, max]`, fn 1 get `[gain]`, fn 2 set `[gain]`.
+- 0x0605 noise cancelling: fn 0 get mode, fn 1 set `[mode]` (0 off, 1 on, 2 transparency, 3 low,
+  4 adaptive: G HUB's enum - 1), fn 2 / 3 the button: `[short-press bits (bit n = mode n), long-press
+  mode]`.
 - Devices behind a 0x0003 bridge go through a sub-device layer that refuses packets larger than
   the adapter's size.
 
-Lghub (`centurion.py`) opens these headsets over this transport and sets their sidetone (not
+Lghub (`centurion.py`) opens these headsets over this transport and sets their sidetone, mic mute, mic gain and noise cancelling (not
 checked on a headset yet). Byte 0 on the wire is the collection's report id (ours: how G HUB's
 HID layer fills it isn't read).
 

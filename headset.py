@@ -150,6 +150,60 @@ def set_sidetone(dev, level):
 	dev.call(SIDETONE, 1, bytes([max(0, min(100, int(level)))]))
 
 
+# 0x0601 HeadsetMicMute (Centurion): fn 0 get (byte 0 bit 0 = muted, decoder 0x141cb9b40), fn 1 set
+# [muted]; fn 2 / 3 are the mic LED support pair (not used).
+CENTURION_MIC_MUTE = 0x0601
+
+
+def centurion_mic_muted(dev):
+	return bool(dev.call(CENTURION_MIC_MUTE, 0)[0] & 1)
+
+
+def set_centurion_mic_muted(dev, muted):
+	dev.call(CENTURION_MIC_MUTE, 1, bytes([1 if muted else 0]))
+
+
+# 0x0611 HeadsetMicGain (Centurion): fn 0 info [min, max] (decoder 0x141cddf10; which byte is min is
+# from the order of G HUB's min_mic_gain / max_mic_gain fields: ours), fn 1 get [gain], fn 2 set [gain].
+CENTURION_MIC_GAIN = 0x0611
+
+
+def centurion_mic_gain(dev):
+	"""(gain, min, max) in the headset's own units."""
+	info = dev.call(CENTURION_MIC_GAIN, 0)
+	return dev.call(CENTURION_MIC_GAIN, 1)[0], info[0], info[1]
+
+
+def set_centurion_mic_gain(dev, gain):
+	_gain, low, high = centurion_mic_gain(dev)
+	dev.call(CENTURION_MIC_GAIN, 2, bytes([max(low, min(high, int(gain)))]))
+
+
+# 0x0605 HeadsetAudioANC (Centurion): fn 0 get mode [mode], fn 1 set [mode], fn 2 get button, fn 3
+# set button [short-press bits, long-press mode]. Modes on the wire = G HUB's HeadsetANC.Mode - 1
+# (toDevio 0x14221e600); short-press bit n = the button cycles through mode n (encoder 0x141ed4f50).
+CENTURION_ANC = 0x0605
+ANC_MODES = ('Off', 'On', 'Transparency', 'Low', 'Adaptive')   # DISABLED, ENABLED, TRANSPARENCY, LOW, ADAPTIVE
+
+
+def anc_mode(dev):
+	return dev.call(CENTURION_ANC, 0)[0]
+
+
+def set_anc_mode(dev, mode):
+	dev.call(CENTURION_ANC, 1, bytes([mode]))
+
+
+def anc_button(dev):
+	"""(modes the button cycles through by a short press, the long-press mode)."""
+	r = dev.call(CENTURION_ANC, 2)
+	return [m for m in range(len(ANC_MODES)) if r[0] >> m & 1], r[1]
+
+
+def set_anc_button(dev, short_modes, long_mode):
+	dev.call(CENTURION_ANC, 3, bytes([sum(1 << m for m in short_modes), long_mode]))
+
+
 # 0x0604 HeadsetAudioSidetone (Centurion headsets; G HUB's FeatureC0604HeadsetSidetone): fn 0 get
 # = [n, n x (mic, level)] ([mic, ?, level] from version 2), fn 1 set = [mic, 0xFF (version 2+),
 # level], fn 2 settings: byte 2 = the number of steps (version 2+; 101 before). G HUB shows

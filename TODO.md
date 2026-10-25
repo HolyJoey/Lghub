@@ -29,7 +29,7 @@ measurements.
 | PRO 5-band equalizer | 95% | done with G HUB's own band maths (its DLL, run natively) and its busy check; check on the G Pro X |
 | Mice | 94% | see "Mice" below |
 | Keyboards | 80% | analog keys' per-key settings and onboard-profile editing (formats found, not built); see "Keyboards" below |
-| Headsets (other than the voice chain) | 60% | Centurion transport and sidetone done; its other features; see "Headsets" below |
+| Headsets (other than the voice chain) | 65% | Centurion transport, sidetone, mic and noise cancelling done; its other features; see "Headsets" below |
 | Yeti controls | 100% | check on a Yeti |
 | Litra lights | 90% | check on a Litra Glow / Beam |
 | Webcams | 90% | check on the C920 |
@@ -177,9 +177,9 @@ copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
   - Done: G HUB's transport (centurion.py): its built-in table of 16 headsets (pid, HID usage page /
     usage, prefix, length byte, packet size; static init 0x1402111c0), the packet layer's fragments
     and reassembly, and the transport's wrap / unwrap, under the normal HID++ code. Sidetone 0x0604
-    over it, as G HUB scales it (steps from fn 2). Ours: byte 0 on the wire = the collection's
+    over it, as G HUB scales it (steps from fn 2); mic mute 0x0601, mic gain 0x0611 (its min / max), noise cancelling 0x0605 (mode and button). Ours: byte 0 on the wire = the collection's
     report id. Check on a G735 / PRO X 2 / G325.
-  - Left: the other 0x06xx features (0601 mic mute, 0605 ANC, 0611 mic gain, 0636 onboard EQ, ...),
+  - Left: the other 0x06xx features (0636 onboard EQ, ...),
     read the same way from G HUB's decoders; Centurion0003SubdevicePlain (devices behind the 0x0003
     bridge). Notes: re/notes/centurion.txt.
 - **Others**:

@@ -40,6 +40,7 @@ def row(title, widget):
 # Features read the same way on connect: (feature, info key, reader)
 SIMPLE_READS = ((features.SIDETONE, 'sidetone', headset.sidetone),
                 (headset.CENTURION_SIDETONE, 'sidetone', headset.sidetone),
+                (headset.CENTURION_ANC, 'anc', lambda dev: (headset.anc_mode(dev), *headset.anc_button(dev))),
                 (features.POLAR_PATTERN, 'patterns', features.polar_patterns),
                 (features.DEVICE_EQ, 'device_eq', features.device_eq),
                 (features.ANGLE_SNAPPING, 'angle_snapping', features.angle_snapping),
@@ -279,6 +280,12 @@ class SettingsPanel(Gtk.Box):
 			level = read(dev) if feature in have else None
 			if level is not None:
 				mic[key] = level
+		if headset.CENTURION_MIC_MUTE in have:            # the newer headsets' own features
+			mic['muted'], mic['centurion'] = headset.centurion_mic_muted(dev), True
+		if headset.CENTURION_MIC_GAIN in have:
+			gain, low, high = headset.centurion_mic_gain(dev)
+			if high > low:
+				mic['gain'], mic['gain_range'], mic['centurion'] = gain, (low, high), True
 		if features.JACK_DETECTION in have:
 			plugged = features.headphones_plugged(dev)
 			if plugged is not None:
@@ -347,7 +354,7 @@ class SettingsPanel(Gtk.Box):
 		                   ('analog', self._analog_card), ('light', self._light_card),
 		                   ('game_mode', self._game_mode_card), ('hosts', self._hosts_card),
 		                   ('device_eq', self._device_eq_card), ('charging', self._charging_card),
-		                   ('bass_tone', self._bass_card), ('mic', self._mic_card),
+		                   ('bass_tone', self._bass_card), ('mic', self._mic_card), ('anc', self._anc_card),
 		                   ('power', lambda i: power_card(i['power'], self._do, self.dev)),
 		                   ('battery', lambda _i: battery_warnings_card()),
 		                   ('mode', self._mode_card)):
@@ -477,6 +484,35 @@ class SettingsPanel(Gtk.Box):
 			c.append(row(f'Turn off {name}', sw))
 		return c
 
+	def _anc_card(self, info):
+		"""The newer headsets' noise cancelling (0x0605): the mode, and what the headset's button does."""
+		mode, short, long_mode = info['anc']
+		c = card('Noise cancelling', 'What the headset does with outside sound, and what its button switches between.')
+		names = list(headset.ANC_MODES)
+		dd = Gtk.DropDown.new_from_strings(names)
+		dd.set_selected(mode if mode < len(names) else 0)
+		dd.connect(NOTIFY_SELECTED, lambda w, _p: self.loading or self._do(
+			lambda m=w.get_selected(): headset.set_anc_mode(self.dev, m)))
+		c.append(row('Mode', dd))
+		chosen = set(short)
+		long_dd = Gtk.DropDown.new_from_strings(names)
+		long_dd.set_selected(long_mode if long_mode < len(names) else 0)
+
+		def save(*_):
+			if not self.loading:
+				self._do(lambda s=sorted(chosen), lm=long_dd.get_selected(): headset.set_anc_button(self.dev, s, lm))
+		for m, name in enumerate(names):
+			sw = Gtk.Switch(active=m in chosen, valign=Gtk.Align.CENTER)
+
+			def toggled(w, _p, m=m):
+				(chosen.add if w.get_active() else chosen.discard)(m)
+				save()
+			sw.connect(NOTIFY_ACTIVE, toggled)
+			c.append(row(f'Button: {name}', sw))
+		long_dd.connect(NOTIFY_SELECTED, save)
+		c.append(row('Button held', long_dd))
+		return c
+
 	def _bass_card(self, info):
 		c = card('Bass', 'The headset\'s own bass level.')
 		s = slider(0, 100, info['bass_tone'])
@@ -490,14 +526,25 @@ class SettingsPanel(Gtk.Box):
 		c = card('Microphone', 'The mic\'s own mute, gain, headphone level and how much of the mic you hear (its knob does the same).')
 		if 'muted' in mic:
 			sw = Gtk.Switch(active=mic['muted'], valign=Gtk.Align.CENTER)
+			if mic.get('centurion'):
+				set_muted = headset.set_centurion_mic_muted
+			else:
+				def set_muted(dev, on):
+					features.set_mic_muted(dev, on, self.device.usb_id)
 			sw.connect(NOTIFY_ACTIVE, lambda w, _p: self.loading or self._do(
-				lambda on=w.get_active(): features.set_mic_muted(self.dev, on, self.device.usb_id)))
+				lambda on=w.get_active(): set_muted(self.dev, on)))
 			c.append(row('Mute', sw))
 		if 'gain' in mic:
-			s = slider(0, 100, mic['gain'])
-			s.connect('value-changed', lambda w: self.loading or self._do(
-				lambda v=int(w.get_value()): features.set_mic_gain(self.dev, v, mic['gain_type'])))
-			c.append(row('Gain (%)', s))
+			if 'gain_range' in mic:                       # the headset's own units (0x0611)
+				s = slider(*mic['gain_range'], mic['gain'])
+				s.connect('value-changed', lambda w: self.loading or self._do(
+					lambda v=int(w.get_value()): headset.set_centurion_mic_gain(self.dev, v)))
+				c.append(row('Gain', s))
+			else:
+				s = slider(0, 100, mic['gain'])
+				s.connect('value-changed', lambda w: self.loading or self._do(
+					lambda v=int(w.get_value()): features.set_mic_gain(self.dev, v, mic['gain_type'])))
+				c.append(row('Gain (%)', s))
 		if 'plugged' in mic:
 			c.append(row('Headphones', label('Plugged in' if mic['plugged'] else 'Not plugged in', ['muted'])))
 		if 'headphones' in mic:

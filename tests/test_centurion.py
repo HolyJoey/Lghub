@@ -95,6 +95,35 @@ class CenturionTest(unittest.TestCase):
 			if entry[2]:
 				self.assertTrue(all(p[1:1 + len(entry[2])] == entry[2] for p in fake.sent))
 
+	def test_mic_mute_and_gain(self):
+		calls = []
+
+		class Dev:
+			def call(self, feature, fn, params=b''):
+				calls.append((feature, fn, bytes(params)))
+				answers = {(0x0601, 0): b'\x01', (0x0611, 0): b'\x00\x40', (0x0611, 1): b'\x20'}
+				return answers.get((feature, fn), b'').ljust(16, b'\0')
+		dev = Dev()
+		self.assertTrue(headset.centurion_mic_muted(dev))
+		headset.set_centurion_mic_muted(dev, False)
+		self.assertEqual(headset.centurion_mic_gain(dev), (0x20, 0, 0x40))
+		headset.set_centurion_mic_gain(dev, 99)
+		self.assertIn((0x0601, 1, b'\x00'), calls)
+		self.assertEqual(calls[-1], (0x0611, 2, b'\x40'))                 # clamped to the headset's max
+
+	def test_anc(self):
+		calls = []
+
+		class Dev:
+			def call(self, feature, fn, params=b''):
+				calls.append((feature, fn, bytes(params)))
+				return {(0x0605, 0): b'\x02', (0x0605, 2): b'\x13\x01'}.get((feature, fn), b'').ljust(16, b'\0')
+		dev = Dev()
+		self.assertEqual(headset.ANC_MODES[headset.anc_mode(dev)], 'Transparency')
+		self.assertEqual(headset.anc_button(dev), ([0, 1, 4], 1))
+		headset.set_anc_button(dev, [1, 2], 0)
+		self.assertEqual(calls[-1], (0x0605, 3, b'\x06\x00'))
+
 	def test_descriptor_collection(self):
 		desc = bytes([0x06, 0xA0, 0xFF, 0x09, 0x01, 0xA1, 0x01, 0x85, 0x51, 0xC0])
 		self.assertEqual(centurion._collection(desc), (0xFFA0, 1, 0x51))
