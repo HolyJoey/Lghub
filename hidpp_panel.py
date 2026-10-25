@@ -1,10 +1,11 @@
 """Device settings over HID++: lighting zones, brightness, report rate, sidetone, onboard
 memory and battery, built from what the device says it has. Changes apply right away. Used on
 the generic device page and on the headset page."""
-from gi.repository import Gdk, Gtk
+from gi.repository import Gdk, GLib, Gtk
 
 import devices
 import battery_model
+import centurion_eq
 import device_settings
 import features
 import headset
@@ -41,6 +42,7 @@ def row(title, widget):
 SIMPLE_READS = ((features.SIDETONE, 'sidetone', headset.sidetone),
                 (headset.CENTURION_SIDETONE, 'sidetone', headset.sidetone),
                 (headset.CENTURION_ANC, 'anc', lambda dev: (headset.anc_mode(dev), *headset.anc_button(dev))),
+                (centurion_eq.EQ, 'onboard_eq', centurion_eq.read),
                 (features.POLAR_PATTERN, 'patterns', features.polar_patterns),
                 (features.DEVICE_EQ, 'device_eq', features.device_eq),
                 (features.ANGLE_SNAPPING, 'angle_snapping', features.angle_snapping),
@@ -355,6 +357,7 @@ class SettingsPanel(Gtk.Box):
 		                   ('game_mode', self._game_mode_card), ('hosts', self._hosts_card),
 		                   ('device_eq', self._device_eq_card), ('charging', self._charging_card),
 		                   ('bass_tone', self._bass_card), ('mic', self._mic_card), ('anc', self._anc_card),
+		                   ('onboard_eq', self._onboard_eq_card),
 		                   ('power', lambda i: power_card(i['power'], self._do, self.dev)),
 		                   ('battery', lambda _i: battery_warnings_card()),
 		                   ('mode', self._mode_card)):
@@ -482,6 +485,37 @@ class SettingsPanel(Gtk.Box):
 			sw = Gtk.Switch(active=usage in chosen, valign=Gtk.Align.CENTER)
 			sw.connect(NOTIFY_ACTIVE, lambda w, _p, u=usage: self.loading or self._game_key(u, w.get_active()))
 			c.append(row(f'Turn off {name}', sw))
+		return c
+
+	def _onboard_eq_card(self, info):
+		"""The newer headsets' onboard equalizer (0x0636): gains per band, sent with G HUB's own filter
+		maths (centurion_eq.py); Save keeps them in the headset."""
+		bands = info['onboard_eq']
+		c = card('Headset equalizer', 'The equalizer inside the headset (G HUB’s filter maths). Changes apply '
+		         'right away; Save keeps them on the headset.')
+		sliders, pending = [], {}
+
+		def send(save=False):
+			pending.pop('id', None)
+			gains = [s.get_value() for s in sliders]
+			self._do(lambda: centurion_eq.set_gains(self.dev, gains, save))
+			return False
+
+		def changed(_w):
+			if self.loading:
+				return
+			if 'id' in pending:
+				GLib.source_remove(pending['id'])
+			pending['id'] = GLib.timeout_add(300, send)      # ours: one write when a slider stops
+		low, high = centurion_eq.GAIN_RANGE
+		for freq, gain, _q in bands:
+			s = slider(low, high, gain)
+			s.connect('value-changed', changed)
+			sliders.append(s)
+			c.append(row(f'{freq / 1000:g} kHz' if freq >= 1000 else f'{freq} Hz', s))
+		save = Gtk.Button(label='Save to headset', halign=Gtk.Align.END)
+		save.connect('clicked', lambda _b: send(True))
+		c.append(save)
 		return c
 
 	def _anc_card(self, info):

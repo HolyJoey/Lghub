@@ -101,7 +101,10 @@ class Device:
 		func_sw = (function << 4) | SW_ID
 		report = self._report_for(len(params))
 		msg = bytes([report, self.index, feature_index, func_sw]) + bytes(params)
-		msg = msg.ljust(SIZES[report], b'\0')[:SIZES[report]]
+		size = SIZES[report]
+		if getattr(self.transport, 'long_messages', False):   # a transport that splits long messages
+			size = max(size, len(msg))
+		msg = msg.ljust(size, b'\0')[:size]
 		with self.transport.lock:
 			self.transport.write(msg)
 			deadline = time.monotonic() + TIMEOUT

@@ -321,10 +321,16 @@ onboard equalizer, and others.
 - 0x0605 noise cancelling: fn 0 get mode, fn 1 set `[mode]` (0 off, 1 on, 2 transparency, 3 low,
   4 adaptive: G HUB's enum - 1), fn 2 / 3 the button: `[short-press bits (bit n = mode n), long-press
   mode]`.
+- 0x0636 onboard equalizer: fn 0 info (byte 1 = sample-rate mask, byte 4 = most bands), fn 1 read
+  `[slot]` -> `[flag, n, n x (frequency u16 BE, gain dB i8, q)]`, fn 2 write `[slot, n, bands...,
+  coefficients]`. G HUB reads slot `(save ^ 1) << 7` and writes `save << 7`. The coefficients come from
+  a filter designer inside G HUB's agent (per rate, 44.1 then 48 kHz: `[2 for 48 kHz else 1, 0,
+  count u16 LE, count x int16]`, after `[3, 0x0E, 0, rates, 0, 0, 0]`, all behind `[5, 0x5A, length
+  u16 LE]`); Lghub runs that designer natively (`bin/centurion-eq`).
 - Devices behind a 0x0003 bridge go through a sub-device layer that refuses packets larger than
   the adapter's size.
 
-Lghub (`centurion.py`) opens these headsets over this transport and sets their sidetone, mic mute, mic gain and noise cancelling (not
+Lghub (`centurion.py`) opens these headsets over this transport and sets their sidetone, mic mute, mic gain, noise cancelling and onboard equalizer (not
 checked on a headset yet). Byte 0 on the wire is the collection's report id (ours: how G HUB's
 HID layer fills it isn't read).
 

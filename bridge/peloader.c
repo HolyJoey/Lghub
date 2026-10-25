@@ -70,6 +70,11 @@ static WINAPI double w_exp(double x) { return exp(x); }
 static WINAPI double w_acos(double x) { return acos(x); }
 static WINAPI double w_atan(double x) { return atan(x); }
 static WINAPI double w_atan2(double y, double x) { return atan2(y, x); }
+static WINAPI double w_copysign(double x, double y) { return copysign(x, y); }
+static WINAPI double w_fabs(double x) { return fabs(x); }
+static WINAPI double w_floor(double x) { return floor(x); }
+static WINAPI double w_ceil(double x) { return ceil(x); }
+static WINAPI double w_tan(double x) { return tan(x); }
 static WINAPI float w_sinf(float x) { return sinf(x); }
 static WINAPI float w_cosf(float x) { return cosf(x); }
 static WINAPI float w_sqrtf(float x) { return sqrtf(x); }
@@ -80,6 +85,34 @@ static WINAPI void *w_memset(void *d, int c, size_t n) { return memset(d, c, n);
 static WINAPI void *w_memcpy(void *d, const void *s, size_t n) { return memcpy(d, s, n); }
 static WINAPI void *w_memmove(void *d, const void *s, size_t n) { return memmove(d, s, n); }
 static WINAPI int w_memcmp(const void *a, const void *b, size_t n) { return memcmp(a, b, n); }
+/* MSVC's _Exp (behind std::exp of a complex number): *x = y * e^*x * 2^eoff; returns the class
+ * of the result as MSVC does (0 zero, -1 finite, 1 infinite, 2 NaN) */
+static WINAPI short w_Exp(double *x, double y, short eoff)
+{
+	*x = ldexp(y * exp(*x), eoff);
+	if (isnan(*x)) return 2;
+	if (isinf(*x)) return 1;
+	return *x == 0.0 ? 0 : -1;
+}
+static WINAPI int w_dsign(double x) { return signbit(x) ? 0x8000 : 0; }   /* MSVC: the sign bit */
+static WINAPI short w_dtest(const double *x)                               /* MSVC: class of *x */
+{
+	if (isnan(*x)) return 2;
+	if (isinf(*x)) return 1;
+	return *x == 0.0 ? 0 : -1;
+}
+/* qsort with the DLL's comparator (Windows calling convention), through glibc's qsort_r */
+typedef WINAPI int (*ms_compare)(const void *, const void *);
+static int call_compare(const void *a, const void *b, void *cmp) { return ((ms_compare)cmp)(a, b); }
+static WINAPI void w_qsort(void *base, size_t n, size_t size, ms_compare cmp)
+{
+	qsort_r(base, n, size, call_compare, (void *)cmp);  /* NOLINT(performance-no-int-to-ptr): the DLL's pointer */
+}
+/* the C runtime's heap (G HUB's agent code allocates through it) */
+static WINAPI void *w_malloc(size_t n) { return malloc(n ? n : 1); }
+static WINAPI void *w_calloc(size_t n, size_t size) { return calloc(n ? n : 1, size ? size : 1); }
+static WINAPI void *w_realloc(void *p, size_t n) { return realloc(p, n ? n : 1); }
+static WINAPI void w_free(void *p) { free(p); }
 
 static const struct { const char *name; pe_fn fn; } implemented[] = {
 	{"GetLastError", (pe_fn)w_GetLastError}, {"SetLastError", (pe_fn)w_SetLastError},
@@ -94,6 +127,11 @@ static const struct { const char *name; pe_fn fn; } implemented[] = {
 	{"cosf", (pe_fn)w_cosf}, {"sqrtf", (pe_fn)w_sqrtf}, {"powf", (pe_fn)w_powf}, {"log10f", (pe_fn)w_log10f},
 	{"acosf", (pe_fn)w_acosf}, {"memset", (pe_fn)w_memset}, {"memcpy", (pe_fn)w_memcpy},
 	{"memmove", (pe_fn)w_memmove}, {"memcmp", (pe_fn)w_memcmp},
+	{"malloc", (pe_fn)w_malloc}, {"calloc", (pe_fn)w_calloc}, {"realloc", (pe_fn)w_realloc},
+	{"free", (pe_fn)w_free}, {"_Exp", (pe_fn)w_Exp},
+	{"_dsign", (pe_fn)w_dsign}, {"copysign", (pe_fn)w_copysign},
+	{"_copysign", (pe_fn)w_copysign}, {"fabs", (pe_fn)w_fabs}, {"floor", (pe_fn)w_floor},
+	{"ceil", (pe_fn)w_ceil}, {"tan", (pe_fn)w_tan}, {"qsort", (pe_fn)w_qsort}, {"_dtest", (pe_fn)w_dtest},
 };
 
 /* --- traps for everything else ------------------------------------------------------------------ */

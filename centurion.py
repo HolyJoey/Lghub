@@ -86,6 +86,7 @@ class Reassembler:
 
 class CenturionTransport:
 	"""A hidpp transport over a Centurion collection (/dev/hidrawN)."""
+	long_messages = True             # hidpp.Device may send messages longer than one report
 
 	def __init__(self, path, entry, report_id):
 		self.raw = hidpp.HidrawTransport(path)

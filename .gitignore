@@ -18,6 +18,7 @@ bridge/*
 !bridge/bluevoice_bridge.c
 !bridge/surround_bridge.c
 !bridge/proeq_design.c
+!bridge/centurion_eq.c
 !bridge/micopt.c
 !bridge/micopt.h
 !bridge/hx2e.c
