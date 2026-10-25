@@ -26,7 +26,7 @@ measurements.
 | Blue VO!CE (G Pro X, G733) | 100% | check on the G Pro X |
 | Blue VO!CE 2 (Yetis, G735, PRO X 2) | 95% | check against Logitech's APO under Wine; check on a mic |
 | Surround, equalizer | 100% | check on the G Pro X |
-| PRO 5-band equalizer | 40% | read-only probe done (`proeq.py`); needs the G Pro X |
+| PRO 5-band equalizer | 90% | done with G HUB's own band maths (its DLL, run natively); G HUB's pre-write lock check not ported |
 | Mice | 94% | see "Mice" below |
 | Keyboards | 80% | analog keys' per-key settings and onboard-profile editing (formats found, not built); see "Keyboards" below |
 | Headsets (other than the voice chain) | 50% | Centurion and the newer headsets; see "Headsets" below |
@@ -80,16 +80,12 @@ Everything below has only met the simulator (`simulate.py`) or the DLLs offline.
 ## 2. Open work, by area
 
 ### PRO 5-band equalizer (G Pro X)
-G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
-`logi_audio_conexant.dll` (class CxAudioHidDev2089x).
-- Found: the per-band write sequence and the gain format; the HID report layout (chip table
-  entry 5 "ANDRUS": memory space 1, report 4 `[4, flags, length, address high, low]` out, report 5
-  `[5, data]` back, 32 bytes a report, no checksum); the band records' coefficient format.
-- Done (read-only): `proeq.py` reads the active profile (register 0x1152) and every profile's
-  five band records, and shows each band's peak frequency and gain (from the filter's response:
-  ours; G HUB fits type / frequency / Q with FUN_180002e00, not ported). Run
-  `python3 ~/.local/share/lghub/proeq.py` with the G Pro X plugged in and send the output.
-- Left: G HUB's filter fitting and design (for writes), then the page. Notes: `re/notes/proeq.txt`.
+Done: the PRO equalizer card on the G Pro X's headset page (profiles 1-4, five bands +-12 dB with
+their type and frequency). It talks to the headset's Conexant chip as G HUB does (memory reads /
+writes over report 4 / 5, then the apply bit), and G HUB's own band design and analysis run from
+its logi_audio_conexant.dll (pinned build, fetched at first use) through bin/proeq-design.
+Left: G HUB's pre-write busy check (FUN_18000e180), taking frequency / Q from the chip's EEPROM
+copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
 
 ### Mice
 - **0x1B04 buttons on newer mice** (those without 0x8110, like the G502 X): done: macros on
@@ -256,7 +252,7 @@ G HUB sets 5 band gains (+-12 dB) on the headset's own Conexant chip through
   keyboards that have them). Type 17's builder is identical to Smooth Wave's, and type 16's style 0 (its
   Smooth Star) builds the same tree as Smooth Star, so both are done; type 16's other per-key styles are done too (Pulsar Point, G 3 Series, Remind Me
   Of, Neon, Outer Space; signature.py). Left: their zonal versions, Astro Point (headsets), G Tide
-  (type 18).
+  (type 18: draws on 13 per-device key lists, source not found yet; re/notes/lighting.txt).
   Started: G HUB's frame-handler engine is ported (signature.py: sequencer, parallel, pause,
   gradient, gradient sampler, gradient tween, colour blend, its gradient stops and colour blend;
   tests). Done: Smooth Wave (its whole tree from G HUB's builder 0x14121b700: 23 tween

@@ -5,6 +5,7 @@ from gi.repository import GLib, Gtk
 
 import eq
 import headset
+import proeq
 import surround
 from hidpp_panel import SettingsPanel
 from ui import NOTIFY_ACTIVE, box, label, page_header
@@ -392,6 +393,9 @@ class HeadsetPage(Gtk.Box):
 		                     ('Volume', [c for c in ctrls if not c.capture and not c.is_sidetone])):
 			if group:
 				self.body.append(self._group_card(title, group))
+		if self.device and self.device.model.key in proeq.MODELS:
+			import proeq_ui
+			self.body.append(proeq_ui.ProEqCard(self.device, self.worker))
 		self.loading = False
 
 	def _sidetone_card(self, controls):

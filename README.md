@@ -55,7 +55,8 @@ with your headset's tuning (G Pro X, G Pro X Wireless, G733 and more), on a new 
 (Gaming, Entertainment, Sports) and per-channel volumes. It only runs while something plays, and it works together with the equalizer.
 
 **Headset.** Sidetone (over HID++, the way G HUB sets it, or the sound card's own control; the
-page says why when neither is there), volume and mic level from the headset's sound card, plus lighting,
+page says why when neither is there), volume and mic level from the headset's sound card, the G Pro
+X's PRO equalizer on the headset itself (G HUB's five bands per profile, with G HUB's own band maths), plus lighting,
 battery and the equalizer built into the headset (works on any computer or console) on headsets
 that have them.
 
@@ -264,9 +265,7 @@ simulator. The webcam screenshot is a real camera.
 - Most devices here have only met the simulator. If something doesn't work on yours (or does),
   open an issue with the "Device report" form: it asks for the model, the service log
   (`journalctl --user -u lghub`) and what the device's page says.
-- Still open, compared with G HUB: the 5-band PRO equalizer (a read-only check is in: with a
-  G Pro X plugged in, `python3 ~/.local/share/lghub/proeq.py` prints what its chip holds; please
-  send that output), the G735 / PRO X 2 protocol and the newer headsets' settings (A50 X, G522,
+- Still open, compared with G HUB: the G735 / PRO X 2 protocol and the newer headsets' settings (A50 X, G522,
   PRO X3), per-key actuation on analog keyboards, pairing on LSX / POWERPLAY receivers, keyboard
   onboard-profile editing and a few newer-mouse features. The full list is in [TODO.md](TODO.md).
 

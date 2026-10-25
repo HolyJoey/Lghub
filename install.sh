@@ -199,6 +199,7 @@ gcc -O2 -o "$APP_DIR/bin/bluevoice-bridge" \
 gcc -O2 -o "$APP_DIR/bin/surround-bridge" \
   "$SRC/bridge/surround_bridge.c" "$SRC/bridge/hx2e.c" "$SRC/bridge/peloader.c" \
   "${PW_FLAGS[@]}" -lm
+gcc -O2 -o "$APP_DIR/bin/proeq-design" "$SRC/bridge/proeq_design.c" "$SRC/bridge/peloader.c" -lm
 # Earlier versions ran the DSP under Wine; that's no longer needed.
 rm -rf "$APP_DIR/wine" "$APP_DIR/bin/bluevoice_host.exe"
 echo "OK"

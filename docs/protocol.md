@@ -352,7 +352,12 @@ G HUB downloads its data from `https://updates.ghub.logitechg.com/depots/<uuid>/
   0x0000-0x27FF): request report 4 `[4, flags, length ≤ 32, address high, address low, data…]`
   (flags 0x40 write, 0x10 address above 0xFFFF), padded to the output report; reply report 5
   `[5, data…]`. Protocol variant 1, no checksum.
-- Register 0x1152 (low 2 bits) = active EQ profile; command 0x1154 applies a change.
+- Writes: report 4 with flags 0x40 and the data after the header; no reply.
+- Register 0x1152 (low 2 bits) = active EQ profile; a change is applied by setting bit 0 of
+  register 0x1154 (read-modify-write), then 200 ms.
+- Band parameters (G HUB's): type (0 peaking, 1 low shelf, 2 high shelf, 3 low-pass, 4 high-pass),
+  frequency in Hz, Q x 256, gain dB x 256 (+-12 dB). G HUB's DLL turns them into the record and
+  back; Lghub runs those two functions from the DLL.
 - Band records: 5 × 11 bytes per profile at `profile × 0x37 + 0xFE9` (band 1 first): signed
   16-bit b0, b1, b2, −a1, −a2 and a shift byte s, each word × 2^−(15 − (s − 2)); gains are
   dB × 256 in G HUB's band parameters.

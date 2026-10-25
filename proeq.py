@@ -1,4 +1,4 @@
-"""The PRO equalizer on the G Pro X's own Conexant chip (CX2089x), read-only for now.
+"""The PRO equalizer on the G Pro X's own Conexant chip (CX2089x).
 
 G HUB sets it through logi_audio_conexant.dll (class CxAudioHidDev2089x, chip table entry 5,
 "ANDRUS"). Its HID transport (FUN_180006150) for memory space 1 (read / write, 0x0000-0x27FF,
@@ -6,21 +6,28 @@ up to 32 bytes per report, protocol variant 1, no checksum):
   request  report 4: [4, flags, length, address high, address low], data after it for writes;
            flags 0x40 = write, 0x10 = address above 0xFFFF
   reply    report 5: [5, data...]
-Register 0x1152 low 2 bits = the active EQ profile (set_profile 0x18000ef70; command 0x1154
-applies). Each profile has 5 bands of 11 bytes of filter coefficients at profile * 0x37 + 0xFE9
-(set_band_gain 0x18000f550, band 1-5); G HUB turns them into frequency / gain / Q with its
-filter design (FUN_1800011e0), not ported yet.
+Writes send report 4 with the data after the header and get no reply (protocol flag 0x10 off).
+Register 0x1152 low 2 bits = the active EQ profile (set_profile 0x18000ef70). Each profile has 5
+bands of 11 bytes of filter coefficients at profile * 0x37 + 0xFE9 (band 1-5). G HUB's
+set_band_gain (0x18000f550): the band's type / frequency / Q, the new gain (dB x 256, +-12 dB),
+its filter design (FUN_180001000) -> 11 bytes written back, then "apply": bit 0 of register
+0x1154 set (read-modify-write, FUN_1800129f0) and 200 ms. The design and its inverse
+(FUN_1800011e0) are Logitech's own code, run by bin/proeq-design (bridge/proeq_design.c) from the
+DLL in G HUB's core depot, fetched at first use.
 
-Nothing here writes to the headset. `python3 proeq.py [USB port]` prints what the chip answers.
+`python3 proeq.py [USB port]` prints what the chip holds (it only reads).
 """
 import cmath
 import math
 import os
 import select
 import struct
+import subprocess
 import sys
+import time
 
 import hotplug
+import store
 
 SYS_HIDRAW = '/sys/class/hidraw'
 REQUEST, REPLY = 4, 5
@@ -28,6 +35,57 @@ MAX_CHUNK = 32
 PROFILE_REGISTER = 0x1152
 BANDS_BASE, PROFILE_SIZE, BAND_SIZE, BAND_COUNT = 0xFE9, 0x37, 11, 5
 TIMEOUT = 1.0
+WRITE = 0x40
+APPLY_REGISTER = 0x1154
+MAX_GAIN_DB = 12.0
+TYPES = {0: 'peaking', 1: 'low shelf', 2: 'high shelf', 3: 'low-pass', 4: 'high-pass'}   # FUN_1800013b0
+MODELS = ('pro_71_gaming_headset',)                   # G HUB's hasOnboardProEq
+DLL_PATH = 'LGHUB/logi_audio_conexant.dll'          # in G HUB's core depot
+DLL_SHA256 = '3b985cda853e8d5e0f3ccedb31822485661b9612c7097c38f9606f9bf836b05d'   # the build the RVAs are for
+DLL = os.path.join(store.DATA_DIR, 'apo', 'logi_audio_conexant.dll')
+HELPER = os.path.join(store.DATA_DIR, 'bin', 'proeq-design')
+
+
+def fetch_dll():
+	"""G HUB's Conexant DLL from its core depot (first use), checked against the build we know."""
+	import hashlib
+	if os.path.exists(DLL):
+		return DLL
+	import depots
+	url = depots.SERVER + depots.CORE_DEPOT
+	data = depots._read(url, depots.files_cached(url)[DLL_PATH])
+	if hashlib.sha256(data).hexdigest() != DLL_SHA256:
+		raise OSError('G HUB ships another build of logi_audio_conexant.dll; its band maths may have moved')
+	os.makedirs(os.path.dirname(DLL), exist_ok=True)
+	tmp = DLL + '.tmp'
+	with open(tmp, 'wb') as f:
+		f.write(data)
+	os.replace(tmp, DLL)
+	return DLL
+
+
+def _helper(*args):
+	out = subprocess.run([HELPER, '--dll', fetch_dll(), *map(str, args)], capture_output=True, text=True,
+	                     timeout=10, check=True).stdout.split()
+	return out
+
+
+def analyse(record):
+	"""(type, frequency Hz, Q x 256, gain dB) of an 11-byte band record, by G HUB's FUN_1800011e0
+	(Q x 256: FUN_180001340 turns it into a bandwidth, asinh(128 / q))."""
+	kind, freq, q, gain, status = (int(x) for x in _helper('analyse', bytes(record).hex()))
+	if status:
+		raise ValueError(f'G HUB could not read this band (status {status})')
+	return kind, freq, q, gain / 256
+
+
+def design(kind, freq, q, gain_db):
+	"""The 11-byte record for a band, by G HUB's FUN_180001000 (its checks included)."""
+	gain = round(max(-MAX_GAIN_DB, min(MAX_GAIN_DB, gain_db)) * 256)
+	record, status = _helper('design', kind, freq, q, gain)
+	if int(status):
+		raise ValueError(f'G HUB refuses this band (status 0x{int(status):x})')
+	return bytes.fromhex(record)
 
 
 def coefficients(record):
@@ -153,8 +211,37 @@ class Chip:
 			out += self._reply()[1:1 + n]
 		return out
 
+	def write(self, address, data):
+		"""data to memory space 1 from address, in chunks of up to 32 (no reply)."""
+		for start in range(0, len(data), MAX_CHUNK):
+			chunk, a = data[start:start + MAX_CHUNK], address + start
+			header = bytes([REQUEST, WRITE | (0x10 if a > 0xFFFF else 0), len(chunk), a >> 8 & 0xFF, a & 0xFF])
+			os.write(self.fd, (header + bytes(chunk)).ljust(self.request_len, b'\0'))
+
+	def apply(self):
+		"""G HUB's command 0x1154: bit 0 set, read-modify-write, then 200 ms."""
+		value = self.read(APPLY_REGISTER, 1)[0]
+		self.write(APPLY_REGISTER, bytes([value | 1]))
+		time.sleep(0.2)
+
 	def profile(self):
 		return self.read(PROFILE_REGISTER, 1)[0] & 3
+
+	def set_profile(self, profile):
+		value = self.read(PROFILE_REGISTER, 1)[0]
+		self.write(PROFILE_REGISTER, bytes([value & 0xFC | profile & 3]))
+		self.apply()
+
+	def bands(self, profile):
+		"""[(type, frequency, Q, gain dB)] of a profile's 5 bands, as G HUB reads them."""
+		return [analyse(r) for r in self.band_records(profile)]
+
+	def set_band_gain(self, profile, band, gain_db):
+		"""band 1-5: its gain, keeping its type / frequency / Q (G HUB's set_band_gain)."""
+		address = profile * PROFILE_SIZE + BANDS_BASE + (band - 1) * BAND_SIZE
+		kind, freq, q, _gain = analyse(self.read(address, BAND_SIZE))
+		self.write(address, design(kind, freq, q, gain_db))
+		self.apply()
 
 	def band_records(self, profile):
 		"""The 5 bands' 11-byte coefficient records of a profile."""
@@ -182,11 +269,16 @@ def main(argv):
 	try:
 		profile = chip.profile()
 		print(f'active profile {profile}')
+		exact = os.path.exists(HELPER)
 		for p in range(4):
 			print(f'profile {p}:')
 			for i, r in enumerate(chip.band_records(p)):
-				freq, db = band_summary(coefficients(r))
-				print(f'  band {i + 1}: {r.hex(" ")}  ~{freq:.0f} Hz {db:+.1f} dB')
+				if exact:
+					kind, freq, q, db = analyse(r)
+					print(f'  band {i + 1}: {r.hex(" ")}  {TYPES.get(kind, kind)} {freq} Hz Q {q / 256:.2f} {db:+.2f} dB')
+				else:
+					freq, db = band_summary(coefficients(r))
+					print(f'  band {i + 1}: {r.hex(" ")}  ~{freq:.0f} Hz {db:+.1f} dB')
 	except OSError as e:          # TimeoutError too
 		print(f'failed: {e}')
 		return 1

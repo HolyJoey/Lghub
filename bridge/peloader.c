@@ -10,6 +10,7 @@
 #define _GNU_SOURCE
 #include "peloader.h"
 
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,6 +57,29 @@ static WINAPI void *w_DecodePointer(void *p) { return p; }
 static WINAPI int w_IsProcessorFeaturePresent(uint32_t f) { return f == 10 || f == 17; } /* SSE2, NX */
 static WINAPI void w_OutputDebugStringA(const char *s) { (void)s; }
 
+/* the C runtime's maths (the Conexant EQ design uses them; same calling convention for doubles) */
+static WINAPI double w_sin(double x) { return sin(x); }
+static WINAPI double w_cos(double x) { return cos(x); }
+static WINAPI double w_sinh(double x) { return sinh(x); }
+static WINAPI double w_sqrt(double x) { return sqrt(x); }
+static WINAPI double w_pow(double x, double y) { return pow(x, y); }
+static WINAPI double w_log(double x) { return log(x); }
+static WINAPI double w_log10(double x) { return log10(x); }
+static WINAPI double w_exp(double x) { return exp(x); }
+static WINAPI double w_acos(double x) { return acos(x); }
+static WINAPI double w_atan(double x) { return atan(x); }
+static WINAPI double w_atan2(double y, double x) { return atan2(y, x); }
+static WINAPI float w_sinf(float x) { return sinf(x); }
+static WINAPI float w_cosf(float x) { return cosf(x); }
+static WINAPI float w_sqrtf(float x) { return sqrtf(x); }
+static WINAPI float w_powf(float x, float y) { return powf(x, y); }
+static WINAPI float w_log10f(float x) { return log10f(x); }
+static WINAPI float w_acosf(float x) { return acosf(x); }
+static WINAPI void *w_memset(void *d, int c, size_t n) { return memset(d, c, n); }
+static WINAPI void *w_memcpy(void *d, const void *s, size_t n) { return memcpy(d, s, n); }
+static WINAPI void *w_memmove(void *d, const void *s, size_t n) { return memmove(d, s, n); }
+static WINAPI int w_memcmp(const void *a, const void *b, size_t n) { return memcmp(a, b, n); }
+
 static const struct { const char *name; pe_fn fn; } implemented[] = {
 	{"GetLastError", (pe_fn)w_GetLastError}, {"SetLastError", (pe_fn)w_SetLastError},
 	{"GetProcessHeap", (pe_fn)w_GetProcessHeap}, {"HeapAlloc", (pe_fn)w_HeapAlloc},
@@ -63,6 +87,12 @@ static const struct { const char *name; pe_fn fn; } implemented[] = {
 	{"DecodePointer", (pe_fn)w_DecodePointer},
 	{"IsProcessorFeaturePresent", (pe_fn)w_IsProcessorFeaturePresent},
 	{"OutputDebugStringA", (pe_fn)w_OutputDebugStringA},
+	{"sin", (pe_fn)w_sin}, {"cos", (pe_fn)w_cos}, {"sinh", (pe_fn)w_sinh}, {"sqrt", (pe_fn)w_sqrt},
+	{"pow", (pe_fn)w_pow}, {"log", (pe_fn)w_log}, {"log10", (pe_fn)w_log10}, {"exp", (pe_fn)w_exp},
+	{"acos", (pe_fn)w_acos}, {"atan", (pe_fn)w_atan}, {"atan2", (pe_fn)w_atan2}, {"sinf", (pe_fn)w_sinf},
+	{"cosf", (pe_fn)w_cosf}, {"sqrtf", (pe_fn)w_sqrtf}, {"powf", (pe_fn)w_powf}, {"log10f", (pe_fn)w_log10f},
+	{"acosf", (pe_fn)w_acosf}, {"memset", (pe_fn)w_memset}, {"memcpy", (pe_fn)w_memcpy},
+	{"memmove", (pe_fn)w_memmove}, {"memcmp", (pe_fn)w_memcmp},
 };
 
 /* --- traps for everything else ------------------------------------------------------------------ */
