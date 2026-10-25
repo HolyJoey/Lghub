@@ -9,8 +9,8 @@ classes, G HUB 2026.6) and its app features.
 0.9.9 = everything that can be built from G HUB without hardware; 1.0 = after checks on real devices.
 
 1. Signature effects' extra key groups: done for Smooth Star and Pulsar Point (G HUB's W / A / S / D,
-   logo and light-strip groups, signature.key_groups). Left: Smooth Wave's two extra groups (its builder
-   sorts by a device bit and the PerKey type, consumer keys apart; still our guess).
+   logo and light-strip groups, signature.key_groups). Smooth Wave: its two extra groups are only
+   filled on six-zone devices, so on per-key boards it is the sweep alone, as in G HUB.
 2. Keyboards: the analog keys' per-key editor (actuation point, rapid trigger) and onboard-profile
    editing (formats mostly found; see "Keyboards").
 3. Signature effects on the light strips (G735 / G512 X bottom, G713 / G715 halo): G HUB's per-LED
@@ -268,7 +268,7 @@ copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
   found yet). Neutron Null (in G HUB's device list) isn't in its 2026.6 program yet: nothing to port. Astro Point (headsets). G Tide
   (type 18, G HUB offers it on the G316 / G316 X) is done fully as G HUB's: timing, gradients and its 12
   key lists matched against key ids.
-  The per-key effects' extra groups are G HUB's now (signature.key_groups), except Smooth Wave's.
+  The per-key effects' extra groups are G HUB's now (signature.key_groups).
   Started: G HUB's frame-handler engine is ported (signature.py: sequencer, parallel, pause,
   gradient, gradient sampler, gradient tween, colour blend, its gradient stops and colour blend;
   tests). Done: Smooth Wave (its whole tree from G HUB's builder 0x14121b700: 23 tween

@@ -665,7 +665,9 @@ def g_tide(leds, c1=GHUB_PINK, c2=GHUB_BLUE):
 
 # name -> build(leds, logo ids, indicator ids, c1, c2), for lightsync
 EFFECTS = {
-	'smooth_wave': lambda leds, logo, ind, c1, c2: smooth_wave(leds, logo, ind, c1, c2),
+	# Smooth Wave's two extra groups (+0x100 / +0x110) are filled only on six-zone devices (its builder
+	# 0x14120fe90 ~760-910); on a per-key board every LED is in the sweep (+0xe0)
+	'smooth_wave': lambda leds, _logo, _ind, c1, c2: smooth_wave(leds, c1=c1, c2=c2),
 	'smooth_star': lambda leds, _logo, _ind, c1, c2: smooth_star(leds, c1, c2),
 	'pulsar_point': lambda leds, _logo, _ind, c1, c2: pulsar_point(leds, c1, c2),
 	'remind_me_of': lambda leds, _logo, _ind, c1, _c2: remind_me_of(leds, c1),
