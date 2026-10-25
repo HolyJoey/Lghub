@@ -111,6 +111,12 @@ class ProEqTest(unittest.TestCase):
 		chip.set_profile(2)
 		self.assertEqual(fake.memory[0x1152], 0xF2)
 
+	def test_busy_chip_is_not_written(self):
+		fake, chip = self._chip({0x1152: 0xF1, 0x1154: 0x01})               # still applying
+		with self.assertRaises(OSError):
+			chip.set_profile(2)
+		self.assertEqual(fake.memory[0x1152], 0xF1)
+
 	def test_gain_is_clamped(self):
 		with mock.patch.object(proeq, '_helper', return_value=['00' * 11, '0']) as h:
 			proeq.design(0, 1000, 362, 40)

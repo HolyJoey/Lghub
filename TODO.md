@@ -26,7 +26,7 @@ measurements.
 | Blue VO!CE (G Pro X, G733) | 100% | check on the G Pro X |
 | Blue VO!CE 2 (Yetis, G735, PRO X 2) | 95% | check against Logitech's APO under Wine; check on a mic |
 | Surround, equalizer | 100% | check on the G Pro X |
-| PRO 5-band equalizer | 90% | done with G HUB's own band maths (its DLL, run natively); G HUB's pre-write lock check not ported |
+| PRO 5-band equalizer | 95% | done with G HUB's own band maths (its DLL, run natively) and its busy check; check on the G Pro X |
 | Mice | 94% | see "Mice" below |
 | Keyboards | 80% | analog keys' per-key settings and onboard-profile editing (formats found, not built); see "Keyboards" below |
 | Headsets (other than the voice chain) | 50% | Centurion and the newer headsets; see "Headsets" below |
@@ -84,7 +84,7 @@ Done: the PRO equalizer card on the G Pro X's headset page (profiles 1-4, five b
 their type and frequency). It talks to the headset's Conexant chip as G HUB does (memory reads /
 writes over report 4 / 5, then the apply bit), and G HUB's own band design and analysis run from
 its logi_audio_conexant.dll (pinned build, fetched at first use) through bin/proeq-design.
-Left: G HUB's pre-write busy check (FUN_18000e180), taking frequency / Q from the chip's EEPROM
+Done too: G HUB's busy check before writes (FUN_18000e180). Left: taking frequency / Q from the chip's EEPROM
 copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
 
 ### Mice

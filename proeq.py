@@ -37,6 +37,7 @@ BANDS_BASE, PROFILE_SIZE, BAND_SIZE, BAND_COUNT = 0xFE9, 0x37, 11, 5
 TIMEOUT = 1.0
 WRITE = 0x40
 APPLY_REGISTER = 0x1154
+BUSY_READS = 5                                       # FUN_18000e180
 MAX_GAIN_DB = 12.0
 TYPES = {0: 'peaking', 1: 'low shelf', 2: 'high shelf', 3: 'low-pass', 4: 'high-pass'}   # FUN_1800013b0
 MODELS = ('pro_71_gaming_headset',)                   # G HUB's hasOnboardProEq
@@ -227,7 +228,20 @@ class Chip:
 	def profile(self):
 		return self.read(PROFILE_REGISTER, 1)[0] & 3
 
+	def busy(self):
+		"""G HUB's check before a write (FUN_18000e180): bit 0 of 0x1154 (the apply bit) read up to 5
+		times, back to back; True while the chip is still applying the last change."""
+		for _try in range(BUSY_READS):
+			if not self.read(APPLY_REGISTER, 1)[0] & 1:
+				return False
+		return True
+
+	def _ready(self):
+		if self.busy():                              # G HUB gives up without writing, as here
+			raise OSError('the headset is still applying the last equalizer change')
+
 	def set_profile(self, profile):
+		self._ready()
 		value = self.read(PROFILE_REGISTER, 1)[0]
 		self.write(PROFILE_REGISTER, bytes([value & 0xFC | profile & 3]))
 		self.apply()
@@ -240,6 +254,7 @@ class Chip:
 		"""band 1-5: its gain, keeping its type / frequency / Q (G HUB's set_band_gain)."""
 		address = profile * PROFILE_SIZE + BANDS_BASE + (band - 1) * BAND_SIZE
 		kind, freq, q, _gain = analyse(self.read(address, BAND_SIZE))
+		self._ready()
 		self.write(address, design(kind, freq, q, gain_db))
 		self.apply()
 

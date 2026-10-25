@@ -51,8 +51,8 @@ class Session:
 
 
 def active_profile(dev):
-	"""The onboard profile in use (0x8102 fn 2: the call next to G HUB's activate, fn 3; that
-	byte 0 is the profile number is ours)."""
+	"""The onboard profile in use: 0x8102 fn 2, no parameters (G HUB's getActiveProfile: byte 0 of
+	the reply, which must be at least 1 byte; fn 3 activates)."""
 	return dev.call(PROFILE_MANAGEMENT, 2)[0]
 
 
