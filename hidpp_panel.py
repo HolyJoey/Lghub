@@ -45,6 +45,8 @@ SIMPLE_READS = ((features.SIDETONE, 'sidetone', headset.sidetone),
                 (headset.CENTURION_ANC, 'anc', lambda dev: (headset.anc_mode(dev), *headset.anc_button(dev))),
                 (centurion_eq.EQ, 'onboard_eq', centurion_eq.read),
                 (headset.MIC_SELECT, 'mic_select', headset.mics),
+                (headset.AUX_CONFIG, 'aux', headset.aux_mode),
+                (headset.USB_PORTS, 'usb_ports', headset.usb_ports),
                 (features.POLAR_PATTERN, 'patterns', features.polar_patterns),
                 (features.DEVICE_EQ, 'device_eq', features.device_eq),
                 (features.ANGLE_SNAPPING, 'angle_snapping', features.angle_snapping),
@@ -365,7 +367,8 @@ class SettingsPanel(Gtk.Box):
 		                   ('device_eq', self._device_eq_card), ('charging', self._charging_card),
 		                   ('bass_tone', self._bass_card), ('mic', self._mic_card), ('anc', self._anc_card),
 		                   ('onboard_eq', self._onboard_eq_card), ('headset_switches', self._switches_card),
-		                   ('mic_select', self._mic_select_card),
+		                   ('mic_select', self._mic_select_card), ('aux', self._aux_card),
+		                   ('usb_ports', self._usb_ports_card),
 		                   ('power', lambda i: power_card(i['power'], self._do, self.dev)),
 		                   ('battery', lambda _i: battery_warnings_card()),
 		                   ('mode', self._mode_card)):
@@ -499,6 +502,25 @@ class SettingsPanel(Gtk.Box):
 			sw = Gtk.Switch(active=usage in chosen, valign=Gtk.Align.CENTER)
 			sw.connect(NOTIFY_ACTIVE, lambda w, _p, u=usage: self.loading or self._game_key(u, w.get_active()))
 			c.append(row(f'Turn off {name}', sw))
+		return c
+
+	def _aux_card(self, info):
+		c = card('Aux input', 'When the headset’s aux input is on.')
+		dd = Gtk.DropDown.new_from_strings(list(headset.AUX_MODES))
+		dd.set_selected(min(info['aux'], len(headset.AUX_MODES) - 1))
+		dd.connect(NOTIFY_SELECTED, lambda w, _p: self.loading or self._do(
+			lambda m=w.get_selected(): headset.set_aux_mode(self.dev, m)))
+		c.append(row('Aux', dd))
+		return c
+
+	def _usb_ports_card(self, info):
+		c = card('USB ports', 'What each of the headset’s USB ports is set up for.')
+		for index, setting in info['usb_ports']:
+			dd = Gtk.DropDown.new_from_strings(list(headset.PORT_SETTINGS))
+			dd.set_selected(min(setting, len(headset.PORT_SETTINGS) - 1))
+			dd.connect(NOTIFY_SELECTED, lambda w, _p, i=index: self.loading or self._do(
+				lambda s=w.get_selected(): headset.set_usb_port(self.dev, i, s)))
+			c.append(row(f'Port {index + 1}', dd))
 		return c
 
 	def _mic_select_card(self, info):

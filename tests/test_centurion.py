@@ -151,6 +151,21 @@ class CenturionTest(unittest.TestCase):
 		headset.set_mic(Dev(), 0)
 		self.assertEqual(calls[-1], (0x063B, 2, b'\x00'))
 
+	def test_aux_and_usb_ports(self):
+		calls = []
+
+		class Dev:
+			def call(self, feature, fn, params=b''):
+				calls.append((feature, fn, bytes(params)))
+				answers = {(0x063C, 0): b'\x01', (0x063A, 0): b'\x02', (0x063A, 1, b'\x00'): b'\x00',
+				           (0x063A, 1, b'\x01'): b'\x01'}
+				return answers.get((feature, fn, bytes(params)), answers.get((feature, fn), b'')).ljust(16, b'\0')
+		dev = Dev()
+		self.assertEqual(headset.aux_mode(dev), 1)
+		self.assertEqual(headset.usb_ports(dev), [(0, 0), (1, 1)])
+		headset.set_usb_port(dev, 1, 0)
+		self.assertEqual(calls[-1], (0x063A, 2, b'\x01\x00'))
+
 	def test_descriptor_collection(self):
 		desc = bytes([0x06, 0xA0, 0xFF, 0x09, 0x01, 0xA1, 0x01, 0x85, 0x51, 0xC0])
 		self.assertEqual(centurion._collection(desc), (0xFFA0, 1, 0x51))

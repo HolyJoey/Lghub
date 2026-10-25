@@ -209,10 +209,11 @@ def set_anc_button(dev, short_modes, long_mode):
 # reduction (fn 0 / 1 get / set on, fn 2 / 3 get / set level: off, low, medium, high), 0x0618 battery
 # saver ("eco mode", fn 0 / 1), 0x0639 footstep detection (fn 0 / 1), 0x060B tones (getToneEnabledState
 # fn 0, setToneEnabledState fn 1). That a get answers in byte 0 is ours.
-AI_NOISE_REDUCTION, BATTERY_SAVER, FOOTSTEP_DETECTION, TONES = 0x060E, 0x0618, 0x0639, 0x060B
+# 0x0631 Do Not Disturb (fn 0 / 1, proto DoNotDisturb{is_donotdisturb_enabled}) works the same way.
+AI_NOISE_REDUCTION, BATTERY_SAVER, FOOTSTEP_DETECTION, TONES, DO_NOT_DISTURB = 0x060E, 0x0618, 0x0639, 0x060B, 0x0631
 AI_NR_LEVELS = ('Off', 'Low', 'Medium', 'High')
 SWITCHES = {AI_NOISE_REDUCTION: 'AI noise reduction', BATTERY_SAVER: 'Battery saver',
-            FOOTSTEP_DETECTION: 'Footstep detection', TONES: 'Headset tones'}
+            FOOTSTEP_DETECTION: 'Footstep detection', TONES: 'Headset tones', DO_NOT_DISTURB: 'Do not disturb'}
 
 
 def switch_state(dev, feature):
@@ -237,6 +238,33 @@ def switches(dev):
 	if AI_NOISE_REDUCTION in out:
 		out['ai_level'] = ai_nr_level(dev)
 	return out
+
+
+# 0x063C AuxConfig (fn 0 get, fn 1 set; proto ALWAYS_ENABLED / ONLY_WHEN_DOCKED, wire = enum - 1) and
+# 0x063A USBPortConfig (fn 0 getInfo: proto Info{count, ports{console_supported, pc_supported}},
+# fn 1 getPortConfig [index], fn 2 setPortConfig [index, setting]; settings PC 0, CONSOLE 1 on the wire).
+# Ours: info as [count, (pc, console) per port], answers in byte 0.
+AUX_CONFIG, USB_PORTS = 0x063C, 0x063A
+AUX_MODES = ('Always on', 'Only when docked')
+PORT_SETTINGS = ('PC', 'Console')
+
+
+def aux_mode(dev):
+	return dev.call(AUX_CONFIG, 0)[0]
+
+
+def set_aux_mode(dev, mode):
+	dev.call(AUX_CONFIG, 1, bytes([mode]))
+
+
+def usb_ports(dev):
+	"""[(port index, setting)] of the headset's USB ports."""
+	count = dev.call(USB_PORTS, 0)[0]
+	return [(i, dev.call(USB_PORTS, 1, bytes([i]))[0]) for i in range(count)]
+
+
+def set_usb_port(dev, index, setting):
+	dev.call(USB_PORTS, 2, bytes([index, setting]))
 
 
 # 0x063B MicSelect (G HUB's Feature063BMicSelect): fn 0 getInfo (proto Info{count, mic_types}), fn 1
