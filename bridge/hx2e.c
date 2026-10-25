@@ -109,7 +109,7 @@ hx2e *hx2e_open(const char *dll_path, const char *headset, int rate, int channel
 		dll = pe_load(dll_path);
 		if (!dll) return NULL;
 		if (quiet_logger(dll) || no_stack_probe(dll)) {
-			fprintf(stderr, "hx2e: unexpected DLL build; expected Logitech's 2024.7 HX2E APO\n");
+			(void)fprintf(stderr, "hx2e: unexpected DLL build; expected Logitech's 2024.7 HX2E APO\n");
 			return NULL;
 		}
 	}
@@ -130,12 +130,12 @@ hx2e *hx2e_open(const char *dll_path, const char *headset, int rate, int channel
 	init_fn init = (init_fn)slot(h, V_INIT);
 	streams_fn streams = (streams_fn)slot(h, V_STREAMS);
 	if (!init(h->obj, &name)) {
-		fprintf(stderr, "hx2e: Init(%s) failed\n", headset);
+		(void)fprintf(stderr, "hx2e: Init(%s) failed\n", headset);
 		hx2e_close(h);
 		return NULL;
 	}
 	if (!streams(h->obj, rate, channels, channels == 2 ? h->stereo : h->room, 1)) {
-		fprintf(stderr, "hx2e: SetStreamsParams(%d Hz, %d channels) failed\n", rate, channels);
+		(void)fprintf(stderr, "hx2e: SetStreamsParams(%d Hz, %d channels) failed\n", rate, channels);
 		hx2e_close(h);
 		return NULL;
 	}

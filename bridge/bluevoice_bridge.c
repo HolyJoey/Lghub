@@ -21,7 +21,7 @@
  *
  * Usage: bluevoice-bridge --dll APO.dll --params FILE [--engine micopt|bv2]
  */
-#define _GNU_SOURCE
+#define _GNU_SOURCE  /* NOLINT(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp): glibc's feature switch */
 #include <math.h>
 #include <signal.h>
 #include <stdatomic.h>
@@ -211,7 +211,7 @@ static void on_state(void *data, enum pw_filter_state old, enum pw_filter_state 
 {
 	(void)data;
 	(void)old;
-	fprintf(stderr, "bridge: filter %s%s%s\n", pw_filter_state_as_string(state), error ? ": " : "", error ? error : "");
+	(void)fprintf(stderr, "bridge: filter %s%s%s\n", pw_filter_state_as_string(state), error ? ": " : "", error ? error : "");
 }
 
 static const struct pw_filter_events filter_events = {
@@ -221,7 +221,7 @@ static const struct pw_filter_events filter_events = {
 static void *new_instance(struct bridge *b, int rate)
 {
 	void *m = b->dsp->open(b->dll_path, rate);
-	if (m && b->dsp->load_params(m, b->params_path) < 0) fprintf(stderr, "bridge: cannot read %s\n", b->params_path);
+	if (m && b->dsp->load_params(m, b->params_path) < 0) (void)fprintf(stderr, "bridge: cannot read %s\n", b->params_path);
 	return m;
 }
 
@@ -256,7 +256,7 @@ static void on_timer(void *data, uint64_t expirations)
 		void *m = new_instance(b, b->rate);
 		if (m) {
 			atomic_store(&b->pending, m);
-			fprintf(stderr, rate_changed ? "sample rate now %d\n" : "reloaded parameters\n", b->rate);
+			(void)fprintf(stderr, rate_changed ? "sample rate now %d\n" : "reloaded parameters\n", b->rate);
 		}
 	}
 	double in_db = to_db(&b->meter_in), out_db = to_db(&b->meter_out);
@@ -264,7 +264,7 @@ static void on_timer(void *data, uint64_t expirations)
 	/* Silence is reported once a second, sound every 100 ms: an idle engine needn't wake 10x/s. */
 	if (in_db > -119.0 || out_db > -119.0 || ++quiet_ticks >= 10) {
 		quiet_ticks = 0;
-		fprintf(stderr, "meter %.1f %.1f\n", in_db, out_db);
+		(void)fprintf(stderr, "meter %.1f %.1f\n", in_db, out_db);
 	}
 }
 
@@ -286,7 +286,7 @@ int main(int argc, char **argv)
 	}
 	b->dsp = !strcmp(engine, "bv2") ? &BV2 : !strcmp(engine, "micopt") ? &MICOPT : NULL;
 	if (!b->dll_path || !b->params_path || !b->dsp) {
-		fprintf(stderr, "usage: %s --dll APO.dll --params FILE [--engine micopt|bv2]\n", argv[0]);
+		(void)fprintf(stderr, "usage: %s --dll APO.dll --params FILE [--engine micopt|bv2]\n", argv[0]);
 		return 2;
 	}
 
@@ -294,7 +294,7 @@ int main(int argc, char **argv)
 	b->rate = RATE;
 	b->current = new_instance(b, b->rate);
 	if (!b->current) {
-		fprintf(stderr, "bridge: cannot load Blue VO!CE from %s\n", b->dll_path);
+		(void)fprintf(stderr, "bridge: cannot load Blue VO!CE from %s\n", b->dll_path);
 		return 1;
 	}
 	b->block = b->dsp->block(b->current);
@@ -310,7 +310,7 @@ int main(int argc, char **argv)
 	pw_loop_add_signal(loop, SIGTERM, on_signal, b);
 	b->context = pw_context_new(loop, NULL, 0);
 	b->core = pw_context_connect(b->context, NULL, 0);
-	if (!b->core) { fprintf(stderr, "bridge: cannot connect to PipeWire\n"); return 1; }
+	if (!b->core) { (void)fprintf(stderr, "bridge: cannot connect to PipeWire\n"); return 1; }
 
 	/* The virtual microphone apps record from. Not lingering: it goes away with us. */
 	struct pw_properties *mic = pw_properties_new(
@@ -336,7 +336,7 @@ int main(int argc, char **argv)
 		sizeof(struct port), pw_properties_new(PW_KEY_FORMAT_DSP, "32 bit float mono audio",
 		                                       PW_KEY_PORT_NAME, "out", NULL), NULL, 0);
 	if (pw_filter_connect(b->filter, PW_FILTER_FLAG_RT_PROCESS, NULL, 0) < 0) {
-		fprintf(stderr, "bridge: cannot connect filter\n");
+		(void)fprintf(stderr, "bridge: cannot connect filter\n");
 		return 1;
 	}
 
@@ -344,10 +344,10 @@ int main(int argc, char **argv)
 	struct timespec period = {0, 100L * 1000 * 1000};
 	pw_loop_update_timer(loop, timer, &period, &period, false);
 
-	fprintf(stderr, "ready rate=%d block=%d (native, no Wine)\n", RATE, b->block);
+	(void)fprintf(stderr, "ready rate=%d block=%d (native, no Wine)\n", RATE, b->block);
 	pw_main_loop_run(b->loop);
 
-	fprintf(stderr, "bridge: stopping\n");
+	(void)fprintf(stderr, "bridge: stopping\n");
 	pw_filter_destroy(b->filter);
 	pw_proxy_destroy(b->virtual_mic);
 	pw_core_disconnect(b->core);

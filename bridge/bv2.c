@@ -147,7 +147,8 @@ bv2 *bv2_open(const char *dll_path, int rate)
 {
 	int block = block_for_rate(rate);
 	if (!block) return NULL;
-	if (!dll && !(dll = pe_load(dll_path))) return NULL;
+	if (!dll) dll = pe_load(dll_path);
+	if (!dll) return NULL;
 	params_fn defaults = (params_fn)api(API("GetDefaultParameters", "PEAUDtsClearVoice2Parameters@1@@Z"));
 	size_fn size = (size_fn)api(API("GetInstanceSize", "PEBUDtsClearVoice2Config@1@PEA_K@Z"));
 	init_fn init = (init_fn)api(API("Init", "PEAUDtsClearVoice2Inst@1@PEBUDtsClearVoice2Config@1@@Z"));
@@ -158,7 +159,7 @@ bv2 *bv2_open(const char *dll_path, int rate)
 	b->process = (process_fn)api(API("Process", "PEAUDtsClearVoice2Inst@1@PEAPEAM@Z"));
 	b->release = (release_fn)api(API("Release", "PEAUDtsClearVoice2Inst@1@@Z"));
 	if (!defaults || !size || !init || !b->get || !b->update || !b->process || !b->release) {
-		fprintf(stderr, "bv2: the DLL doesn't have the ClearVoice 2 API\n");
+		(void)fprintf(stderr, "bv2: the DLL doesn't have the ClearVoice 2 API\n");
 		free(b);
 		return NULL;
 	}
@@ -166,7 +167,9 @@ bv2 *bv2_open(const char *dll_path, int rate)
 	int32_t head[6] = {rate, block, 1, rate, block, 2};
 	memcpy(config, head, sizeof head);
 	uint64_t inst_size = 0;
-	if (defaults(config + CONFIG_PARAMS) || (config[CONFIG_FLAG] = 1, size(config, &inst_size)) || !inst_size) {
+	int failed = defaults(config + CONFIG_PARAMS) != 0;
+	config[CONFIG_FLAG] = 1;
+	if (failed || size(config, &inst_size) || !inst_size) {
 		free(b);
 		return NULL;
 	}

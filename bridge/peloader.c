@@ -7,7 +7,7 @@
  * is obvious instead of a mystery crash. The DSP entry points take caller-allocated memory, so the
  * DLL's C runtime start-up (DllMain) is not run.
  */
-#define _GNU_SOURCE
+#define _GNU_SOURCE  /* NOLINT(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp): glibc's switch for strdup / MAP_ANONYMOUS */
 #include "peloader.h"
 
 #include <math.h>
@@ -22,7 +22,8 @@
 #define DIR_IMPORT 8
 #define DIR_BASERELOC 40
 #define TRAP_SIZE 32
-#define TRAP_AREA (1 << 16)
+#define TRAP_AREA (1u << 16u)
+#define U(x) ((unsigned)(x))   /* the mman.h flags are int constants; combine them unsigned */
 
 struct pe_image {
 	uint8_t *base;
@@ -30,9 +31,9 @@ struct pe_image {
 	uint32_t export_dir, export_size;
 };
 
-static uint16_t rd16(const uint8_t *p) { return (uint16_t)(p[0] | p[1] << 8); }
-static uint32_t rd32(const uint8_t *p) { return rd16(p) | (uint32_t)rd16(p + 2) << 16; }
-static uint64_t rd64(const uint8_t *p) { return rd32(p) | (uint64_t)rd32(p + 4) << 32; }
+static uint16_t rd16(const uint8_t *p) { return (uint16_t)(U(p[0]) | U(p[1]) << 8u); }
+static uint32_t rd32(const uint8_t *p) { return rd16(p) | (uint32_t)rd16(p + 2) << 16u; }
+static uint64_t rd64(const uint8_t *p) { return rd32(p) | (uint64_t)rd32(p + 4) << 32u; }
 
 /* --- the few Windows functions the DSP path may use ------------------------------------------- */
 
@@ -43,7 +44,7 @@ static WINAPI void *w_GetProcessHeap(void) { return (void *)1; }
 static WINAPI void *w_HeapAlloc(void *heap, uint32_t flags, size_t n)
 {
 	(void)heap;
-	return flags & 0x8 ? calloc(1, n ? n : 1) : malloc(n ? n : 1); /* 0x8 = HEAP_ZERO_MEMORY */
+	return flags & 0x8u ? calloc(1, n ? n : 1) : malloc(n ? n : 1); /* 0x8 = HEAP_ZERO_MEMORY */
 }
 static WINAPI int w_HeapFree(void *heap, uint32_t flags, void *p)
 {
@@ -99,7 +100,7 @@ static const struct { const char *name; pe_fn fn; } implemented[] = {
 
 static void trap(const char *name)
 {
-	fprintf(stderr, "peloader: the DLL called %s, which is not implemented\n", name);
+	(void)fprintf(stderr, "peloader: the DLL called %s, which is not implemented\n", name);
 	abort();
 }
 
@@ -149,7 +150,7 @@ static uint8_t *read_file(const char *path, size_t *len)
 		}
 		*len = (size_t)size;
 	}
-	fclose(f);
+	(void)fclose(f);
 	return data;
 }
 
@@ -166,8 +167,8 @@ static int apply_relocations(pe_image *img, uint32_t rel, uint32_t rel_size, int
 		if (size < 8 || !in_range((size_t)rel + off, size, img->size)) return -1;
 		for (uint32_t k = 8; k + 2 <= size; k += 2) {
 			uint16_t e = rd16(block + k);
-			size_t at = (size_t)page + (e & 0xfff);
-			if (e >> 12 != 10) continue; /* only IMAGE_REL_BASED_DIR64 occurs in x64 images */
+			size_t at = (size_t)page + (U(e) & 0xfffu);
+			if (U(e) >> 12u != 10) continue; /* only IMAGE_REL_BASED_DIR64 occurs in x64 images */
 			if (!in_range(at, 8, img->size)) return -1;
 			uint64_t v;
 			memcpy(&v, img->base + at, 8);
@@ -182,11 +183,11 @@ static int apply_relocations(pe_image *img, uint32_t rel, uint32_t rel_size, int
 static int link_imports(pe_image *img, uint32_t imp)
 {
 	/* Written now, made executable (and no longer writable) once every trap is in place. */
-	uint8_t *traps = mmap(NULL, TRAP_AREA, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	uint8_t *traps = mmap(NULL, TRAP_AREA, (int)(U(PROT_READ) | U(PROT_WRITE)), (int)(U(MAP_PRIVATE) | U(MAP_ANONYMOUS)), -1, 0);
 	if (traps == MAP_FAILED) return -1;
 	int rc = fill_imports(img, imp, traps);
-	if (rc < 0 || mprotect(traps, TRAP_AREA, PROT_READ | PROT_EXEC) != 0) {
-		munmap(traps, TRAP_AREA);
+	if (rc < 0 || mprotect(traps, TRAP_AREA, (int)(U(PROT_READ) | U(PROT_EXEC))) != 0) {
+		(void)munmap(traps, TRAP_AREA);
 		return -1;
 	}
 	return 0;
@@ -201,11 +202,11 @@ static int protect_sections(pe_image *img, const uint8_t *file, size_t sections,
 		uint32_t vsize = rd32(sec + 8), va = rd32(sec + 12), raw_size = rd32(sec + 16), flags = rd32(sec + 36);
 		size_t len = ((size_t)(vsize > raw_size ? vsize : raw_size) + 0xfff) & ~(size_t)0xfff;
 		if (!len || !in_range(va, len, img->size)) continue;
-		int prot = (flags & 0x40000000u ? PROT_READ : 0)      /* IMAGE_SCN_MEM_READ */
-		         | (flags & 0x80000000u ? PROT_WRITE : 0)     /* IMAGE_SCN_MEM_WRITE */
-		         | (flags & 0x20000000u ? PROT_EXEC : 0);     /* IMAGE_SCN_MEM_EXECUTE */
-		if ((prot & PROT_WRITE) && (prot & PROT_EXEC)) prot &= ~PROT_WRITE;
-		if (mprotect(img->base + va, len, prot) != 0) return -1;
+		unsigned prot = (flags & 0x40000000u ? U(PROT_READ) : 0)      /* IMAGE_SCN_MEM_READ */
+		              | (flags & 0x80000000u ? U(PROT_WRITE) : 0)     /* IMAGE_SCN_MEM_WRITE */
+		              | (flags & 0x20000000u ? U(PROT_EXEC) : 0);     /* IMAGE_SCN_MEM_EXECUTE */
+		if ((prot & U(PROT_WRITE)) && (prot & U(PROT_EXEC))) prot &= ~U(PROT_WRITE);
+		if (mprotect(img->base + va, len, (int)prot) != 0) return -1;
 	}
 	return 0;
 }
@@ -223,9 +224,9 @@ static int fill_imports(pe_image *img, uint32_t imp, uint8_t *traps)
 			if (!entry) break;
 			char ordinal[32];
 			const char *name = ordinal;
-			if (entry >> 63)
-				snprintf(ordinal, sizeof ordinal, "%s#%u", (const char *)img->base + rd32(desc + 12),
-				         (unsigned)(entry & 0xffff));
+			if (entry >> 63u)
+				(void)snprintf(ordinal, sizeof ordinal, "%s#%u", (const char *)img->base + rd32(desc + 12),
+				         (unsigned)(entry & 0xffffu));
 			else if (in_range((uint32_t)entry + 2, 1, img->size))
 				name = (const char *)img->base + (uint32_t)entry + 2;
 			else
@@ -261,7 +262,7 @@ pe_image *pe_load(const char *path)
 	img->export_dir = rd32(dirs + DIR_EXPORT);
 	img->export_size = rd32(dirs + DIR_EXPORT + 4);
 	uint32_t imp = rd32(dirs + DIR_IMPORT), rel = rd32(dirs + DIR_BASERELOC), rel_size = rd32(dirs + DIR_BASERELOC + 4);
-	img->base = mmap(NULL, image_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	img->base = mmap(NULL, image_size, (int)(U(PROT_READ) | U(PROT_WRITE)), (int)(U(MAP_PRIVATE) | U(MAP_ANONYMOUS)), -1, 0);
 	if (img->base == MAP_FAILED) {
 		free(img);
 		img = NULL;
@@ -277,7 +278,7 @@ pe_image *pe_load(const char *path)
 	if (apply_relocations(img, rel, rel_size, (int64_t)((uintptr_t)img->base - image_base)) < 0) goto fail;
 	if (link_imports(img, imp) < 0) goto fail;
 	if (protect_sections(img, file, sections, nsec, header_size) < 0) goto fail;
-	if (getenv("PELOADER_DEBUG")) fprintf(stderr, "peloader: %s at %p\n", path, (void *)img->base);
+	if (getenv("PELOADER_DEBUG")) (void)fprintf(stderr, "peloader: %s at %p\n", path, (void *)img->base);
 	goto out;
 
 fail:
@@ -317,9 +318,10 @@ void *pe_rva(pe_image *img, unsigned rva)
 int pe_patch(pe_image *img, unsigned rva, const void *expect, const void *bytes, size_t n)
 {
 	if (!in_range(rva, n, img->size) || memcmp(img->base + rva, expect, n) != 0) return -1;
-	uintptr_t start = (uintptr_t)(img->base + rva) & ~(uintptr_t)0xfff;
-	size_t len = ((uintptr_t)(img->base + rva) + n - start + 0xfff) & ~(size_t)0xfff;
-	if (mprotect((void *)start, len, PROT_READ | PROT_WRITE) != 0) return -1;
+	/* the image is mapped page-aligned, so its pages are found from the base pointer itself */
+	uint8_t *start = img->base + (rva & ~0xfffu);
+	size_t len = ((size_t)(rva - (rva & ~0xfffu)) + n + 0xfffu) & ~(size_t)0xfffu;
+	if (mprotect(start, len, (int)(U(PROT_READ) | U(PROT_WRITE))) != 0) return -1;
 	memcpy(img->base + rva, bytes, n);
-	return mprotect((void *)start, len, PROT_READ | PROT_EXEC);   /* only code is patched */
+	return mprotect(start, len, (int)(U(PROT_READ) | U(PROT_EXEC)));   /* only code is patched */
 }

@@ -101,7 +101,7 @@ micopt *micopt_open(const char *dll_path, int rate)
 		dll = pe_load(dll_path);
 		if (!dll) return NULL;
 		if (init_crt_matherr(dll)) {
-			fprintf(stderr, "micopt: unexpected DLL build; expected Logitech's 2024.7 Blue VO!CE APO\n");
+			(void)fprintf(stderr, "micopt: unexpected DLL build; expected Logitech's 2024.7 Blue VO!CE APO\n");
 			return NULL;
 		}
 	}
@@ -152,7 +152,7 @@ static int is_integer_param(const char *name)
 static int set_raw(micopt *m, const char *name, void *value)
 {
 	char buf[64] = {0}; /* the DLL compares up to 64 bytes */
-	snprintf(buf, sizeof buf, "%s", name);
+	(void)snprintf(buf, sizeof buf, "%s", name);
 	return m->set(m->state, m->params, buf, value);
 }
 

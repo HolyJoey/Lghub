@@ -18,7 +18,7 @@
  *
  * Usage: surround-bridge --dll APO.dll --headset NAME --settings FILE --description TEXT
  */
-#define _GNU_SOURCE
+#define _GNU_SOURCE  /* NOLINT(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp): glibc's feature switch */
 #include <math.h>
 #include <signal.h>
 #include <stdatomic.h>
@@ -233,8 +233,8 @@ static void on_process(void *data, struct spa_io_position *position)
 		return;
 	}
 	for (uint32_t i = 0; i < n; i++) {
-		l[i] = b->stereo[2 * i];
-		r[i] = b->stereo[2 * i + 1];
+		l[i] = b->stereo[2 * (size_t)i];
+		r[i] = b->stereo[2 * (size_t)i + 1];
 	}
 	run_eq(b, l, r, n, rate);
 	meter_max(&b->meter_out, l, n);
@@ -244,7 +244,7 @@ static void on_state(void *data, enum pw_filter_state old, enum pw_filter_state 
 {
 	(void)data;
 	(void)old;
-	fprintf(stderr, "surround: filter %s%s%s\n", pw_filter_state_as_string(state), error ? ": " : "", error ? error : "");
+	(void)fprintf(stderr, "surround: filter %s%s%s\n", pw_filter_state_as_string(state), error ? ": " : "", error ? error : "");
 }
 
 static const struct pw_filter_events filter_events = {
@@ -266,12 +266,16 @@ static void read_settings(struct bridge *b)
 			if (!strcmp(name, "state")) s.state = v != 0;
 			else if (!strcmp(name, "room")) s.room = (int)v;
 			else if (!strcmp(name, "eq")) s.eq = v != 0;
-			else if (!strncmp(name, "eq_", 3) && atoi(name + 3) >= 1 && atoi(name + 3) <= BANDS)
-				s.eq_db[atoi(name + 3) - 1] = v < -24 ? -24 : v > 24 ? 24 : v;
+			else if (!strncmp(name, "eq_", 3)) {
+				char *after;
+				long band = strtol(name + 3, &after, 10);
+				if (after != name + 3 && !*after && band >= 1 && band <= BANDS)
+					s.eq_db[band - 1] = v < -24 ? -24 : v > 24 ? 24 : v;
+			}
 			for (int ch = 0; ch < CHANNELS; ch++)
 				if (!strncmp(name, "gain_", 5) && !strcmp(name + 5, positions[ch])) s.gain[ch] = v < 0 ? 0 : v > 4 ? 4 : v;
 		}
-		fclose(f);
+		(void)fclose(f);
 	}
 	b->shared = s;
 	atomic_fetch_add(&b->settings_serial, 1);
@@ -293,10 +297,10 @@ static void on_timer(void *data, uint64_t expirations)
 	struct bridge *b = data;
 	hx2e *old = atomic_exchange(&b->retired, NULL);
 	if (old) hx2e_close(old);
-	fprintf(stderr, "meter %.1f %.1f\n", to_db(&b->meter_in), to_db(&b->meter_out));
+	(void)fprintf(stderr, "meter %.1f %.1f\n", to_db(&b->meter_in), to_db(&b->meter_out));
 	if (settings_changed(b)) {
 		read_settings(b);
-		fprintf(stderr, "surround: settings reloaded\n");
+		(void)fprintf(stderr, "surround: settings reloaded\n");
 	}
 	int rate = atomic_load(&b->graph_rate);
 	if (rate && rate != b->rate && (rate == 44100 || rate == 48000) && !atomic_load(&b->pending)) {
@@ -304,7 +308,7 @@ static void on_timer(void *data, uint64_t expirations)
 		if (h) {
 			b->rate = rate;
 			atomic_store(&b->pending, h);
-			fprintf(stderr, "surround: sample rate now %d\n", rate);
+			(void)fprintf(stderr, "surround: sample rate now %d\n", rate);
 		}
 	}
 }
@@ -327,7 +331,7 @@ int main(int argc, char **argv)
 		else if (!strcmp(argv[i], "--description")) b->description = argv[++i];
 	}
 	if (!b->dll_path || !b->settings_path) {
-		fprintf(stderr, "usage: %s --dll APO.dll --headset NAME --settings FILE --description TEXT\n", argv[0]);
+		(void)fprintf(stderr, "usage: %s --dll APO.dll --headset NAME --settings FILE --description TEXT\n", argv[0]);
 		return 2;
 	}
 	settings_changed(b);
@@ -335,7 +339,7 @@ int main(int argc, char **argv)
 	b->rate = 48000;
 	b->current = hx2e_open(b->dll_path, b->headset, b->rate, CHANNELS);
 	if (!b->current) {
-		fprintf(stderr, "surround: cannot load DTS Headphone:X from %s\n", b->dll_path);
+		(void)fprintf(stderr, "surround: cannot load DTS Headphone:X from %s\n", b->dll_path);
 		return 1;
 	}
 	b->applied_serial = -1;
@@ -348,7 +352,7 @@ int main(int argc, char **argv)
 	pw_loop_add_signal(loop, SIGTERM, on_signal, b);
 	b->context = pw_context_new(loop, NULL, 0);
 	b->core = pw_context_connect(b->context, NULL, 0);
-	if (!b->core) { fprintf(stderr, "surround: cannot connect to PipeWire\n"); return 1; }
+	if (!b->core) { (void)fprintf(stderr, "surround: cannot connect to PipeWire\n"); return 1; }
 
 	/* The 7.1 output apps play into; it goes away with us. */
 	struct pw_properties *sink = pw_properties_new(
@@ -368,28 +372,28 @@ int main(int argc, char **argv)
 		&filter_events, b);
 	char name[16];
 	for (int ch = 0; ch < CHANNELS; ch++) {
-		snprintf(name, sizeof name, "in_%s", positions[ch]);
+		(void)snprintf(name, sizeof name, "in_%s", positions[ch]);
 		b->in[ch] = pw_filter_add_port(b->filter, PW_DIRECTION_INPUT, PW_FILTER_PORT_FLAG_MAP_BUFFERS,
 			sizeof(struct port), pw_properties_new(PW_KEY_FORMAT_DSP, "32 bit float mono audio",
 			                                       PW_KEY_PORT_NAME, name, PW_KEY_AUDIO_CHANNEL, positions[ch], NULL),
 			NULL, 0);
 	}
 	for (int ch = 0; ch < 2; ch++) {
-		snprintf(name, sizeof name, "out_%s", positions[ch]);
+		(void)snprintf(name, sizeof name, "out_%s", positions[ch]);
 		b->out[ch] = pw_filter_add_port(b->filter, PW_DIRECTION_OUTPUT, PW_FILTER_PORT_FLAG_MAP_BUFFERS,
 			sizeof(struct port), pw_properties_new(PW_KEY_FORMAT_DSP, "32 bit float mono audio",
 			                                       PW_KEY_PORT_NAME, name, PW_KEY_AUDIO_CHANNEL, positions[ch], NULL),
 			NULL, 0);
 	}
 	if (pw_filter_connect(b->filter, PW_FILTER_FLAG_RT_PROCESS, NULL, 0) < 0) {
-		fprintf(stderr, "surround: cannot connect filter\n");
+		(void)fprintf(stderr, "surround: cannot connect filter\n");
 		return 1;
 	}
 	struct spa_source *timer = pw_loop_add_timer(loop, on_timer, b);
 	struct timespec period = {0, 200L * 1000 * 1000};
 	pw_loop_update_timer(loop, timer, &period, &period, false);
 
-	fprintf(stderr, "ready headset=%s\n", b->headset);
+	(void)fprintf(stderr, "ready headset=%s\n", b->headset);
 	pw_main_loop_run(b->loop);
 
 	pw_filter_destroy(b->filter);

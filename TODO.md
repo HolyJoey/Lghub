@@ -306,3 +306,7 @@ copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
   G HUB moves the depots; the code fails cleanly and keeps working without the new files.
 - Re-check this list against a newer G HUB now and then: `Feature####` class names in the
   agent's strings.
+- Native code (`bridge/*.c`) is at 0 under clang-tidy (LLVM 23: clang-analyzer, bugprone, cert,
+  performance, portability), gcc -fanalyzer and SonarQube, checked 2026-10-25. One check is off:
+  Annex K (`memcpy_s` / `snprintf_s`), which glibc doesn't have; the bridges check every copy's
+  bounds themselves. Keep it at 0 when the bridges change.
