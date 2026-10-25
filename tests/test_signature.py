@@ -109,26 +109,35 @@ class SignatureTest(unittest.TestCase):
 
 	def test_smooth_star_runs(self):
 		import random
-		leds = [(f'k{x}{y}', x / 9, y / 4) for x in range(10) for y in range(5)]
-		tree = sig.smooth_star(leds, logo=['logo'], rng=random.Random(2))
-		lit = set()
+		leds = [(f'PERKEY_KEYBOARD:{30 + x * 5 + y}', x / 9, y / 4) for x in range(10) for y in range(5)]
+		leds += [('PERKEY_KEYBOARD:26', 0.2, 0.4), ('PERKEY_COSMETIC:160', 0.5, 0.0), ('PERKEY_BRANDING:1', 0.5, 1.0)]
+		tree = sig.smooth_star(leds, c1=(200, 0, 0, 255), rng=random.Random(2))
+		lit, w, strip = set(), set(), []
 		for _ in range(500):
 			f = sig.Frame()
 			self.assertTrue(tree.step(f))                      # loops (the gradient and stars run on)
 			lit.update(k for k, c in f.colors.items() if any(c[:3]))
+			if 'PERKEY_KEYBOARD:26' in f.colors:
+				w.add(f.colors['PERKEY_KEYBOARD:26'])
+			if 'PERKEY_COSMETIC:160' in f.colors:
+				strip.append(f.colors['PERKEY_COSMETIC:160'])
 		self.assertGreater(len(lit), 40)
+		self.assertIn((200, 0, 0, 255), w)                     # W held at colour one (G HUB's WASD group)
+		self.assertEqual(len(strip), 18)                       # the strip only glows in the startup
 
 	def test_pulsar_point_sweeps(self):
-		leds = [(f'k{x}', x / 9, 0.5) for x in range(10)]
-		tree = sig.pulsar_point(leds, logo=['logo'], c2=(0, 100, 200, 255))
+		leds = [(f'PERKEY_KEYBOARD:{30 + x}', x / 9, 0.5) for x in range(10)]
+		leds += [('PERKEY_KEYBOARD:4', 0.1, 0.6), ('PERKEY_BRANDING:1', 0.5, 0.9)]
+		tree = sig.pulsar_point(leds, c2=(0, 100, 200, 255))
 		seen = {}
 		for _ in range(70):
 			f = sig.Frame()
 			self.assertTrue(tree.step(f))
 			for k, c in f.colors.items():
 				seen.setdefault(k, set()).add(c[2])
-		self.assertGreater(len(seen['k5']), 3)              # the key's brightness changes as bands pass
-		self.assertEqual(seen['logo'], {sig.GHUB_PINK[2]})  # the logo keeps the first colour (G HUB's default)
+		self.assertGreater(len(seen['PERKEY_KEYBOARD:35']), 3)        # the key's brightness changes as bands pass
+		self.assertEqual(seen['PERKEY_KEYBOARD:4'], {sig.GHUB_PINK[2]})  # A keeps the first colour (WASD group)
+		self.assertEqual(seen['PERKEY_BRANDING:1'], {200})              # the logo takes the pulse colour
 		self.assertEqual(sig.stops((1, 'b', 0.5), (0, 'a', 0.5))[0][1], 'a')
 
 	def test_neon_flickers_then_holds(self):

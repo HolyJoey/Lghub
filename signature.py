@@ -398,10 +398,33 @@ def layout_leds(layout):
 	G HUB's two extra LED groups taken as the branding and indicator keys (ours)."""
 	w, h, keys = layout
 	leds = [(f'{g}:{k}', (x + kw / 2) / w, (y + kh / 2) / h) for g, k, x, y, kw, kh in keys
-	        if g in softlight.KEY_GROUPS]
+	        if g in softlight.KEY_GROUPS or g.startswith('PERKEY_COSMETIC')]     # cosmetic: the light strips
 	accent = [f'{g}:{k}' for g, k, *_r in keys if g == 'PERKEY_BRANDING']
 	indicator = [f'{g}:{k}' for g, k, *_r in keys if g == 'PERKEY_INDICATOR']
 	return leds, accent, indicator
+
+
+WASD = (4, 7, 22, 26)          # HID A, D, S, W: G HUB's 0x4400090 key mask (its WASD LED group)
+
+
+def key_groups(leds):
+	"""G HUB's per-key LED groups (signature builder 0x141204170 ~1611 and Smooth Star's 0x141218ff0)
+	of layout_leds-style ids: keys (PERKEY_KEYBOARD), strips (the cosmetic LEDs), wasd, logo
+	(branding) and others (consumer, indicator, G-keys)."""
+	out = {'keys': [], 'strips': [], 'wasd': [], 'logo': [], 'others': []}
+	for led in leds:
+		kind, _sep, key = led[0].partition(':')
+		if kind.startswith('PERKEY_COSMETIC'):
+			out['strips'].append(led)
+		elif kind == 'PERKEY_KEYBOARD':
+			out['keys'].append(led)
+			if key.isdigit() and int(key) in WASD:
+				out['wasd'].append(led)
+		elif kind == 'PERKEY_BRANDING':
+			out['logo'].append(led)
+		else:
+			out['others'].append(led)
+	return out
 
 
 def smooth_wave(leds, accent=(), indicator=(), c1=GHUB_PINK, c2=GHUB_BLUE):
@@ -451,20 +474,22 @@ _SS_KEYFRAMES = (
 STAR_BLUE = (0, 184, 252, 255)          # G HUB's twinkle colour in Smooth Star (fixed)
 
 
-def smooth_star(leds, logo=(), c1=GHUB_PINK, c2=GHUB_BLUE, rng=None):
-	"""G HUB's Smooth Star for per-key keyboards (its root at metadata +0x1a0): a startup glow from
-	the top centre, then the gradient sweep with twinkles over it. LED groups +0xe0 / +0xf0 /
-	+0x100 taken as all keys and +0x110 as the logo (ours); default colours are G HUB's."""
+def smooth_star(leds, c1=GHUB_PINK, c2=GHUB_BLUE, rng=None):
+	"""G HUB's Smooth Star for per-key keyboards (its root at metadata +0x1a0): a startup, then the
+	gradient sweep with twinkles over it. G HUB's LED groups (builder 0x141218ff0): +0xe0 every LED
+	but the light strips (the gradient), +0xf0 the keys (startup colour B, then the stars), +0x100
+	the strips (the startup glow from the top centre), +0x110 W A S D (held at colour one)."""
 	off = (0, 0, 0, 0)
 	c1, c2 = tuple(c1), tuple(c2)
 	frames = [(n, 0.0, [(p, c2 if c == C2 else off if c == OFF else c, b) for p, c, b in stops])
 	          for n, stops in _SS_KEYFRAMES]
-	ids = [led for led, _x, _y in leds]
+	g = key_groups(leds)
+	lit = g['keys'] + g['logo'] + g['others']
 	return Sequencer([
-		Startup(leds, leds, c1, c2, 18),
-		Parallelizer([Gradient(leds, (0.0, 0.0, 1.0, 1.0), frames, loop=True),
-		              Starlight(ids, STAR_BLUE, 0, 37, 31, 20, rng=rng),
-		              ColorBlend(list(logo), c1, c1, 1, loop=True)])])
+		Startup(g['keys'], g['strips'], c1, c2, 18),
+		Parallelizer([Gradient(lit, (0.0, 0.0, 1.0, 1.0), frames, loop=True),
+		              Starlight([led for led, _x, _y in g['keys']], STAR_BLUE, 0, 37, 31, 20, rng=rng),
+		              ColorBlend([led for led, _x, _y in g['wasd']], c1, c1, 1, loop=True)])])
 
 
 def dim(color, k):
@@ -478,11 +503,14 @@ def stops(*items):
 	return sorted(items, key=lambda s: s[0])
 
 
-def pulsar_point(leds, logo=(), indicator=(), c1=GHUB_PINK, c2=GHUB_BLUE):
+def pulsar_point(leds, c1=GHUB_PINK, c2=GHUB_BLUE):
 	"""G HUB's Pulsar Point (signature style 1, per-key case in 0x1412084c0): a pulse of the colour
-	with two dim bands sweeping across the keys, looping. Its colour is the second one (G HUB uses
-	the first only for a device kind with LED group +0x108 and +0xe4 == 0x80); the logo keeps the
-	first colour and the indicators the pulse colour (LED groups +0x118 / +0x128: ours)."""
+	with two dim bands sweeping across every LED but the logo (group +0xe8), looping. Its colour is
+	the second one (G HUB uses the first only for a device kind with LED group +0x108 and +0xe4 ==
+	0x80); W A S D (+0x118) keep the first colour and the logo (+0x128) the pulse colour."""
+	g = key_groups(leds)
+	logo, indicator = [led for led, _x, _y in g['wasd']], [led for led, _x, _y in g['logo']]
+	leds = g['keys'] + g['strips'] + g['others']
 	c = tuple(c2)
 	band = stops((0, c, 0.5), (1.0, c, 0.5), (0.5, c, 0.5), (0.25, dim(c, 0.25), 0.5), (0.75, dim(c, 0.25), 0.5))
 	keyframes = [(69, (-1.0287, 0.9531, 1.0032, 0.9698), band), (1, (-0.0033, 1.0015, 2.0339, 1.0268), band)]
@@ -638,8 +666,8 @@ def g_tide(leds, c1=GHUB_PINK, c2=GHUB_BLUE):
 # name -> build(leds, logo ids, indicator ids, c1, c2), for lightsync
 EFFECTS = {
 	'smooth_wave': lambda leds, logo, ind, c1, c2: smooth_wave(leds, logo, ind, c1, c2),
-	'smooth_star': lambda leds, logo, _ind, c1, c2: smooth_star(leds, logo, c1, c2),
-	'pulsar_point': pulsar_point,
+	'smooth_star': lambda leds, _logo, _ind, c1, c2: smooth_star(leds, c1, c2),
+	'pulsar_point': lambda leds, _logo, _ind, c1, c2: pulsar_point(leds, c1, c2),
 	'remind_me_of': lambda leds, _logo, _ind, c1, _c2: remind_me_of(leds, c1),
 	'g_3_series': lambda leds, _logo, _ind, c1, c2: g_3_series(leds, c1, c2),
 	'neon': lambda leds, _logo, _ind, c1, _c2: neon(leds, c1),
