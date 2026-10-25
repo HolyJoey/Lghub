@@ -363,6 +363,13 @@ def open_hidpp(device):
 	if device.port.startswith('fake') or os.environ.get(FAKE_ENV):
 		transport, reports = _transport(device)
 		return hidpp.Device(transport, device.index, reports)
+	import centurion
+	pid = int(device.usb_id.split(':')[1], 16)
+	if pid in centurion.ENTRIES:
+		try:
+			return centurion.open_usb(device.port, pid)
+		except OSError:
+			pass                                      # then plain HID++, if it has that
 	return hidpp.open_usb(device.port, device.index)
 
 

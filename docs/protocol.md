@@ -306,13 +306,22 @@ Newer headsets use features in the 0x06xx range over G HUB's own Centurion trans
 plain HID++: 0x0601 mic mute, 0x0604 sidetone, 0x0605 noise cancelling, 0x0611 mic gain, 0x0636
 onboard equalizer, and others.
 
-- Messages are HID++-like without the device index, with an optional length byte and a
-  per-device prefix, split into fragments.
-- They go over the HID collection G HUB calls the "Avnera Centurion collection".
+- G HUB keeps a built-in table per headset: the collection's HID usage page and usage, a prefix,
+  whether a length byte goes in, and the largest packet (0x3D on most, 0x20 on the G735).
+- Sending: a message longer than a packet is split. Each fragment repeats the message's first 2
+  bytes, then `seq << 1 | 1` (more follows) or `seq << 1` (last), then the next (packet - 1)
+  bytes. Then the device index is dropped and the length byte (the bytes after byte 0) and the
+  prefix go in after byte 0: `[report id, prefix..., length, control, feature, function, ...]`.
+- Receiving undoes it and gives back `[0x12, 0xFF, feature, function, ...]`.
+- 0x0604 sidetone: fn 0 get `[n, n x (mic, level)]` (`[mic, ?, level]` from version 2), fn 1 set
+  `[mic, 0xFF (version 2+), level]`, fn 2 settings (byte 2 = number of steps; 101 on version 1).
+  G HUB shows `round(level * 100 / (steps - 1))`.
 - Devices behind a 0x0003 bridge go through a sub-device layer that refuses packets larger than
   the adapter's size.
 
-Not implemented in Lghub yet.
+Lghub (`centurion.py`) opens these headsets over this transport and sets their sidetone (not
+checked on a headset yet). Byte 0 on the wire is the collection's report id (ours: how G HUB's
+HID layer fills it isn't read).
 
 ## G HUB's depots
 

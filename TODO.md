@@ -29,7 +29,7 @@ measurements.
 | PRO 5-band equalizer | 95% | done with G HUB's own band maths (its DLL, run natively) and its busy check; check on the G Pro X |
 | Mice | 94% | see "Mice" below |
 | Keyboards | 80% | analog keys' per-key settings and onboard-profile editing (formats found, not built); see "Keyboards" below |
-| Headsets (other than the voice chain) | 50% | Centurion and the newer headsets; see "Headsets" below |
+| Headsets (other than the voice chain) | 60% | Centurion transport and sidetone done; its other features; see "Headsets" below |
 | Yeti controls | 100% | check on a Yeti |
 | Litra lights | 90% | check on a Litra Glow / Beam |
 | Webcams | 90% | check on the C920 |
@@ -174,21 +174,14 @@ copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
   them (capabilities in G HUB's device list); none done yet, features to find in the agent.
 - **Centurion (G735, PRO X 2)**: features 0x06xx (mic mute 0x0601, sidetone 0x0604, ANC 0x0605,
   mic gain 0x0611, onboard EQ 0x0636, ...) over G HUB's own transport.
-  - Found: messages are HID++ without the device index, with an optional length byte and a
-    per-device prefix (CenturionTransport::write 0x14200d030), split into fragments
-    (CenturionPacketLayer 0x14200f3c0).
-  - Left: the per-device settings: they come from a list of per-pid "centurion entries" that
-    DeviceManager::applyDeviceAdapters walks (0x141fb1da0); found: a built-in table of 18 entries
-    (static init 0x1402111c0: pid, HID usage page / usage, prefix bytes, a flag, a size; e.g. the G735
-    on page 0xff03, the newer ones on 0xffa0 with prefix 0x23; re/notes/centurion.txt). Next: the
-    transport itself in Lghub.
-  - G HUB's layers: CenturionTransport on the HID collection G HUB calls "Avnera Centurion
-    collection", a CenturionPacketLayer per pid, and Centurion0003SubdevicePlain for devices
-    behind the 0x0003 bridge (it refuses packets larger than the adapter's size). G HUB's feature
-    routes: 0601 mic mute, 0604 sidetone, 0605 ANC mode / button, mixer_mic, onboard_equalizer
-    (+ save), onboard_noise_reduction, volume, bt_equalizer. Not built: nothing here can test it.
-  - Plan (decided 2026-10-20): wait for a tester with a G735 / PRO X 2; then build the transport
-    plus a probe mode that reports what the headset answers, and the features from that data.
+  - Done: G HUB's transport (centurion.py): its built-in table of 16 headsets (pid, HID usage page /
+    usage, prefix, length byte, packet size; static init 0x1402111c0), the packet layer's fragments
+    and reassembly, and the transport's wrap / unwrap, under the normal HID++ code. Sidetone 0x0604
+    over it, as G HUB scales it (steps from fn 2). Ours: byte 0 on the wire = the collection's
+    report id. Check on a G735 / PRO X 2 / G325.
+  - Left: the other 0x06xx features (0601 mic mute, 0605 ANC, 0611 mic gain, 0636 onboard EQ, ...),
+    read the same way from G HUB's decoders; Centurion0003SubdevicePlain (devices behind the 0x0003
+    bridge). Notes: re/notes/centurion.txt.
 - **Others**:
   - 0x8320 jack detection done (headphone bit ours); 0x8305 bass tone done
   - 0x0200 / 0x0201 / 0x020D volume and EQ sets, 0x020E mic test

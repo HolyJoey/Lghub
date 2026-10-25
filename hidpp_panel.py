@@ -39,6 +39,7 @@ def row(title, widget):
 
 # Features read the same way on connect: (feature, info key, reader)
 SIMPLE_READS = ((features.SIDETONE, 'sidetone', headset.sidetone),
+                (headset.CENTURION_SIDETONE, 'sidetone', headset.sidetone),
                 (features.POLAR_PATTERN, 'patterns', features.polar_patterns),
                 (features.DEVICE_EQ, 'device_eq', features.device_eq),
                 (features.ANGLE_SNAPPING, 'angle_snapping', features.angle_snapping),
@@ -414,7 +415,7 @@ class SettingsPanel(Gtk.Box):
 		"""Why there's no sidetone slider: G HUB sets it over HID++ only (0x8300, or 0x0604 on
 		Centurion headsets), never through the sound card."""
 		self.no_sidetone = card('Sidetone', f'Not over HID++: {why}. That is the only way G HUB sets sidetone (feature '
-		                        '0x8300); a sidetone control on the headset’s sound card shows with its sound '
+		                        '0x8300, or 0x0604 on the newer headsets); a sidetone control on the headset’s sound card shows with its sound '
 		                        'settings.')
 		self.no_sidetone.set_visible(not self.sidetone_elsewhere)
 		return self.no_sidetone

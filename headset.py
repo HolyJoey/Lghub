@@ -138,8 +138,46 @@ def _amixer(card, control, value):
 # --- HID++ sidetone --------------------------------------------------------------------------
 
 def sidetone(dev):
+	if not dev.has(SIDETONE) and dev.has(CENTURION_SIDETONE):
+		return centurion_sidetone(dev)
 	return dev.call(SIDETONE, 0)[0]
 
 
 def set_sidetone(dev, level):
+	if not dev.has(SIDETONE) and dev.has(CENTURION_SIDETONE):
+		set_centurion_sidetone(dev, level)
+		return
 	dev.call(SIDETONE, 1, bytes([max(0, min(100, int(level)))]))
+
+
+# 0x0604 HeadsetAudioSidetone (Centurion headsets; G HUB's FeatureC0604HeadsetSidetone): fn 0 get
+# = [n, n x (mic, level)] ([mic, ?, level] from version 2), fn 1 set = [mic, 0xFF (version 2+),
+# level], fn 2 settings: byte 2 = the number of steps (version 2+; 101 before). G HUB shows
+# round(level * 100 / (steps - 1)) and only handles one mic (mic 0 here: ours, the first entry).
+CENTURION_SIDETONE = 0x0604
+OLD_STEPS = 101
+
+
+def _sidetone_version(dev):
+	return dev.request(0, 0, CENTURION_SIDETONE.to_bytes(2, 'big'))[2]
+
+
+def _sidetone_steps(dev, version):
+	return dev.call(CENTURION_SIDETONE, 2)[2] if version >= 2 else OLD_STEPS
+
+
+def centurion_sidetone(dev):
+	"""(level in percent) of the first mic."""
+	version = _sidetone_version(dev)
+	r = dev.call(CENTURION_SIDETONE, 0)
+	level = r[3] if version >= 2 else r[2]
+	steps = _sidetone_steps(dev, version)
+	return round(level * 100 / (steps - 1)) if steps > 1 else 0
+
+
+def set_centurion_sidetone(dev, percent):
+	version = _sidetone_version(dev)
+	steps = _sidetone_steps(dev, version)
+	mic = dev.call(CENTURION_SIDETONE, 0)[1]
+	level = round(max(0, min(100, percent)) * (steps - 1) / 100)        # G HUB's scale, inverted (ours)
+	dev.call(CENTURION_SIDETONE, 1, bytes([mic, 0xFF, level] if version >= 2 else [mic, level]))
