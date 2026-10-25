@@ -120,7 +120,9 @@ copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
 - **Per-LED lighting on mice**: done for the G502 X PLUS (and its Millennium Falcon edition): a
   Light strip page from G HUB's layout (its LEDs are circles there), sent over 0x8081 through the
   model's light_map.json, with its signature effects (lighting_effects.json: keyframe animations,
-  played by softlight). Check on the mouse. Left: 0x8071 inside onboard profiles.
+  played by softlight). Check on the mouse. 0x8071 mice's onboard profiles: done as G HUB's onboard
+  encoder ([effect id] + the live parameters), with each zone's own effects (fixed, cycle, colour wave,
+  breathing, ripple). Left: the two-colour and signature ids there.
 - **Battery time left** (newer models' battery.xml are power models: capacity in Wh, milliwatts
   per sensor / MCU / roller / report rate / lighting effect): done as G HUB's agent does it
   (hours = percent / 100 * Wh * 1000 / mW, its max_life_span and "mileage"). Ours: the running

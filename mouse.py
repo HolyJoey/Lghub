@@ -133,6 +133,11 @@ PRESET_ACTIONS = (
 
 LED_OFF, LED_FIXED, LED_CYCLE, LED_BREATHING = 0x00, 0x01, 0x03, 0x0a
 LED_EFFECTS = {LED_OFF: 'Off', LED_FIXED: 'Fixed', LED_BREATHING: 'Breathing', LED_CYCLE: 'Color cycle'}
+# 0x8071 mice: G HUB's get_raw_onboard_effect_params (0x142175070) stores [effect id] + the live
+# parameters (get_raw_effect_params, features.effect_params), so a zone keeps any effect it supports;
+# these are the ones whose parameters Lghub builds
+LED_COLOR_WAVE, LED_RIPPLE = 0x04, 0x0b
+ONBOARD_V2_EFFECTS = (LED_OFF, LED_FIXED, LED_CYCLE, LED_COLOR_WAVE, LED_BREATHING, LED_RIPPLE)
 
 
 @dataclass
@@ -146,27 +151,32 @@ class Led:
 
 	@property
 	def color(self):
-		return tuple(self.raw[1:4]) if self.effect in (LED_FIXED, LED_BREATHING) else (0x2f, 0x8c, 0xff)
+		return tuple(self.raw[1:4]) if self.effect in (LED_FIXED, LED_BREATHING, LED_RIPPLE) else (0x2f, 0x8c, 0xff)
 
 	@property
 	def period(self):
 		"""Milliseconds per cycle / breath."""
-		if self.effect == LED_CYCLE:
-			return struct.unpack('>H', self.raw[6:8])[0] or 10000
-		if self.effect == LED_BREATHING:
-			return struct.unpack('>H', self.raw[4:6])[0] or 3000
-		return 3000
+		hi_lo = {LED_CYCLE: (6, 7), LED_BREATHING: (4, 5), LED_RIPPLE: (5, 6), LED_COLOR_WAVE: (10, 7)}.get(self.effect)
+		if not hi_lo:
+			return 3000
+		value = self.raw[hi_lo[0]] << 8 | self.raw[hi_lo[1]]
+		return value or (10000 if self.effect == LED_CYCLE else 3000)
 
 	@property
 	def brightness(self):
 		"""1-100 %. The device stores 0 for full."""
-		if self.effect == LED_CYCLE:
-			value = self.raw[8]
-		elif self.effect == LED_BREATHING:
-			value = self.raw[7]
-		else:
-			value = 100
+		at = {LED_CYCLE: 8, LED_BREATHING: 7, LED_COLOR_WAVE: 9}.get(self.effect)
+		value = self.raw[at] if at else 100
 		return value if 0 < value <= 100 else 100
+
+	@staticmethod
+	def build_v2(effect, color=(255, 255, 255), period=3000, brightness=100):
+		"""A 0x8071 mouse's profile entry, as G HUB's get_raw_onboard_effect_params: the effect id,
+		then the effect's live parameters."""
+		import features
+		if effect == LED_OFF:
+			return Led(bytes(LED_SIZE))
+		return Led((bytes([effect]) + features.effect_params(effect, color, period, brightness))[:LED_SIZE])
 
 	@staticmethod
 	def build(effect, color=(255, 255, 255), period=3000, brightness=100):

@@ -669,12 +669,23 @@ class MouseView(Gtk.Box):
 		if features.COLOR_LED_EFFECTS in self.mouse.features or features.RGB_EFFECTS in self.mouse.features:
 			page.append(lightsync_ui.card(self.device.model.key, lambda: None, per_key=False))
 
+	def _led_effects(self, i, v2):
+		"""([effect ids], {id: name}) for profile zone i: on 0x8071 mice the zone's own effects that
+		Lghub builds (G HUB offers what the zone reports), else the four of the 0x8100 profile."""
+		if not v2:
+			return list(mouse.LED_EFFECTS), mouse.LED_EFFECTS
+		zones = self.state.get('zones') or []
+		have = {e for _idx, e in zones[i].effects} if i < len(zones) else set(mouse.ONBOARD_V2_EFFECTS)
+		effects = [e for e in mouse.ONBOARD_V2_EFFECTS if e == mouse.LED_OFF or e in have]
+		return effects, {e: features.EFFECTS.get(e, str(e)) for e in effects}
+
 	def _led_card(self, i, title):
 		p = self.profile
 		led = p.led(i)
 		c = card(title)
-		effects = list(mouse.LED_EFFECTS)
-		effect_dd = Gtk.DropDown.new_from_strings([mouse.LED_EFFECTS[e] for e in effects])
+		v2 = features.RGB_EFFECTS in self.mouse.features        # 0x8071: G HUB's onboard encoding
+		effects, names = self._led_effects(i, v2)
+		effect_dd = Gtk.DropDown.new_from_strings([names[e] for e in effects])
 		effect_dd.set_selected(effects.index(led.effect) if led.effect in effects else 0)
 		c.append(row('Effect', effect_dd))
 		color = Gtk.ColorDialogButton(dialog=Gtk.ColorDialog(with_alpha=False))
@@ -698,14 +709,15 @@ class MouseView(Gtk.Box):
 
 		def visible():
 			effect = effects[effect_dd.get_selected()]
-			color_row.set_visible(effect in (mouse.LED_FIXED, mouse.LED_BREATHING))
-			speed_row.set_visible(effect in (mouse.LED_CYCLE, mouse.LED_BREATHING))
-			bright_row.set_visible(effect in (mouse.LED_CYCLE, mouse.LED_BREATHING))
+			color_row.set_visible(effect in (mouse.LED_FIXED, mouse.LED_BREATHING, mouse.LED_RIPPLE))
+			speed_row.set_visible(effect in (mouse.LED_CYCLE, mouse.LED_BREATHING, mouse.LED_RIPPLE, mouse.LED_COLOR_WAVE))
+			bright_row.set_visible(effect in (mouse.LED_CYCLE, mouse.LED_BREATHING, mouse.LED_COLOR_WAVE))
 
 		def apply(*_):
 			visible()
 			rgb = color.get_rgba()
-			new = mouse.Led.build(effects[effect_dd.get_selected()],
+			build = mouse.Led.build_v2 if v2 else mouse.Led.build
+			new = build(effects[effect_dd.get_selected()],
 			                      tuple(round(v * 255) for v in (rgb.red, rgb.green, rgb.blue)),
 			                      speed.get_value() * 1000, bright.get_value())
 			self._edit(lambda: p.set_led(i, new))

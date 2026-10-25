@@ -141,3 +141,21 @@ class WheelTest(unittest.TestCase):
 		self.assertEqual(features.hybrid_mode(dev), 0)
 		features.set_hybrid_mode(dev, 1)
 		self.assertEqual(features.hybrid_mode(dev), 1)
+
+
+class OnboardV2LightingTest(unittest.TestCase):
+	"""0x8071 mice store [effect id] + the live parameters (G HUB's get_raw_onboard_effect_params)."""
+
+	def test_fixed_as_g_hub(self):
+		led = mouse.Led.build_v2(mouse.LED_FIXED, (10, 20, 30))
+		self.assertEqual(led.raw, bytes([1, 10, 20, 30, 2]) + bytes(6))
+		self.assertEqual(led.color, (10, 20, 30))
+
+	def test_round_trips(self):
+		for effect in (mouse.LED_COLOR_WAVE, mouse.LED_CYCLE, mouse.LED_BREATHING):
+			led = mouse.Led.build_v2(effect, (1, 2, 3), 4500, 60)
+			self.assertEqual(len(led.raw), mouse.LED_SIZE)
+			self.assertEqual((led.effect, led.period, led.brightness), (effect, 4500, 60))
+		ripple = mouse.Led.build_v2(mouse.LED_RIPPLE, (9, 8, 7), 2000)
+		self.assertEqual((ripple.color, ripple.period), ((9, 8, 7), 2000))
+		self.assertEqual(mouse.Led.build_v2(mouse.LED_OFF).raw, bytes(mouse.LED_SIZE))
