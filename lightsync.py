@@ -634,7 +634,7 @@ class Animated(Visualizer):
 # signature presets in the keyboards' defaults_override.json)
 GHUB_PINK, GHUB_BLUE = (0xFF, 0x00, 0xAB), (0x00, 0xB8, 0xFC)
 SIGNATURE = dict.fromkeys(('smooth_wave', 'smooth_star', 'pulsar_point', 'remind_me_of', 'g_3_series', 'neon',
-                           'outer_space'), (GHUB_PINK, GHUB_BLUE))
+                           'outer_space', 'g_tide'), (GHUB_PINK, GHUB_BLUE))
 ANIMATED = ('keyframe', 'device', 'starlight', 'cycle', 'echo') + tuple(SIGNATURE)
 
 

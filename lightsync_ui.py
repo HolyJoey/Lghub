@@ -47,6 +47,8 @@ def card(model, restore, per_key=True):
 	g3b = _color_button(settings.get('color2', list(lightsync.GHUB_BLUE)))
 	neon_c = _color_button(settings.get('color', list(lightsync.GHUB_PINK)))
 	space_c = _color_button(settings.get('color', list(lightsync.GHUB_PINK)))
+	tide1 = _color_button(settings.get('color', list(lightsync.GHUB_PINK)))
+	tide2 = _color_button(settings.get('color2', list(lightsync.GHUB_BLUE)))
 	regions = Gtk.Button(label='Edit regions')
 
 	def edit_regions(_b):
@@ -59,13 +61,14 @@ def card(model, restore, per_key=True):
 	        'starlight': [('Star colour', star), ('Sky colour', sky), ('Stars', count), ('Speed', speed)],
 	        'cycle': [('Speed', cycle_speed)],
 	        'echo': [('Echo colour', echo), ('Rest colour', rest), ('Fade', echo_speed)],
-	        'smooth_wave': [('Colour', wave1), ('Second colour', wave2)],
+	        'smooth_wave': [('Colour', wave1), (SECOND_COLOUR, wave2)],
 	        'smooth_star': [('Start colour', star1), ('Colour', star2)],
 	        'pulsar_point': [('Logo colour', pulse1), ('Pulse colour', pulse2)],
 	        'remind_me_of': [('Colour', remind)],
 	        'g_3_series': [('Colour', g3a), ('Centre colour', g3b)],
 	        'neon': [('Colour', neon_c)],
-	        'outer_space': [('Colour', space_c)]}
+	        'outer_space': [('Colour', space_c)],
+	        'g_tide': [('Colour', tide1), (SECOND_COLOUR, tide2)]}
 	widgets = _add_rows(card, rows)
 
 	def show():
@@ -90,6 +93,7 @@ def card(model, restore, per_key=True):
 		          'g_3_series': lambda: {'color': _rgb(g3a), 'color2': _rgb(g3b)},
 		          'neon': lambda: {'color': _rgb(neon_c)},
 		          'outer_space': lambda: {'color': _rgb(space_c)},
+		          'g_tide': lambda: {'color': _rgb(tide1), 'color2': _rgb(tide2)},
 		          'keyframe': lambda: {'file': effects[effect.get_selected()][1]},
 		          'custom': lambda: {'custom': effects[effect.get_selected()][1]}}
 		if kind:
@@ -158,7 +162,7 @@ def _audio_controls(settings):
 	clip = Gtk.Switch(active=settings.get('clip', False), valign=Gtk.Align.CENTER)
 	clip_color = _color_button(settings.get('clip_color', [255, 0, 0]))
 	clip_at = _slider(0, 100, settings.get('clip_threshold', 80), ' %')
-	rows = [('Colour mode', mode), ('Second colour', high), ('Background', background), ('Audio boost', boost),
+	rows = [('Colour mode', mode), (SECOND_COLOUR, high), ('Background', background), ('Audio boost', boost),
 	        ('Adaptive max amplitude', adaptive), ('Max amplitude', top), ('Bass noise threshold', bass),
 	        ('Mid / high noise threshold', mid), ('Smooth animation', smooth), ('Clip zone', clip),
 	        ('Clip zone colour', clip_color), ('Clip zone threshold', clip_at)]
@@ -195,6 +199,7 @@ def _intro(per_key):
 	        'zones again.')
 
 
+SECOND_COLOUR = 'Second colour'
 SIGNATURE_NAMES = {'SIGNATURE_FRAME_ACTIVE': 'Signature (active)', 'SIGNATURE_FRAME_INACTIVE': 'Signature (idle)'}
 
 
@@ -208,7 +213,8 @@ def _effects(per_key, model=None):
 		return effects + [('smooth_star', None, 'Smooth Star'), ('smooth_wave', None, 'Smooth Wave'),
 		                  ('pulsar_point', None, 'Pulsar Point'), ('remind_me_of', None, 'Remind Me Of'),
 		                  ('g_3_series', None, 'G 3 Series'), ('neon', None, 'Neon'),
-		                  ('outer_space', None, 'Outer Space')] + own + _keyframe_effects() + [('custom', file, name) for name, file in softlight.custom_effects()]
+		                  ('outer_space', None, 'Outer Space'), ('g_tide', None, 'G Tide')] + own + _keyframe_effects() + [
+			('custom', file, name) for name, file in softlight.custom_effects()]
 	return effects                                     # G HUB: no keyframe animations on zones
 
 

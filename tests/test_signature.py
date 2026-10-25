@@ -147,9 +147,28 @@ class SignatureTest(unittest.TestCase):
 		for name, build in sig.EFFECTS.items():
 			tree = build(leds, ['logo'], ['ind'], (200, 0, 0, 255), (0, 0, 200, 255))
 			self.assertIn(name, ('smooth_wave', 'smooth_star', 'pulsar_point', 'remind_me_of', 'g_3_series', 'neon',
-			                     'outer_space'))
+			                     'outer_space', 'g_tide'))
 			for _ in range(120):
 				tree.step(sig.Frame())
+
+	def test_g_tide_grows_sweeps_and_shrinks(self):
+		leds = [(f'k{x}{y}', x / 19, y / 5) for x in range(20) for y in range(6)] + [('far', -0.5, -0.5)]
+		rings = sig.g_tide_rings(leds)
+		self.assertEqual([len(r) for r in rings][:3], [1, 2, 6])         # G HUB's 1, 2, 5 scaled to 121 keys
+		self.assertNotIn('far', rings[-2])
+		tree = sig.g_tide(leds, c1=(200, 0, 0, 255), c2=(0, 0, 200, 255))
+		first, steps, colors = [], 0, {}
+		while tree.step(f := sig.Frame()):
+			if steps < 5:
+				first.append(set(f.colors))
+			colors.update(f.colors)
+			steps += 1
+			self.assertLess(steps, 1000)
+		self.assertEqual(first[0], set(rings[0]))                          # starts at the middle key
+		# each sampler takes one more frame to report it is done, like the Sequencer's other children
+		self.assertEqual(steps, sum(n + 1 for *_r, n in sig._G_TIDE_OUT + sig._G_TIDE_BACK) + 121 + 1)
+		self.assertEqual(colors['far'][:3], (0, 0, 0))                      # ends black outside the rings
+		self.assertIn('g_tide', sig.EFFECTS)
 
 	def test_player_restarts(self):
 		calls = []

@@ -565,6 +565,51 @@ def outer_space(leds, c1=GHUB_PINK):
 	return Sequencer([ColorBlend(ids, c if on else off, c if on else off, n) for n, on in _OUTER_SPACE])
 
 
+# G Tide's 12 key rings (signature type 18, its ctor 0x141213170): G HUB hard-codes 12 lists of LED ids
+# of these sizes (re/notes/g_tide_key_lists.json). Which LED id space they use isn't read yet: on
+# our layouts they aren't zones, HID usages or light-map indexes, so the rings are made here as the
+# keys nearest the keyboard's middle, scaled to the layout's key count (ours).
+_G_TIDE_RING_SIZES = (1, 2, 5, 14, 23, 29, 44, 51, 57, 69, 87, 103)
+# its two sampler runs: (ring index or None = every key, position on the gradient, frames)
+# (phase 1 0x1412158e0 grows outwards, phase 2 0x1412168e0 shrinks back; ring 8 twice is G HUB's)
+_G_TIDE_OUT = ((0, 0, 5), (1, 0, 4), (2, 0.09, 5), (3, 0.18, 4), (4, 0.27, 5), (5, 0.36, 4), (6, 0.45, 5),
+               (7, 0.54, 4), (8, 0.63, 5), (9, 0.72, 4), (10, 0.81, 5), (11, 0.9, 4), (None, 1.0, 60))
+_G_TIDE_BACK = ((None, 0, 56), (11, 0.09, 4), (10, 0.18, 5), (9, 0.27, 4), (8, 0.36, 5), (8, 0.45, 4),
+                (7, 0.54, 5), (6, 0.63, 4), (5, 0.72, 5), (4, 0.81, 4), (3, 0.9, 5), (2, 1.0, 4), (1, 1.0, 5),
+                (0, 1.0, 4))
+
+
+def g_tide_rings(leds):
+	"""The 12 rings: the keys nearest the middle of the LEDs, growing to G HUB's ring sizes (ours)."""
+	if not leds:
+		return [[] for _n in _G_TIDE_RING_SIZES]
+	cx = sum(x for _l, x, _y in leds) / len(leds)
+	cy = sum(y for _l, _x, y in leds) / len(leds)
+	near = [led for led, _x, _y in sorted(leds, key=lambda e: (e[1] - cx) ** 2 + (e[2] - cy) ** 2)]
+	scale = len(leds) / _G_TIDE_RING_SIZES[-1]
+	return [near[:max(1, round(n * scale))] for n in _G_TIDE_RING_SIZES]
+
+
+def g_tide(leds, c1=GHUB_PINK, c2=GHUB_BLUE):
+	"""G HUB's G Tide (signature type 18, builder 0x141214500 -> FUN_141217ec0): a C1 -> C2 -> C1
+	tide grows ring by ring from the keyboard's middle, a gradient sweeps across (FUN_141218220),
+	then the rings shrink back over black. Timing, gradients and positions are G HUB's; the rings
+	are g_tide_rings (ours)."""
+	c1, c2, black = tuple(c1), tuple(c2), (0, 0, 0, 255)      # black: G HUB's (0, 0, 0, 1.0) constant
+	ids = [led for led, _x, _y in leds]
+	rings = g_tide_rings(leds)
+	tide = stops((0, c1, 0.5), (0.5, c2, 0.5), (1, c1, 0.5))
+
+	def sampler(ring, position, frames):
+		return GradientSampler([(position, ids if ring is None else rings[ring])], [(frames, tide)])
+	out = Sequencer([sampler(*s) for s in _G_TIDE_OUT])
+	sweep = GradientTween(leds, (0.0, 0.0, 1.0, 1.0), [
+		(120, (0.0491, 0.9351, 2.6741, -1.8038), stops((0, c1, 1.0), (0.5, c2, 0.0), (1, c1, 0.5))),
+		(55, (-1.8196, 3.0638, 0.9739, 0.1766), tide)])
+	back = Sequencer([Parallelizer([ColorBlend(ids, black, black, 1), sampler(*s)]) for s in _G_TIDE_BACK])
+	return Sequencer([out, sweep, back])
+
+
 # name -> build(leds, logo ids, indicator ids, c1, c2), for lightsync
 EFFECTS = {
 	'smooth_wave': lambda leds, logo, ind, c1, c2: smooth_wave(leds, logo, ind, c1, c2),
@@ -574,6 +619,7 @@ EFFECTS = {
 	'g_3_series': lambda leds, _logo, _ind, c1, c2: g_3_series(leds, c1, c2),
 	'neon': lambda leds, _logo, _ind, c1, _c2: neon(leds, c1),
 	'outer_space': lambda leds, _logo, _ind, c1, _c2: outer_space(leds, c1),
+	'g_tide': lambda leds, _logo, _ind, c1, c2: g_tide(leds, c1, c2),
 }
 
 

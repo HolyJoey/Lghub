@@ -108,7 +108,7 @@ Keyboards, other headsets, the G560 speakers, POWERPLAY and anything else Logite
 asks the device what it can do and shows that. Keyboards also get macros on their G-keys (three sets, switched with M1-M3) and a
 per-key lighting page drawn from G HUB's own key layout, sent over HID++ 0x8081 with G HUB's
 key-to-LED table (0x8080 on older keyboards), with G HUB's LIGHTSYNC effects: its own animations (Verticool, Contrastic, Ocean Wave, Lightning, Red White
-and Blue), G HUB's signature effects Smooth Star, Smooth Wave, Pulsar Point, G 3 Series, Remind Me Of, Neon and Outer Space (rebuilt from its effect data and run by a port of its effect engine), starlight, colour cycle, echo press, your own animations (made in a Freestyle-like editor), the audio visualizer and the screen sampler (its regions editable as in G HUB: move, add, delete, which keys go where; it reads the screen with
+and Blue), G HUB's signature effects Smooth Star, Smooth Wave, Pulsar Point, G 3 Series, Remind Me Of, Neon, Outer Space and G Tide (G Tide's key rings are ours for now; rebuilt from its effect data and run by a port of its effect engine), starlight, colour cycle, echo press, your own animations (made in a Freestyle-like editor), the audio visualizer and the screen sampler (its regions editable as in G HUB: move, add, delete, which keys go where; it reads the screen with
 grim on Hyprland, Sway and other wlroots compositors, else through the desktop's screen-sharing
 portal on GNOME and KDE, which asks once; that needs GStreamer's PipeWire plugin,
 `gstreamer1.0-pipewire`). Lighting zones and the device's own effects (with G HUB's effect
