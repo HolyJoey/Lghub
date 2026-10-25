@@ -97,6 +97,33 @@ def analog_profile(dev, profile):
 	return out
 
 
+PROFILE_WRITE, PROFILE_WRITE_FRAGMENT, PROFILE_COMMIT = 9, 10, 11
+# G HUB's fn 9 has no profile byte (re/notes/keyboard_profiles.txt "0x8102 WRITE PATH"): which profile a
+# write lands in isn't pinned down, so writes stay off until a keyboard shows it
+PROFILE_WRITES_CHECKED = False
+
+
+def write_profile_tag(dev, tag, data):
+	"""Writes an onboard-profile tag as G HUB's setProfileTag: fn 9 [tag, length, data], fn 10
+	[seq, data], fn 11 [CRC-32] (the CRC is G HUB's 0x142010280 = zlib.crc32). Off (raises) until
+	checked on a keyboard."""
+	if not PROFILE_WRITES_CHECKED:
+		raise OSError('changing onboard-profile settings is off until it is checked on a keyboard')
+	with Session(dev, PROFILE_MANAGEMENT, PROFILE_SESSION):
+		r = dev.call(PROFILE_MANAGEMENT, PROFILE_WRITE, struct.pack('>HH', tag, len(data)) + data[:FIRST_DATA])
+		seq = r[0]
+		for i in range(FIRST_DATA, len(data), FRAGMENT):
+			dev.call(PROFILE_MANAGEMENT, PROFILE_WRITE_FRAGMENT, bytes([seq]) + data[i:i + FRAGMENT].ljust(FRAGMENT, b'\0'))
+		status = dev.call(PROFILE_MANAGEMENT, PROFILE_COMMIT, struct.pack('>I', zlib.crc32(data)))[0]
+	if status:
+		raise OSError(f'the keyboard didn’t take the setting (status {status})')
+
+
+def actuation_tag(keys):
+	"""0x123 / 0x124's bytes for {cidx: mm}: [cidx, u16 BE mm x 100] per key (the read format)."""
+	return b''.join(bytes([cidx]) + struct.pack('>H', round(mm * 100)) for cidx, mm in sorted(keys.items()))
+
+
 def read_tag(dev, tag):
 	with Session(dev):
 		r = dev.call(GLOBAL_SETTINGS, 3, struct.pack('>H', tag))

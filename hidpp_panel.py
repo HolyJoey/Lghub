@@ -4,6 +4,7 @@ the generic device page and on the headset page."""
 from gi.repository import Gdk, GLib, Gtk
 
 import devices
+import analog_keys
 import battery_model
 import centurion_eq
 import device_settings
@@ -67,7 +68,8 @@ def analog_summary(a):
 		kinds = sorted({str(p[2]) for p in a['pairs']})
 		lines.append(f'{_plural(len(a["pairs"]), "key-priority pair")} ({", ".join(kinds)})')
 	if lines:
-		lines.append('Read from the keyboard’s onboard profile; editing these comes later.')
+		lines.append('Read from the keyboard’s onboard profile. Changing them stays off until it is checked on a '
+		             'keyboard (a wrong write would overwrite a profile).')
 	return lines
 
 
@@ -311,6 +313,8 @@ class SettingsPanel(Gtk.Box):
 			if device_settings.PROFILE_MANAGEMENT in have:
 				try:
 					info['analog_profile'] = device_settings.analog_profile(dev, device_settings.active_profile(dev))
+					if features.CONTROL_LIST in have:
+						info['analog_cids'] = features.control_list(dev)
 				except (OSError, hidpp.HidppError, IndexError):
 					pass
 		if features.DISABLE_KEYS in have or features.DISABLE_KEYS_V1 in have:
@@ -474,8 +478,14 @@ class SettingsPanel(Gtk.Box):
 			sw.connect(NOTIFY_ACTIVE, lambda w, _p, s=setter: self.loading or self._do(
 				lambda on=w.get_active(): s(self.dev, on)))
 			c.append(row(title, sw))
-		for line in analog_summary(info.get('analog_profile') or {}):
+		profile = info.get('analog_profile') or {}
+		for line in analog_summary(profile):
 			c.append(label(line, ['muted', 'small'], wrap=True))
+		for name, actuation, rapid in analog_keys.per_key_rows(profile, info.get('analog_cids', []),
+		                                                       self.device.model.key):
+			parts = ([f'actuation {actuation:.2f} mm'] if actuation is not None else []) + \
+			        ([f'rapid trigger {rapid:.2f} mm'] if rapid is not None else [])
+			c.append(row(name, label(', '.join(parts), ['muted'])))
 		return c
 
 	def _game_mode_card(self, info):

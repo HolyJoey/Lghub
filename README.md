@@ -116,7 +116,8 @@ portal on GNOME and KDE, which asks once; that needs GStreamer's PipeWire plugin
 numbers and settings, including newer keyboards' two-colour Signature styles), brightness, report
 rate, Fn keys, game mode, Easy-Switch, power-saving and power-off timers, angle snapping, sidetone, on-board memory and battery. Analog keyboards (PRO X TKL RAPID, G515 RAPID and the
 like) get G HUB's rapid trigger and key priority switches, and show their onboard profile's actuation
-point, per-key points and key-priority pairs (read only for now). Devices with a USB sound card (headsets,
+point, each key's own actuation and rapid-trigger values by key name, and key-priority pairs (read only
+until a write is checked on one of these keyboards). Devices with a USB sound card (headsets,
 speakers, Yeti mics) also get its controls. Yetis also get their own mute, gain, headphone level and mic monitoring over HID++,
 as G HUB sets them. Litra lights get on / off, brightness and colour temperature (HID++ 0x1990, as G HUB sets them).
 
