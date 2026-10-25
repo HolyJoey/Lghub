@@ -21,6 +21,7 @@ POLAR_PATTERN = 0x8330
 ANGLE_SNAPPING = 0x2230
 FN_INVERSION = 0x40A3
 ANALOG_KEYS = 0x1B08
+CONTROL_LIST = 0x1B10
 REPROG_CONTROLS = 0x1B04
 ILLUMINATION = 0x1990
 DISABLE_KEYS = 0x4522
@@ -319,6 +320,24 @@ def set_rapid_trigger(dev, on):
 
 def set_key_priority(dev, on):
 	dev.call(ANALOG_KEYS, 5, bytes([1 if on else 0]))
+
+
+# The keyboard's control list (0x1B10), as G HUB's Feature1B10ControlList: fn 0 -> [count], fn 1
+# [offset] -> 8 CIDs (u16 big-endian). A control's index in this list is the CIDX that G HUB's
+# onboard-profile tags use (its input_mapping::CidMap).
+def control_list(dev):
+	"""[CID, ...] in the keyboard's order."""
+	count = dev.call(CONTROL_LIST, 0)[0]
+	cids = []
+	for offset in range(0, count, 8):
+		r = dev.call(CONTROL_LIST, 1, bytes([offset]))
+		cids += [struct.unpack('>H', r[2 * i:2 * i + 2])[0] for i in range(min(8, count - offset))]
+	return cids
+
+
+def cid_indexes(dev):
+	"""{CID: CIDX} (G HUB's CidMap)."""
+	return {cid: i for i, cid in enumerate(control_list(dev))}
 
 
 # The headset's own equalizer (0x8310), as G HUB's Feature8310Equalizer: fn 0 getEQInfo (count,

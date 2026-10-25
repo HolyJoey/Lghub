@@ -252,3 +252,22 @@ class PerKeyV1Test(unittest.TestCase):
 		dev = hidpp.Device(kb, reports={hidpp.LONG})
 		self.assertEqual(perkey.apply(dev, {f'PERKEY_KEYBOARD:{k}': [1, 2, 3] for k in range(4, 11)}), 7)
 		self.assertEqual(len(kb.keys), 7)
+
+	def test_control_list_pages_of_eight(self):
+		fake = simulate.FakeAnalogKeyboard()
+		dev = hidpp.Device(fake)
+		self.assertEqual(features.control_list(dev), fake.CIDS)
+		self.assertEqual(features.cid_indexes(dev)[0x0105], 5)
+
+	def test_analog_profile_tags_read_as_g_hub_lays_them_out(self):
+		import device_settings
+		dev = hidpp.Device(simulate.FakeAnalogKeyboard())
+		a = device_settings.analog_profile(dev, 1)
+		self.assertEqual(a['actuation'], 1.5)
+		self.assertTrue(a['rapid_trigger'])
+		self.assertFalse(a['key_priority'])
+		self.assertEqual(a['keys'], {3: 0.8, 7: 3.0})
+		self.assertEqual(a['rapid'], {})
+		self.assertEqual(a['pairs'], [(4, 6, 'last input', True)])
+		self.assertEqual(device_settings.analog_profile(dev, 2), {})
+

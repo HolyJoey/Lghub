@@ -149,8 +149,10 @@ copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
   Found: all six tags and their bytes (docs/protocol.md, re/notes/keyboard_profiles.txt):
   0x120 global actuation u16, 0x121 / 0x122 global rapid trigger / key priority on, 0x123 / 0x124
   per-key [control index, u16] (value x 100), 0x130 key-priority pairs. 0x130's mode = G HUB's BindingFeatureFlavor (distance /
-  last input / ordinal / reverse ordinal / neutral). Left: the keyboard's control-index table (read from the device). Not built: a wrong write breaks the onboard profile and
-  there's no keyboard here to check.
+  last input / ordinal / reverse ordinal / neutral). The control-index table is 0x1B10 (G HUB's CidMap; features.control_list). Reading the analog
+  tags is built (device_settings.analog_profile, G HUB's read path fn 4 / 6 / 7 with the profile
+  byte). Left: which 0x8102 function reports the active profile, then a page; writes (fn 9-11)
+  stay off until a keyboard can confirm them (a wrong write breaks the onboard profile).
 - **0x1B05 full key customization** (G HUB's "FKC": remap any key, per layer, with presets):
   large; needs a keyboard that has it. Not started.
 - 0x4521 game mode on older keyboards done (bits from G HUB, key names from Logitech's HID++

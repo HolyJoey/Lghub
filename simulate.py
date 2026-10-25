@@ -460,8 +460,25 @@ class FakeMultiHostKeyboard(FakeKeyboard):
 
 
 class FakeAnalogKeyboard(FakeKeyboard):
-	"""A PRO X TKL RAPID-like keyboard: analog keys' switches (0x1B08)."""
-	FEATURES = FakeKeyboard.FEATURES + [features.ANALOG_KEYS]
+	"""A PRO X TKL RAPID-like keyboard: analog keys' switches (0x1B08) and its control list
+	(0x1B10, made-up CIDs 0x0100 + n)."""
+	FEATURES = FakeKeyboard.FEATURES + [features.ANALOG_KEYS, features.CONTROL_LIST, 0x8102]
+	CIDS = [0x0100 + n for n in range(20)]
+	# profile 1's analog tags in G HUB's layout: 1.5 mm global, rapid trigger on, two keys' own
+	# actuation points, one key-priority pair (made-up values)
+	TAGS = {(1, 0x120): bytes([0, 150]), (1, 0x121): bytes([1]), (1, 0x122): bytes([0]),
+	        (1, 0x123): bytes([3, 0, 80, 7, 1, 44]), (1, 0x124): b'', (1, 0x130): bytes([4, 6, 1, 1])}
+
+	def _profile_tags(self, fn, p):
+		if fn == 4:
+			return b''
+		if fn == 6:
+			self.reading = self.TAGS.get((p[0], p[1] << 8 | p[2]))
+			if self.reading is None:
+				raise hidpp.HidppError(5, 0x8102, fn)
+			return bytes([9]) + struct.pack('>H', len(self.reading))
+		data, self.reading = self.reading[:15], self.reading[15:]
+		return bytes([9]) + data
 
 	def __init__(self):
 		super().__init__()
@@ -469,6 +486,13 @@ class FakeAnalogKeyboard(FakeKeyboard):
 		self.analog = {1: 0, 4: 0}      # get fn -> bit 0
 
 	def handle(self, feature, fn, p):
+		if feature == 0x8102:
+			return self._profile_tags(fn, p)
+		if feature == features.CONTROL_LIST:
+			if fn == 0:
+				return bytes([len(self.CIDS)])
+			page = self.CIDS[p[0]:p[0] + 8]
+			return b''.join(struct.pack('>H', c) for c in page).ljust(16, b'\0')
 		if feature != features.ANALOG_KEYS:
 			return super().handle(feature, fn, p)
 		if fn in (2, 5):
