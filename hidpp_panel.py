@@ -44,6 +44,7 @@ SIMPLE_READS = ((features.SIDETONE, 'sidetone', headset.sidetone),
                 (headset.CENTURION_SIDETONE, 'sidetone', headset.sidetone),
                 (headset.CENTURION_ANC, 'anc', lambda dev: (headset.anc_mode(dev), *headset.anc_button(dev))),
                 (centurion_eq.EQ, 'onboard_eq', centurion_eq.read),
+                (headset.MIC_SELECT, 'mic_select', headset.mics),
                 (features.POLAR_PATTERN, 'patterns', features.polar_patterns),
                 (features.DEVICE_EQ, 'device_eq', features.device_eq),
                 (features.ANGLE_SNAPPING, 'angle_snapping', features.angle_snapping),
@@ -364,6 +365,7 @@ class SettingsPanel(Gtk.Box):
 		                   ('device_eq', self._device_eq_card), ('charging', self._charging_card),
 		                   ('bass_tone', self._bass_card), ('mic', self._mic_card), ('anc', self._anc_card),
 		                   ('onboard_eq', self._onboard_eq_card), ('headset_switches', self._switches_card),
+		                   ('mic_select', self._mic_select_card),
 		                   ('power', lambda i: power_card(i['power'], self._do, self.dev)),
 		                   ('battery', lambda _i: battery_warnings_card()),
 		                   ('mode', self._mode_card)):
@@ -497,6 +499,17 @@ class SettingsPanel(Gtk.Box):
 			sw = Gtk.Switch(active=usage in chosen, valign=Gtk.Align.CENTER)
 			sw.connect(NOTIFY_ACTIVE, lambda w, _p, u=usage: self.loading or self._game_key(u, w.get_active()))
 			c.append(row(f'Turn off {name}', sw))
+		return c
+
+	def _mic_select_card(self, info):
+		names, active = info['mic_select']
+		c = card('Microphone', 'Which of the headset’s microphones it uses.')
+		if names:
+			dd = Gtk.DropDown.new_from_strings(names)
+			dd.set_selected(min(active, len(names) - 1))
+			dd.connect(NOTIFY_SELECTED, lambda w, _p: self.loading or self._do(
+				lambda i=w.get_selected(): headset.set_mic(self.dev, i)))
+			c.append(row('Use', dd))
 		return c
 
 	def _switches_card(self, info):

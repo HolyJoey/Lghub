@@ -207,11 +207,12 @@ def set_anc_button(dev, short_modes, long_mode):
 # Switches of the newer headsets, as G HUB's devio classes send them (request function numbers from
 # their methods; device values = G HUB's protobuf enum - 1, its toDevio / toProto): 0x060E AI noise
 # reduction (fn 0 / 1 get / set on, fn 2 / 3 get / set level: off, low, medium, high), 0x0618 battery
-# saver ("eco mode", fn 0 / 1), 0x0639 footstep detection (fn 0 / 1). That a get answers in byte 0 is ours.
-AI_NOISE_REDUCTION, BATTERY_SAVER, FOOTSTEP_DETECTION = 0x060E, 0x0618, 0x0639
+# saver ("eco mode", fn 0 / 1), 0x0639 footstep detection (fn 0 / 1), 0x060B tones (getToneEnabledState
+# fn 0, setToneEnabledState fn 1). That a get answers in byte 0 is ours.
+AI_NOISE_REDUCTION, BATTERY_SAVER, FOOTSTEP_DETECTION, TONES = 0x060E, 0x0618, 0x0639, 0x060B
 AI_NR_LEVELS = ('Off', 'Low', 'Medium', 'High')
 SWITCHES = {AI_NOISE_REDUCTION: 'AI noise reduction', BATTERY_SAVER: 'Battery saver',
-            FOOTSTEP_DETECTION: 'Footstep detection'}
+            FOOTSTEP_DETECTION: 'Footstep detection', TONES: 'Headset tones'}
 
 
 def switch_state(dev, feature):
@@ -236,6 +237,24 @@ def switches(dev):
 	if AI_NOISE_REDUCTION in out:
 		out['ai_level'] = ai_nr_level(dev)
 	return out
+
+
+# 0x063B MicSelect (G HUB's Feature063BMicSelect): fn 0 getInfo (proto Info{count, mic_types}), fn 1
+# getActiveMic, fn 2 setActiveMic [index]. Mic types on the wire = G HUB's MicType - 1 (toProtoMicType).
+# Ours: info as [count, type per mic], the active index in byte 0.
+MIC_SELECT = 0x063B
+MIC_TYPES = {0: 'Headset mic (wireless)', 1: 'USB mic', 2: 'Headset mic (cable)'}
+
+
+def mics(dev):
+	"""([mic names], active index)."""
+	r = dev.call(MIC_SELECT, 0)
+	names = [MIC_TYPES.get(t, f'Mic {i + 1}') for i, t in enumerate(r[1:1 + r[0]])]
+	return names, dev.call(MIC_SELECT, 1)[0]
+
+
+def set_mic(dev, index):
+	dev.call(MIC_SELECT, 2, bytes([index]))
 
 
 # 0x0604 HeadsetAudioSidetone (Centurion headsets; G HUB's FeatureC0604HeadsetSidetone): fn 0 get

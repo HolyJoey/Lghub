@@ -195,7 +195,8 @@ copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
     (run natively from its agent, fetched at first use; the +-12 dB slider range is ours). Ours: byte 0 on the wire = the collection's
     report id. Check on a G735 / PRO X 2 / G325.
   - Also done: AI noise reduction (on / off, level), battery saver and footstep detection (0x060E /
-    0x0618 / 0x0639). Left: mic select (0x063B), tones (0x060B), noise exposure (0x060D) and the other 0x06xx features,
+    0x0618 / 0x0639). Mic select (0x063B) and tones on / off (0x060B) too. Left: noise exposure (0x060D: its levels map
+    through the headset's own table), tone sets, and the other 0x06xx features,
     read the same way from G HUB's decoders; Centurion0003SubdevicePlain (devices behind the 0x0003
     bridge: write 0x141fea530 and its creator found; the sub-device discovery flow 0x141f837e1 is next). Notes: re/notes/centurion.txt.
 - **Others**:

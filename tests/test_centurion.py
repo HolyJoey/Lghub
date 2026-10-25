@@ -140,6 +140,17 @@ class CenturionTest(unittest.TestCase):
 		headset.set_ai_nr_level(dev, 9)
 		self.assertEqual(calls[-2:], [(0x0639, 1, b'\x01'), (0x060E, 3, b'\x03')])
 
+	def test_mic_select(self):
+		calls = []
+
+		class Dev:
+			def call(self, feature, fn, params=b''):
+				calls.append((feature, fn, bytes(params)))
+				return {(0x063B, 0): b'\x02\x00\x01', (0x063B, 1): b'\x01'}.get((feature, fn), b'').ljust(16, b'\0')
+		self.assertEqual(headset.mics(Dev()), (['Headset mic (wireless)', 'USB mic'], 1))
+		headset.set_mic(Dev(), 0)
+		self.assertEqual(calls[-1], (0x063B, 2, b'\x00'))
+
 	def test_descriptor_collection(self):
 		desc = bytes([0x06, 0xA0, 0xFF, 0x09, 0x01, 0xA1, 0x01, 0x85, 0x51, 0xC0])
 		self.assertEqual(centurion._collection(desc), (0xFFA0, 1, 0x51))
