@@ -90,7 +90,7 @@ copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
 ### Mice
 - **0x1B04 buttons on newer mice** (those without 0x8110, like the G502 X): done: macros on
   buttons divert the buttons' controls (G HUB's 6-byte SetCtrlIdReporting; flag bits from
-  Logitech's spec, G HUB's caller not found) and read the diverted-controls events. Check on a
+  Logitech's spec; G HUB's SetCtrlIdReportingAsync only packs its caller's bytes, caller not found) and read the diverted-controls events. Check on a
   G502 X. Not needed: remapping a button to another button's job (fn 3's remap field); these
   mice keep their buttons' jobs in the onboard profile, which the Buttons page edits.
 - **0x2240 surface tuning**: done as G HUB's routine (fn 2 / 3, shutter event, fn 4, squal, fn 5,
@@ -178,8 +178,10 @@ copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
     per-device prefix (CenturionTransport::write 0x14200d030), split into fragments
     (CenturionPacketLayer 0x14200f3c0).
   - Left: the per-device settings: they come from a list of per-pid "centurion entries" that
-    DeviceManager::applyDeviceAdapters walks (0x141fb1da0); where that list is filled is not found
-    yet (re/notes/centurion.txt).
+    DeviceManager::applyDeviceAdapters walks (0x141fb1da0); found: a built-in table of 18 entries
+    (static init 0x1402111c0: pid, HID usage page / usage, prefix bytes, a flag, a size; e.g. the G735
+    on page 0xff03, the newer ones on 0xffa0 with prefix 0x23; re/notes/centurion.txt). Next: the
+    transport itself in Lghub.
   - G HUB's layers: CenturionTransport on the HID collection G HUB calls "Avnera Centurion
     collection", a CenturionPacketLayer per pid, and Centurion0003SubdevicePlain for devices
     behind the 0x0003 bridge (it refuses packets larger than the adapter's size). G HUB's feature
@@ -211,7 +213,8 @@ copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
   on the receiver's page and in Settings; G HUB's HPP10Command lock on register 0xB2: open 1 on
   LS1, 7 on LS2, close 2; which receiver is which from G HUB's receivers list). Check on a
   receiver. Left: LSX (c54f): only one device pairs with it (PRO X3 SUPERSTRIKE); G HUB's
-  0x1894 fn 2 openLock takes 3 bytes from a caller not found yet (re/notes/pairing.txt). The
+  0x1894 fn 2 openLock takes 3 bytes, but no code path to it was found in G HUB 2026.6 (only its
+  vtable; the one 0x1894 user saves pairing info), so it may be unused; re/notes/pairing.txt. The
   POWERPLAY hybrid: closed, no device in G HUB's list pairs with it; unpairing: G HUB has none for LS1 / LS2 / LSX / hybrid receivers (its unpair code is for
   Windows Bluetooth and "BLE Pro" receivers, none of which are in its receiver list); not planned.
 - **Sleep / power-off timers** (0x8103 GlobalDeviceSettings tags 1 / 2): done with G HUB's tag
