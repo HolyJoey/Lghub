@@ -50,6 +50,12 @@ class Session:
 		return False
 
 
+def active_profile(dev):
+	"""The onboard profile in use (0x8102 fn 2: the call next to G HUB's activate, fn 3; that
+	byte 0 is the profile number is ours)."""
+	return dev.call(PROFILE_MANAGEMENT, 2)[0]
+
+
 def read_profile_tag(dev, profile, tag):
 	"""A 0x8102 onboard-profile tag's bytes (read only)."""
 	with Session(dev, PROFILE_MANAGEMENT, PROFILE_SESSION):

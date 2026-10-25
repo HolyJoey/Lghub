@@ -114,7 +114,8 @@ portal on GNOME and KDE, which asks once; that needs GStreamer's PipeWire plugin
 `gstreamer1.0-pipewire`). Lighting zones and the device's own effects (with G HUB's effect
 numbers and settings, including newer keyboards' two-colour Signature styles), brightness, report
 rate, Fn keys, game mode, Easy-Switch, power-saving and power-off timers, angle snapping, sidetone, on-board memory and battery. Analog keyboards (PRO X TKL RAPID, G515 RAPID and the
-like) get G HUB's rapid trigger and key priority switches. Devices with a USB sound card (headsets,
+like) get G HUB's rapid trigger and key priority switches, and show their onboard profile's actuation
+point, per-key points and key-priority pairs (read only for now). Devices with a USB sound card (headsets,
 speakers, Yeti mics) also get its controls. Yetis also get their own mute, gain, headphone level and mic monitoring over HID++,
 as G HUB sets them. Litra lights get on / off, brightness and colour temperature (HID++ 0x1990, as G HUB sets them).
 
@@ -266,7 +267,7 @@ simulator. The webcam screenshot is a real camera.
   open an issue with the "Device report" form: it asks for the model, the service log
   (`journalctl --user -u lghub`) and what the device's page says.
 - Still open, compared with G HUB: the G735 / PRO X 2 protocol and the newer headsets' settings (A50 X, G522,
-  PRO X3), per-key actuation on analog keyboards, pairing on LSX / POWERPLAY receivers, keyboard
+  PRO X3), editing per-key actuation on analog keyboards, pairing on LSX / POWERPLAY receivers, keyboard
   onboard-profile editing and a few newer-mouse features. The full list is in [TODO.md](TODO.md).
 
 ## If something's off

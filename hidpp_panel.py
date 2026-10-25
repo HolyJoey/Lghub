@@ -8,6 +8,7 @@ import battery_model
 import device_settings
 import features
 import headset
+import hidpp
 import lightsync_ui
 import mouse
 import perkey
@@ -43,6 +44,28 @@ SIMPLE_READS = ((features.SIDETONE, 'sidetone', headset.sidetone),
                 (features.ANGLE_SNAPPING, 'angle_snapping', features.angle_snapping),
                 (features.CHARGING_CONTROL, 'charging', features.charging),
                 (features.BASS_TONE, 'bass_tone', features.bass_tone))
+
+def _plural(n, word):
+	return f'{n} {word}' + ('' if n == 1 else 's')
+
+
+def analog_summary(a):
+	"""Lines describing an analog profile (device_settings.analog_profile), read from the keyboard."""
+	lines = []
+	if 'actuation' in a:
+		line = f'Actuation point {a["actuation"]:.2f} mm'
+		if a.get('keys'):
+			line += f', {_plural(len(a["keys"]), "key")} with their own'
+		lines.append(line)
+	if a.get('rapid'):
+		lines.append(f'Rapid-trigger sensitivity set on {_plural(len(a["rapid"]), "key")}')
+	if a.get('pairs'):
+		kinds = sorted({str(p[2]) for p in a['pairs']})
+		lines.append(f'{_plural(len(a["pairs"]), "key-priority pair")} ({", ".join(kinds)})')
+	if lines:
+		lines.append('Read from the keyboard’s onboard profile; editing these comes later.')
+	return lines
+
 
 def report_rates(dev):
 	"""(rates the device offers in Hz, highest first; the current one) from 0x8060."""
@@ -275,6 +298,11 @@ class SettingsPanel(Gtk.Box):
 			self.host = host
 		if features.ANALOG_KEYS in have:
 			info['analog'] = features.analog_switches(dev)
+			if device_settings.PROFILE_MANAGEMENT in have:
+				try:
+					info['analog_profile'] = device_settings.analog_profile(dev, device_settings.active_profile(dev))
+				except (OSError, hidpp.HidppError, IndexError):
+					pass
 		if features.DISABLE_KEYS in have or features.DISABLE_KEYS_V1 in have:
 			most, keys = features.game_mode_choices(dev)
 			info['game_mode'] = (most, features.game_mode_keys(self.device.model.key), keys)
@@ -435,6 +463,8 @@ class SettingsPanel(Gtk.Box):
 			sw.connect(NOTIFY_ACTIVE, lambda w, _p, s=setter: self.loading or self._do(
 				lambda on=w.get_active(): s(self.dev, on)))
 			c.append(row(title, sw))
+		for line in analog_summary(info.get('analog_profile') or {}):
+			c.append(label(line, ['muted', 'small'], wrap=True))
 		return c
 
 	def _game_mode_card(self, info):

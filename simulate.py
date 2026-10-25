@@ -470,6 +470,8 @@ class FakeAnalogKeyboard(FakeKeyboard):
 	        (1, 0x123): bytes([3, 0, 80, 7, 1, 44]), (1, 0x124): b'', (1, 0x130): bytes([4, 6, 1, 1])}
 
 	def _profile_tags(self, fn, p):
+		if fn == 2:
+			return bytes([1])
 		if fn == 4:
 			return b''
 		if fn == 6:
