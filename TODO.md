@@ -4,6 +4,17 @@ Only what is still open. What works is in the README; how things were found is i
 comments. Checked against the device features G HUB's agent knows (its 212 `Feature####`
 classes, G HUB 2026.6) and its app features.
 
+## Before 0.9.9 (what can be done without the devices)
+
+0.9.9 = everything that can be built from G HUB without hardware; 1.0 = after checks on real devices.
+
+1. Signature effects' extra key groups as G HUB's: W / A / S / D, the logo and the light strips
+   (read: re/notes/lighting.txt "PER-KEY GROUPS READ"; Pulsar Point and Smooth Star still use our guesses).
+2. Keyboards: the analog keys' per-key editor (actuation point, rapid trigger) and onboard-profile
+   editing (formats mostly found; see "Keyboards").
+3. Signature effects on the light strips (G735 / G512 X bottom, G713 / G715 halo): G HUB's per-LED
+   order for them isn't found yet.
+
 ## Check first: G Pro X headset (mic, Blue VO!CE, surround)
 
 - Sidetone slider is missing. G HUB sets sidetone only over HID++ (0x8300; 0x0604 on Centurion),
