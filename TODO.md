@@ -4,21 +4,17 @@ Only what is still open. What works is in the README; how things were found is i
 comments. Checked against the device features G HUB's agent knows (its 212 `Feature####`
 classes, G HUB 2026.6) and its app features.
 
-## Before 0.9.9 (what can be done without the devices)
+## 0.9.9: the laptop-only list is done
 
 0.9.9 = everything that can be built from G HUB without hardware; 1.0 = after checks on real devices.
+What's left needs a device:
 
-1. Signature effects' extra key groups: done for Smooth Star and Pulsar Point (G HUB's W / A / S / D,
-   logo and light-strip groups, signature.key_groups). Smooth Wave: its two extra groups are only
-   filled on six-zone devices, so on per-key boards it is the sweep alone, as in G HUB.
-2. Keyboards: the analog keys' per-key editor (actuation point, rapid trigger) and onboard-profile
-   editing (formats mostly found; see "Keyboards"). The write is read (fn 9 [u16, u16, data], fn 10
-   fragments, fn 11 CRC-32 commit, as 0x8103's) except how a write picks its profile: fn 9 has no
-   profile byte (re/notes/keyboard_profiles.txt "0x8102 WRITE PATH"). Built: the per-key values shown
-   by key name (analog_keys.py) and the write (device_settings.write_profile_tag), kept off by
-   PROFILE_WRITES_CHECKED until one write is checked on an analog keyboard; then the sliders.
-3. Signature effects on the light strips (G735 / G512 X bottom, G713 / G715 halo): G HUB's per-LED
-   order for them isn't found yet.
+1. Analog keyboards: turn on onboard-profile writes (device_settings.PROFILE_WRITES_CHECKED) after one
+   write is checked on a PRO X TKL RAPID / G515 RAPID (G HUB's fn 9 carries no profile number), then
+   the per-key sliders and the other profile tags.
+2. Signature effects on the light strips (G735 / G512 X bottom, G713 / G715 halo): their per-LED order
+   comes from the device's own zone list at runtime.
+3. Everything under "Check first" and section 1 below.
 
 ## Check first: G Pro X headset (mic, Blue VO!CE, surround)
 

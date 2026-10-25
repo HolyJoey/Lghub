@@ -268,7 +268,8 @@ simulator. The webcam screenshot is a real camera.
 - Most devices here have only met the simulator. If something doesn't work on yours (or does),
   open an issue with the "Device report" form: it asks for the model, the service log
   (`journalctl --user -u lghub`) and what the device's page says.
-- Next release (0.9.9): the list at the top of [TODO.md](TODO.md#before-099-what-can-be-done-without-the-devices).
+- 0.9.9 has everything that can be built without the devices; 1.0 comes after checks on real hardware
+  (what needs a device: the top of [TODO.md](TODO.md#099-the-laptop-only-list-is-done)).
 - Still open, compared with G HUB: the G735 / PRO X 2 settings other than sidetone and the newer headsets' settings (A50 X, G522,
   PRO X3), editing per-key actuation on analog keyboards, pairing on LSX / POWERPLAY receivers, keyboard
   onboard-profile editing and a few newer-mouse features. The full list is in [TODO.md](TODO.md).
