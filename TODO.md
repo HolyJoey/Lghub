@@ -96,8 +96,8 @@ Done: the PRO equalizer card on the G Pro X's headset page (profiles 1-4, five b
 their type and frequency). It talks to the headset's Conexant chip as G HUB does (memory reads /
 writes over report 4 / 5, then the apply bit), and G HUB's own band design and analysis run from
 its logi_audio_conexant.dll (pinned build, fetched at first use) through bin/proeq-design.
-Done too: G HUB's busy check before writes (FUN_18000e180). Left: taking frequency / Q from the chip's EEPROM
-copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
+Done too: G HUB's busy check before writes (FUN_18000e180). Not ported on purpose: G HUB takes frequency / Q from an EEPROM copy
+(layout in the notes) read through another memory call; the band record gives the same values. Notes: `re/notes/proeq.txt`.
 
 ### Mice
 - **0x1B04 buttons on newer mice** (those without 0x8110, like the G502 X): done: macros on
