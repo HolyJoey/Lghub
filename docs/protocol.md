@@ -5,7 +5,7 @@ projects can use it. Everything here is a description of behaviour in our own wo
 code, binaries or data files are reproduced. G HUB 2026.6 was the reference.
 
 Most of it has been checked against G HUB's own code and a device simulator, not on every device:
-the per-device notes in [TODO.md](../TODO.md) say what has met real hardware.
+the [roadmap](../TODO.md) says what still needs a check on real hardware.
 
 Notation: `fn n` is HID++ function n of a feature; `[a, b]` are the bytes sent or received after
 the HID++ header; multi-byte numbers are big-endian unless noted. **Ours** marks a detail Lghub
