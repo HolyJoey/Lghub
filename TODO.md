@@ -32,7 +32,7 @@ What's left needs a device:
 - Versions: 0.9.8's updater reads four-part versions, so small fixes can ship as 0.9.8.x
   (0.9.7 and older only see three-part ones).
 
-## Progress (overall about 85%)
+## Progress (overall about 88%)
 
 The percentages are rough estimates of how much of each area's G HUB features Lghub has, not
 measurements.
@@ -44,8 +44,8 @@ measurements.
 | Surround, equalizer | 100% | check on the G Pro X |
 | PRO 5-band equalizer | 95% | done with G HUB's own band maths (its DLL, run natively) and its busy check; check on the G Pro X |
 | Mice | 94% | see "Mice" below |
-| Keyboards | 80% | analog keys' per-key settings and onboard-profile editing (formats found, not built); see "Keyboards" below |
-| Headsets (other than the voice chain) | 70% | Centurion transport, sidetone, mic, noise cancelling and onboard EQ done; its other features; see "Headsets" below |
+| Keyboards | 88% | onboard profiles read and shown (keys, macros, analog, game mode, lighting); writing them waits for a check on a keyboard; see "Keyboards" below |
+| Headsets (other than the voice chain) | 85% | the newer headsets' features done over G HUB's Centurion transport; left: host switching, mix inputs, noise exposure, usage time (values G HUB doesn't name); see "Headsets" below |
 | Yeti controls | 100% | check on a Yeti |
 | Litra lights | 90% | check on a Litra Glow / Beam |
 | Webcams | 90% | check on the C920 |

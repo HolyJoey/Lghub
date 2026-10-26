@@ -272,9 +272,11 @@ simulator. The webcam screenshot is a real camera.
   (`journalctl --user -u lghub`) and what the device's page says.
 - 0.9.9 has everything that can be built without the devices; 1.0 comes after checks on real hardware
   (what needs a device: the top of [TODO.md](TODO.md#099-the-laptop-only-list-is-done)).
-- Still open, compared with G HUB: the G735 / PRO X 2 settings other than sidetone and the newer headsets' settings (A50 X, G522,
-  PRO X3), editing per-key actuation on analog keyboards, pairing on LSX / POWERPLAY receivers, keyboard
-  onboard-profile editing and a few newer-mouse features. The full list is in [TODO.md](TODO.md).
+- Still open, compared with G HUB: changing what's stored in a keyboard's onboard profile (key assignments,
+  macros, per-key actuation: Lghub reads them; writing waits for a check on a keyboard), a few newer-headset
+  settings whose values G HUB doesn't name (host switching, the mix inputs, noise exposure), the Yeti 2's
+  screen pictures, pairing on LSX / POWERPLAY receivers and a few newer-mouse features. The full list is in
+  [TODO.md](TODO.md).
 
 ## If something's off
 
