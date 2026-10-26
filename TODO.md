@@ -176,8 +176,10 @@ Done too: G HUB's busy check before writes (FUN_18000e180). Not ported on purpos
   last input / ordinal / reverse ordinal / neutral). The control-index table is 0x1B10 (G HUB's CidMap; features.control_list). Reading the analog
   tags is built (device_settings.analog_profile, G HUB's read path fn 4 / 6 / 7 with the profile
   byte; the active profile from fn 2, confirmed in G HUB). Writes (fn 9-11) stay off until a keyboard can confirm them (a wrong write breaks the onboard profile).
-- **0x1B05 full key customization** (G HUB's "FKC": remap any key, per layer, with presets):
-  large; needs a keyboard that has it. Not started.
+- **0x1B05 full key customization** (G HUB's "FKC"): its on / off is built (fn 1 [1, on], as G HUB's
+  SetFKCState). The remaps are the onboard key rows (tags 0x110-0x112, shown read only); writing them waits
+  for the profile-write check. G HUB's host-side actions (key-trigger events through its preset worker) aren't
+  ported.
 - 0x4521 game mode on older keyboards done (bits from G HUB, key names from Logitech's HID++
   spec). 0x4523 disable controls (newer keyboards' game mode): fn 0 sets a bitmap of control
   indexes, fn 1 / fn 3 read game-mode bits, fn 2 [0, on | lock << 1] sets game mode (G HUB's

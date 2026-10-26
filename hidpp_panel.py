@@ -455,6 +455,8 @@ class SettingsPanel(Gtk.Box):
 						info['analog_cids'] = features.control_list(dev)
 				except (OSError, hidpp.HidppError, IndexError):
 					pass
+		if features.FULL_KEY_CUSTOMIZATION in have:
+			info['fkc'] = features.fkc_enabled(dev)
 		if device_settings.PROFILE_MANAGEMENT in have:
 			info['onboard_profile'] = read_profile_summary(dev, have)
 			info['macros'] = read_macros(dev)
@@ -515,7 +517,7 @@ class SettingsPanel(Gtk.Box):
 		                   ('onboard_eq', self._onboard_eq_card), ('headset_switches', self._switches_card),
 		                   ('mic_select', self._mic_select_card), ('aux', self._aux_card),
 		                   ('tone_sets', self._tone_sets_card), ('mix', self._mix_card), ('onboard_profile', self._onboard_profile_card), ('macros', self._macros_card),
-		                   ('key_rows', self._key_rows_card),
+		                   ('key_rows', self._key_rows_card), ('fkc', self._fkc_card),
 		                   ('usb_ports', self._usb_ports_card), ('clusters', self._clusters_card),
 		                   ('power', lambda i: power_card(i['power'], self._do, self.dev)),
 		                   ('battery', lambda _i: battery_warnings_card()),
@@ -692,6 +694,15 @@ class SettingsPanel(Gtk.Box):
 			names = analog_keys.cid_names(self.device.model.key)
 			c.append(row('Game mode turns off', label(', '.join(names.get(cid, f'control 0x{cid:X}') for cid in p['game_mode']),
 			                                          ['muted', 'small'], wrap=True)))
+		return c
+
+	def _fkc_card(self, info):
+		c = card('Key customization', 'On: the keyboard runs the key assignments stored in its profile (G HUB’s '
+		         'full key customization).')
+		sw = Gtk.Switch(active=info['fkc'], valign=Gtk.Align.CENTER)
+		sw.connect(NOTIFY_ACTIVE, lambda w, _p: self.loading or self._do(
+			lambda on=w.get_active(): features.set_fkc_enabled(self.dev, on)))
+		c.append(row('Use stored key assignments', sw))
 		return c
 
 	def _key_rows_card(self, info):

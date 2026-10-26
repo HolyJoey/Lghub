@@ -116,7 +116,7 @@ grim on Hyprland, Sway and other wlroots compositors, else through the desktop's
 portal on GNOME and KDE, which asks once; that needs GStreamer's PipeWire plugin,
 `gstreamer1.0-pipewire`). Lighting zones and the device's own effects (with G HUB's effect
 numbers and settings, including newer keyboards' two-colour Signature styles), brightness, report
-rate, Fn keys, game mode (also on the newer keyboards), the onboard profile's stored macros and key assignments (read only), Easy-Switch, power-saving and power-off timers, angle snapping, sidetone, on-board memory and battery. Analog keyboards (PRO X TKL RAPID, G515 RAPID and the
+rate, Fn keys, game mode (also on the newer keyboards), full key customization on / off, the onboard profile's stored macros and key assignments (read only), Easy-Switch, power-saving and power-off timers, angle snapping, sidetone, on-board memory and battery. Analog keyboards (PRO X TKL RAPID, G515 RAPID and the
 like) get G HUB's rapid trigger and key priority switches, and show their onboard profile's actuation
 point, each key's own actuation and rapid-trigger values by key name, and key-priority pairs (read only
 until a write is checked on one of these keyboards). Devices with a USB sound card (headsets,

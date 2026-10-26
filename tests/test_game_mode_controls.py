@@ -32,6 +32,17 @@ class DisableControlsTest(unittest.TestCase):
 		features.apply_game_mode(Dev(), [30, 10, 99])
 		self.assertEqual(calls[-1], (features.DISABLE_CONTROLS, 0, features.disabled_controls_bitmap([2, 0])))
 
+	def test_fkc_switch_as_g_hub(self):
+		calls = []
+
+		class Dev:
+			def call(self, feature, fn, params=b''):
+				calls.append((feature, fn, bytes(params)))
+				return bytes([1]).ljust(16, b'\0')
+		self.assertTrue(features.fkc_enabled(Dev()))
+		features.set_fkc_enabled(Dev(), False)
+		self.assertEqual(calls, [(0x1B05, 1, bytes([0, 0])), (0x1B05, 1, bytes([1, 0]))])
+
 	def test_offered_keys(self):
 		try:
 			import hidpp_panel

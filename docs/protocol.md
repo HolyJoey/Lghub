@@ -113,6 +113,7 @@ from the mouse's own HID reports rather than the pointer.
 | --- | --- |
 | 0x4521 disable keys (older) | five fixed keys, one bit each: fn 0 available, fn 1 off now, fn 2 set. Bit names from Logitech's spec: Caps Lock, Num Lock, Scroll Lock, Insert, Windows |
 | 0x4522 disable keys by usage | fn 0 how many, fn 1 turn these HID usages off, fn 2 back on, fn 3 all on |
+| 0x1B05 full key customization | fn 0 capabilities; fn 1 `[set, on]` get / set the switch that runs the profile's key rows (G HUB sends `[1, on]`); fn 2 eight u16; fn 3 on + an 8-bit event mask; fn 4 two bytes |
 | 0x4523 disable controls (newer) | fn 0 `[16 bytes]`: control index i at byte i >> 3, bit i & 7; the index is the control's place in the 0x1B10 list (G HUB maps its presets' CIDs through it). fn 1 reads four game-mode bits; fn 2 `[which, values]` (bit 0 / bit 1 each) |
 | 0x40A3 Fn inversion | fn 0 `[host]` → state, default, capabilities; fn 1 set |
 | 0x1B08 analog keys | G HUB's Feature1B08AnalogKeys: fn 0 capabilities, fn 1 / fn 2 get / set rapid trigger, fn 3 key-travel events, fn 4 / fn 5 get / set key priority; a set is one byte, bit 0 = on (that a get answers in bit 0 is ours). Actuation points and rapid-trigger sensitivity per key are in the onboard profile (tags 0x0120-0x0130) |

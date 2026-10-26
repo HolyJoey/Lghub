@@ -27,6 +27,7 @@ ILLUMINATION = 0x1990
 DISABLE_KEYS = 0x4522
 DISABLE_KEYS_V1 = 0x4521
 DISABLE_CONTROLS = 0x4523
+FULL_KEY_CUSTOMIZATION = 0x1B05
 CHANGE_HOST = 0x1814
 HOSTS_INFO = 0x1815
 DEVICE_EQ = 0x8310
@@ -606,6 +607,18 @@ def set_disabled_keys(dev, usages):
 	dev.call(DISABLE_KEYS, 3)
 	if usages:
 		dev.call(DISABLE_KEYS, 1, bytes(usages))
+
+
+# Full key customization (0x1B05, G HUB's "FKC"): fn 1 [set, on] gets (set 0) or sets the switch that
+# makes the keyboard run the key rows of its onboard profile (Feature1B05FullKeyCustomization 0x141d6e560:
+# byte 0 bit 0 = set, byte 1 bit 0 = on; the reply's bit 0 = on). G HUB's SetFKCState 0x141856e20 sends
+# [1, on]. The remaps themselves are the profile's key-row tags (0x110-0x112, onboard_keys.py).
+def fkc_enabled(dev):
+	return bool(dev.call(FULL_KEY_CUSTOMIZATION, 1, bytes([0, 0]))[0] & 1)
+
+
+def set_fkc_enabled(dev, on):
+	dev.call(FULL_KEY_CUSTOMIZATION, 1, bytes([1, 1 if on else 0]))
 
 
 # --- brightness (0x8040) -------------------------------------------------------------------

@@ -76,7 +76,7 @@ def info():
 		'key_rows': ([('Base', [(0, [(0, 0, 0, 0x8002, 4), (1, 0x20, 0, 0x9003, 0)])])], [0x10]),
 		'clusters': [(0, [0, 1, 2, 3, 4, 5], (cluster_effects.WAVE, {'intensity': 50, 'period': 3000,
 		                                                              'saturation': 100, 'direction': 1}))],
-		'power': {1: 300, 2: 900}, 'mode': mouse.MODE_ONBOARD, 'profiles': (3, 2),
+		'fkc': True, 'power': {1: 300, 2: 900}, 'mode': mouse.MODE_ONBOARD, 'profiles': (3, 2),
 	}
 
 
@@ -152,7 +152,7 @@ class PanelCardsTest(unittest.TestCase):
 		with mock.patch('centurion_eq.coefficients', return_value=b''):
 			poke(self.panel)
 		sent = {(f, fn) for f, fn, _p in self.dev.calls}
-		for want in ((0x0609, 1), (0x060B, 5), (0x0621, 3), (0x0605, 1), (0x063C, 1), (0x063A, 2), (0x063B, 2)):
+		for want in ((0x1B05, 1), (0x0609, 1), (0x060B, 5), (0x0621, 3), (0x0605, 1), (0x063C, 1), (0x063A, 2), (0x063B, 2)):
 			self.assertIn(want, sent)
 
 	def test_no_hidpp_and_status(self):
