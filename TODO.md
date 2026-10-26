@@ -195,11 +195,12 @@ copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
     (run natively from its agent, fetched at first use; the +-12 dB slider range is ours). Ours: byte 0 on the wire = the collection's
     report id. Check on a G735 / PRO X 2 / G325.
   - Also done: AI noise reduction (on / off, level), battery saver and footstep detection (0x060E /
-    0x0618 / 0x0639). Mic select (0x063B), tones on / off (0x060B), Do Not Disturb (0x0631), aux input (0x063C) and USB
+    0x0618 / 0x0639). Mic select (0x063B), tones on / off (0x060B), Do Not Disturb (0x0631), mic SNR (0x0602), aux input (0x063C) and USB
     ports (0x063A) too. Lighting over 0x0620 RGB host mode (the G735's lights: a Lighting page and
     the effects) and 0x0621 stored effects (what each light keeps without Lghub: fixed, colour cycle,
     colour wave, breathing, signature). Left: noise exposure (0x060D: its levels map
-    through the headset's own table), tone sets, and the other 0x06xx features,
+    through the headset's own table), usage time (0x0617: unit unknown), signature
+    effects (0x0622: decoded, but only id 1 is named, the shutdown effect), tone sets, and the other 0x06xx features,
     read the same way from G HUB's decoders; Centurion0003SubdevicePlain (devices behind the 0x0003
     bridge: write 0x141fea530 and its creator found; the sub-device discovery flow 0x141f837e1 is next). Notes: re/notes/centurion.txt.
 - **Others**:

@@ -129,13 +129,14 @@ class CenturionTest(unittest.TestCase):
 
 		class Dev:
 			def has(self, feature):
-				return feature in (0x060E, 0x0639)
+				return feature in (0x060E, 0x0639, 0x0602)
 
 			def call(self, feature, fn, params=b''):
 				calls.append((feature, fn, bytes(params)))
-				return {(0x060E, 0): b'\x01', (0x060E, 2): b'\x02', (0x0639, 0): b'\x00'}.get((feature, fn), b'').ljust(16, b'\0')
+				return {(0x060E, 0): b'\x01', (0x060E, 2): b'\x02', (0x0639, 0): b'\x00',
+				        (0x0602, 0): b'\x01'}.get((feature, fn), b'').ljust(16, b'\0')
 		dev = Dev()
-		self.assertEqual(headset.switches(dev), {0x060E: True, 0x0639: False, 'ai_level': 2})
+		self.assertEqual(headset.switches(dev), {0x060E: True, 0x0639: False, 0x0602: True, 'ai_level': 2})
 		headset.set_switch(dev, 0x0639, True)
 		headset.set_ai_nr_level(dev, 9)
 		self.assertEqual(calls[-2:], [(0x0639, 1, b'\x01'), (0x060E, 3, b'\x03')])

@@ -209,11 +209,14 @@ def set_anc_button(dev, short_modes, long_mode):
 # reduction (fn 0 / 1 get / set on, fn 2 / 3 get / set level: off, low, medium, high), 0x0618 battery
 # saver ("eco mode", fn 0 / 1), 0x0639 footstep detection (fn 0 / 1), 0x060B tones (getToneEnabledState
 # fn 0, setToneEnabledState fn 1). That a get answers in byte 0 is ours.
-# 0x0631 Do Not Disturb (fn 0 / 1, proto DoNotDisturb{is_donotdisturb_enabled}) works the same way.
+# 0x0631 Do Not Disturb (fn 0 / 1, proto DoNotDisturb{is_donotdisturb_enabled}) and 0x0602 mic SNR
+# (Feature0602HeadsetMicSNR: getMicSNR fn 0 -> bool, setMicSNR fn 1 [bool]) work the same way.
 AI_NOISE_REDUCTION, BATTERY_SAVER, FOOTSTEP_DETECTION, TONES, DO_NOT_DISTURB = 0x060E, 0x0618, 0x0639, 0x060B, 0x0631
+MIC_SNR = 0x0602
 AI_NR_LEVELS = ('Off', 'Low', 'Medium', 'High')
 SWITCHES = {AI_NOISE_REDUCTION: 'AI noise reduction', BATTERY_SAVER: 'Battery saver',
-            FOOTSTEP_DETECTION: 'Footstep detection', TONES: 'Headset tones', DO_NOT_DISTURB: 'Do not disturb'}
+            FOOTSTEP_DETECTION: 'Footstep detection', TONES: 'Headset tones', DO_NOT_DISTURB: 'Do not disturb',
+            MIC_SNR: 'Mic SNR'}       # G HUB's own name for 0x0602
 
 
 def switch_state(dev, feature):

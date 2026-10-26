@@ -55,7 +55,7 @@ with your headset's tuning (G Pro X, G Pro X Wireless, G733 and more), on a new 
 (Gaming, Entertainment, Sports) and per-channel volumes. It only runs while something plays, and it works together with the equalizer.
 
 **Headset.** Sidetone (over HID++, the way G HUB sets it, including over G HUB's own Centurion transport on the G735, PRO X 2,
-G325 and other newer headsets, where Lghub also sets their mic mute, mic gain, noise cancelling, AI noise reduction, battery saver, footstep detection, tones, do not disturb, which mic to use, aux input, USB port setup, their lights (colours and effects, and the effect each light keeps stored) and onboard equalizer (with G HUB's own filter maths, from its agent fetched at first use), or the sound card's own control; the
+G325 and other newer headsets, where Lghub also sets their mic mute, mic gain, noise cancelling, AI noise reduction, battery saver, footstep detection, tones, do not disturb, mic SNR, which mic to use, aux input, USB port setup, their lights (colours and effects, and the effect each light keeps stored) and onboard equalizer (with G HUB's own filter maths, from its agent fetched at first use), or the sound card's own control; the
 page says why when neither is there), volume and mic level from the headset's sound card, the G Pro
 X's PRO equalizer on the headset itself (G HUB's five bands per profile, with G HUB's own band maths), plus lighting,
 battery and the equalizer built into the headset (works on any computer or console) on headsets

@@ -333,6 +333,7 @@ onboard equalizer, and others.
   `[intensity %, period ms u16 BE, saturation]`, 2 colour wave (the same, then direction: 0 horizontal,
   1 vertical, 2 / 3 reversed), 3 breathing `[r, g, b, intensity %, period ms u16 BE]`, 4 signature
   `[r, g, b, r2, g2, b2, intensity %]`, 5 custom.
+- 0x0602 mic SNR: fn 0 get, fn 1 set `[on]`.
 - Devices behind a 0x0003 bridge go through a sub-device layer that refuses packets larger than
   the adapter's size.
 
