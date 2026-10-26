@@ -595,6 +595,76 @@ class FakeRgbMouse(FakeMouse):
 		return b''
 
 
+class FakeCenturionHeadset(FakeMouse):
+	"""A G735-like newer headset: the 0x06xx features in G HUB's reply layouts (headset.py,
+	cluster_effects.py), with made-up values."""
+	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, features.UNIFIED_BATTERY,
+	            0x0604, 0x0601, 0x0611, 0x0605, 0x060E, 0x0618, 0x0639, 0x060B, 0x0631, 0x0602, 0x063B,
+	            0x0609, 0x0621]
+	KIND = 8
+
+	def __init__(self):
+		super().__init__('G735')
+		self.values = {0x0601: 0, 0x060E: 1, 0x0618: 0, 0x0639: 1, 0x060B: 1, 0x0631: 0, 0x0602: 1}
+		self.sidetone, self.gain, self.anc, self.balance, self.prompts, self.mic = 40, 6, 1, 8, 1, 0
+		self.ai_level = 2
+		self.effect = bytes([0, 0, 3, 0x2F, 0x8C, 0xFF, 80, 0x0B, 0xB8])     # breathing, blue, 3 s
+
+	def handle(self, feature, fn, p):
+		if feature in self.values:
+			return self._switch(feature, fn, p)
+		own = {0x0604: self._sidetone, 0x0611: self._gain, 0x0605: self._anc, 0x063B: self._mic,
+		       0x0609: self._mix, 0x0621: self._effects}.get(feature)
+		return own(fn, p) if own else super().handle(feature, fn, p)
+
+	def _switch(self, feature, fn, p):
+		if feature == 0x060E and fn in (2, 3):
+			self.ai_level = p[0] if fn == 3 else self.ai_level
+			return bytes([self.ai_level])
+		if feature == 0x060B and fn == 2:
+			return bytes([3, 0, 0, 0, 1, 0, 2])                         # tones only, two voices
+		if feature == 0x060B and fn in (4, 5):
+			self.prompts = p[0] << 8 | p[1] if fn == 5 else self.prompts
+			return bytes([0, self.prompts])
+		if fn == 1:
+			self.values[feature] = p[0]
+		return bytes([self.values[feature]])
+
+	def _sidetone(self, fn, p):
+		if fn == 1:
+			self.sidetone = p[1]
+		return bytes([1, 0, self.sidetone])
+
+	def _gain(self, fn, p):
+		if fn == 2:
+			self.gain = p[0]
+		return bytes([0, 10]) if fn == 0 else bytes([self.gain])
+
+	def _anc(self, fn, p):
+		if fn == 1:
+			self.anc = p[0]
+		return bytes([self.anc]) if fn in (0, 1) else bytes([0b011, 2])
+
+	def _mic(self, fn, p):
+		if fn == 2:
+			self.mic = p[0]
+		return bytes([2, 0, 2]) if fn == 0 else bytes([self.mic])
+
+	def _mix(self, fn, p):
+		if fn == 1:
+			self.balance = p[0]
+		return bytes([self.balance]) if fn in (0, 1) else bytes([16, 0, 2])  # Bluetooth 1 / Lightspeed 1
+
+	def _effects(self, fn, p):
+		if fn == 0:
+			return bytes([0, 1, 0, 0])                                     # one light
+		if fn == 1:
+			return bytes([5, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0])[:16]
+		if fn == 3:
+			self.effect = bytes(p[:10])
+		return self.effect
+
+
 class FakeYeti(FakeMouse):
 	"""A Yeti X-like microphone: polar pattern (0x8330), all four patterns."""
 	FEATURES = [hidpp.ROOT, hidpp.FEATURE_SET, hidpp.FIRMWARE, hidpp.NAME, features.POLAR_PATTERN,
@@ -689,6 +759,7 @@ LIGHTS = ('c900',)               # Litra Glow
 KEYBOARDS = ('c33f', 'c339', 'c33c', 'c343', 'c33e')
 ANALOG_KEYBOARDS = ('c35b',)     # PRO X TKL RAPID
 YETIS = ('0aaf',)
+CENTURION_HEADSETS = ('0ad8',)    # G735
 RECEIVERS = ('c539', 'c53a', 'c53f', 'c541', 'c545', 'c547', 'c548', 'c52b')
 _FAKES = {}
 
@@ -700,7 +771,7 @@ def transport_for(usb_id, port):
 	kinds = {**dict.fromkeys(MICE, FakeMouse), **dict.fromkeys(KEYBOARDS, FakeKeyboard),
 	         **dict.fromkeys(ANALOG_KEYBOARDS, FakeAnalogKeyboard), **dict.fromkeys(MICE_X, FakeMouseX),
 	         **dict.fromkeys(MICE_X_PLUS, FakeMouseXPlus), **dict.fromkeys(LIGHTS, FakeLitra),
-	         **dict.fromkeys(YETIS, FakeYeti),
+	         **dict.fromkeys(YETIS, FakeYeti), **dict.fromkeys(CENTURION_HEADSETS, FakeCenturionHeadset),
 	         **dict.fromkeys(RECEIVERS, FakeReceiver)}
 	if pid not in kinds:
 		return None

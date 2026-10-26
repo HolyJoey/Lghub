@@ -17,7 +17,8 @@ What's left needs a device:
 3. Everything under "Check first" and section 1 below.
 
 4. README screenshots: all retaken on 2026-10-26 from the simulated devices (docs/screenshots.sh now says
-   when a page fails). Before 1.0: add a newer headset's page and retake from real devices where they differ.
+   when a page fails), plus a simulated G735 for the newer headsets. Before 1.0: retake from real devices
+   where they differ.
 
 ## Check first: G Pro X headset (mic, Blue VO!CE, surround)
 

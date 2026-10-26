@@ -66,6 +66,8 @@ that have them.
 | ![Voice](docs/screenshots/voice.png) | ![Effects](docs/screenshots/effects.png) |
 | **Equalizer** | **Surround** |
 | ![Equalizer](docs/screenshots/equalizer.png) | ![Surround](docs/screenshots/surround.png) |
+| **Newer headsets (G735)** | |
+| ![G735 settings](docs/screenshots/headset-g735.png) | |
 
 ## Mice
 
