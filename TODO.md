@@ -11,7 +11,8 @@ What's left needs a device:
 
 1. Analog keyboards: turn on onboard-profile writes (device_settings.PROFILE_WRITES_CHECKED) after one
    write is checked on a PRO X TKL RAPID / G515 RAPID (G HUB's fn 9 carries no profile number), then
-   the per-key sliders and the other profile tags.
+   the per-key sliders and the other profile tags. No keyboard tester yet: 1.0 ships with these off
+   (keyboards read their profiles only) unless a keyboard owner's report comes in first.
 2. Signature effects on the light strips (G735 / G512 X bottom, G713 / G715 halo): their per-LED order
    comes from the device's own zone list at runtime.
 3. Everything under "Check first" and section 1 below.
