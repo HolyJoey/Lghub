@@ -209,7 +209,8 @@ class SignatureCatalogTest(unittest.TestCase):
 			{'id': 'FIXED'}]}]}}}
 		out = {}
 		depots._signature_colors(dev, out)
-		self.assertEqual(out, {'g512_x_75': {'remind_me_of': ['#FF0000', None]}})
+		self.assertEqual(out, {'g512_x_75': {'remind_me_of': ['#FF0000', None],
+		                                    '_ids': {'SIGNATURE_ALGORITHMIC_ACTIVE': 'remind_me_of'}}})
 		with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False) as f:
 			json.dump(out, f)
 		try:
@@ -219,5 +220,7 @@ class SignatureCatalogTest(unittest.TestCase):
 				self.assertEqual(lightsync.signature_effects('g512_x_75'), ['remind_me_of'])
 				self.assertIsNone(lightsync.signature_effects('g815'))
 				self.assertEqual(lightsync.signature_defaults('g815', 'neon'), (lightsync.GHUB_PINK, lightsync.GHUB_BLUE))
+				self.assertEqual(lightsync.firmware_signature('g512_x_75'), 'remind_me_of')
+				self.assertIsNone(lightsync.firmware_signature('g815'))
 		finally:
 			os.unlink(f.name)

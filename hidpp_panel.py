@@ -14,6 +14,7 @@ import device_settings
 import features
 import headset
 import hidpp
+import lightsync
 import lightsync_ui
 import mouse
 import onboard_macros
@@ -238,13 +239,19 @@ def _rgb(button):
 	return tuple(round(v * 255) for v in (c.red, c.green, c.blue))
 
 
-def cluster_box(cluster, effects, current, loading, do, dev):
-	"""One light's stored effect (0x0621): the effect, its colours, speed, brightness and direction."""
+def cluster_box(cluster, effects, current, loading, do, dev, model=None):
+	"""One light's stored effect (0x0621): the effect, its colours, speed, brightness and direction.
+	The signature entry takes G HUB's name and colours for the model (Astro Point on the A20 X)."""
 	eid, params = current
-	v = {**cluster_effects.DEFAULTS, **params}
+	signature = lightsync.firmware_signature(model) if model else None
+	start = {}
+	if signature and eid != cluster_effects.SIGNATURE:
+		start = dict(zip(('color', 'color2'), lightsync.signature_defaults(model, signature)))
+	v = {**cluster_effects.DEFAULTS, **start, **params}
 	b = box(spacing=8)
 	b.append(label(f'Light {cluster + 1}', ['muted', 'small']))
-	effect_dd = Gtk.DropDown.new_from_strings([cluster_effects.NAMES[e] for e in effects])
+	names = {**cluster_effects.NAMES, **({cluster_effects.SIGNATURE: signature.replace('_', ' ').title()} if signature else {})}
+	effect_dd = Gtk.DropDown.new_from_strings([names[e] for e in effects])
 	effect_dd.set_selected(effects.index(eid) if eid in effects else 0)
 	color, color2 = _color_button(v['color']), _color_button(v['color2'])
 	direction = Gtk.DropDown.new_from_strings(list(cluster_effects.DIRECTIONS))
@@ -657,7 +664,8 @@ class SettingsPanel(Gtk.Box):
 		for cluster, ids, current in info['clusters']:
 			effects = [e for e in ids if e in cluster_effects.SETTABLE]
 			if effects:
-				c.append(cluster_box(cluster, effects, current, lambda: self.loading, self._do, lambda: self.dev))
+				c.append(cluster_box(cluster, effects, current, lambda: self.loading, self._do, lambda: self.dev,
+				                     self.device.model.key))
 		return c
 
 	def _mic_select_card(self, info):

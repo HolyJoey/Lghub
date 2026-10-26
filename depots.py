@@ -522,8 +522,11 @@ def fetch_eq_presets(path):
 	return True
 
 
+SIGNATURE_COLORS_OLD = 'signature_colors.json'     # before the effect-id map ('_ids'): fetched again once
+
+
 def signature_colors_path():
-	return os.path.join(store.IMAGE_DIR, 'signature_colors.json')
+	return os.path.join(store.IMAGE_DIR, 'signature_colors2.json')
 
 
 def fetch_signature_colors():
@@ -533,6 +536,10 @@ def fetch_signature_colors():
 	path = signature_colors_path()
 	if os.path.exists(path):
 		return path
+	try:
+		os.remove(os.path.join(store.IMAGE_DIR, SIGNATURE_COLORS_OLD))
+	except OSError:
+		pass
 	url = SERVER + CORE_DEPOT
 	out = {}
 	try:
@@ -562,7 +569,9 @@ def _signature_colors(dev, out):
 			if not effect.get('signature') or not effect.get('name'):
 				continue
 			colors = [support.get(k, {}).get('hex') for k in ('signatureColorOne', 'signatureColorTwo')]
-			out.setdefault(dev.get('modelId', ''), {}).setdefault(effect['name'].lower(), colors)
+			model = out.setdefault(dev.get('modelId', ''), {})
+			model.setdefault(effect['name'].lower(), colors)
+			model.setdefault('_ids', {}).setdefault(effect.get('id', ''), effect['name'].lower())   # firmware effect id -> name
 
 
 def fetch_presets(model):

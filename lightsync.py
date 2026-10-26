@@ -672,6 +672,13 @@ def signature_effects(model):
 	return None if listed is None else [e for e in SIGNATURE if e in listed]
 
 
+def firmware_signature(model, effect_id='SIGNATURE_ALGORITHMIC_ACTIVE'):
+	"""The name G HUB gives this model's firmware signature effect (e.g. astro_point on the A20 X), or None."""
+	listed = _catalog(model) or {}
+	names = [k for k in listed if not k.startswith('_')]
+	return (listed.get('_ids') or {}).get(effect_id) or (names[0] if len(names) == 1 else None)
+
+
 def signature_defaults(model, effect):
 	"""(colour one, colour two) G HUB gives this model for a signature effect (its device list:
 	e.g. #FE8385 / #CBE8CE on the G713 / G735, red for Remind Me Of on the G512 X), else G HUB's

@@ -275,7 +275,8 @@ copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
   Of, Neon, Outer Space; signature.py). Done: G HUB's per-model default colours and effect list (its device list, fetched once).
   Left: the strip trees (G HUB's "zonal" groups exist only for the G735 / G512 X bottom strip and the G713 /
   G715 halo; plain zone devices get no signature effect in G HUB either; the strips' per-LED order isn't
-  found yet). Neutron Null (in G HUB's device list) isn't in its 2026.6 program yet: nothing to port. Astro Point (headsets). G Tide
+  found yet). Neutron Null (in G HUB's device list) isn't in its 2026.6 program yet: nothing to port. Astro Point (the A20 X) is that headset's firmware signature effect
+  (0x0621 id 4, SIGNATURE_ALGORITHMIC_ACTIVE): the stored-lighting card names it and takes its colours. G Tide
   (type 18, G HUB offers it on the G316 / G316 X) is done fully as G HUB's: timing, gradients and its 12
   key lists matched against key ids.
   The per-key effects' extra groups are G HUB's now (signature.key_groups).
