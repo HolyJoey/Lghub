@@ -49,6 +49,7 @@ SIMPLE_READS = ((features.SIDETONE, 'sidetone', headset.sidetone),
                 (headset.MIC_SELECT, 'mic_select', headset.mics),
                 (headset.AUX_CONFIG, 'aux', headset.aux_mode),
                 (headset.TONES, 'tone_sets', headset.tone_sets),
+                (headset.MIX, 'mix', headset.mix),
                 (headset.USB_PORTS, 'usb_ports', headset.usb_ports),
                 (cluster_effects.FEATURE, 'clusters', cluster_effects.read),
                 (features.POLAR_PATTERN, 'patterns', features.polar_patterns),
@@ -435,7 +436,7 @@ class SettingsPanel(Gtk.Box):
 		                   ('bass_tone', self._bass_card), ('mic', self._mic_card), ('anc', self._anc_card),
 		                   ('onboard_eq', self._onboard_eq_card), ('headset_switches', self._switches_card),
 		                   ('mic_select', self._mic_select_card), ('aux', self._aux_card),
-		                   ('tone_sets', self._tone_sets_card),
+		                   ('tone_sets', self._tone_sets_card), ('mix', self._mix_card),
 		                   ('usb_ports', self._usb_ports_card), ('clusters', self._clusters_card),
 		                   ('power', lambda i: power_card(i['power'], self._do, self.dev)),
 		                   ('battery', lambda _i: battery_warnings_card()),
@@ -581,6 +582,15 @@ class SettingsPanel(Gtk.Box):
 			dd.connect(NOTIFY_SELECTED, lambda w, _p: self.loading or self._do(
 				lambda s=sets[w.get_selected()]: headset.set_tone_set(self.dev, s)))
 			c.append(row('Prompts', dd))
+		return c
+
+	def _mix_card(self, info):
+		balance, most, left, right = info['mix']
+		c = card('Mix', f'The balance between {left} and {right} when both play.')
+		s = slider(0, max(1, most), min(balance, most))
+		s.connect('value-changed', lambda w: self.loading or self._do(
+			lambda v=int(w.get_value()): headset.set_mix_balance(self.dev, v)))
+		c.append(row(f'{left} ↔ {right}', s))
 		return c
 
 	def _aux_card(self, info):

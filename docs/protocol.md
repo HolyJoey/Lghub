@@ -334,6 +334,10 @@ onboard equalizer, and others.
   1 vertical, 2 / 3 reversed), 3 breathing `[r, g, b, intensity %, period ms u16 BE]`, 4 signature
   `[r, g, b, r2, g2, b2, intensity %]`, 5 custom.
 - 0x0602 mic SNR: fn 0 get, fn 1 set `[on]`.
+- 0x0609 mix: fn 0 get / fn 1 set balance `[step]`, fn 2 info `[max step, left source, right source,
+  (v3+) selectable inputs u32 BE]`, fn 3 inputs `[left u32 BE, right u32 BE]`. Sources: G HUB's
+  Mix.Info.Source (Bluetooth 1 / 2, Lightspeed 1 / 2, game, voice, configurable left / right); wire =
+  enum - 1 is ours.
 - 0x060B tones: fn 0 / 1 get / set on; fn 2 the sets it has `[n, n x set u16 BE]`, fn 4 get / fn 5 set
   `[set u16 BE]`: 0 tones only, 1 English voice 1, 2 English voice 2.
 - Devices behind a 0x0003 bridge go through a sub-device layer that refuses packets larger than

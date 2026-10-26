@@ -266,6 +266,29 @@ def set_tone_set(dev, value):
 	dev.call(TONES, 5, bytes([value >> 8, value & 0xFF]))
 
 
+# 0x0609 mix (Feature0609HeadetMix): fn 0 getBalance -> [balance], fn 1 setBalance [balance], fn 2 getInfo ->
+# [max step, left source, right source, (version 3+) selectable inputs u32 BE] (decoder 0x141cd12f0: sources
+# below 8), fn 3 getInputs -> [left inputs u32 BE, right inputs u32 BE]. Source names are G HUB's
+# audio Mix.Info.Source; wire = enum - 1 and 0 = all left source are ours (the other 0x06xx features' pattern).
+MIX = 0x0609
+MIX_SOURCES = ('Bluetooth 1', 'Bluetooth 2', 'Lightspeed 1', 'Lightspeed 2', 'Game audio', 'Voice audio',
+               'Left', 'Right')
+
+
+def _mix_source(s):
+	return MIX_SOURCES[s] if s < len(MIX_SOURCES) else f'Source {s}'
+
+
+def mix(dev):
+	"""(balance, max step, left source name, right source name)."""
+	info = dev.call(MIX, 2)
+	return dev.call(MIX, 0)[0], info[0], _mix_source(info[1]), _mix_source(info[2])
+
+
+def set_mix_balance(dev, balance):
+	dev.call(MIX, 1, bytes([balance]))
+
+
 # 0x063C AuxConfig (fn 0 get, fn 1 set; proto ALWAYS_ENABLED / ONLY_WHEN_DOCKED, wire = enum - 1) and
 # 0x063A USBPortConfig (fn 0 getInfo: proto Info{count, ports{console_supported, pc_supported}},
 # fn 1 getPortConfig [index], fn 2 setPortConfig [index, setting]; settings PC 0, CONSOLE 1 on the wire).

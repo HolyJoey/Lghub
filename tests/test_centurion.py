@@ -189,6 +189,18 @@ class ToneSetTest(unittest.TestCase):
 		headset.set_tone_set(dev, 1)
 		self.assertEqual(calls[-1], (0x060B, 5, bytes([0, 1])))
 
+	def test_mix(self):
+		calls = []
+
+		class Dev:
+			def call(self, feature, fn, params=b''):
+				calls.append((feature, fn, bytes(params)))
+				return {0: bytes([7]), 2: bytes([20, 0, 2])}.get(fn, b'').ljust(16, b'\0')
+		dev = Dev()
+		self.assertEqual(headset.mix(dev), (7, 20, 'Bluetooth 1', 'Lightspeed 1'))
+		headset.set_mix_balance(dev, 10)
+		self.assertEqual(calls[-1], (0x0609, 1, bytes([10])))
+
 	def test_no_tone_sets(self):
 		class Dev:
 			def call(self, feature, fn, params=b''):

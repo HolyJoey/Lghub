@@ -195,7 +195,8 @@ copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
     (run natively from its agent, fetched at first use; the +-12 dB slider range is ours). Ours: byte 0 on the wire = the collection's
     report id. Check on a G735 / PRO X 2 / G325.
   - Also done: AI noise reduction (on / off, level), battery saver and footstep detection (0x060E /
-    0x0618 / 0x0639). Mic select (0x063B), tones on / off (0x060B), Do Not Disturb (0x0631), mic SNR (0x0602), voice prompt sets (0x060B), aux input (0x063C) and USB
+    0x0618 / 0x0639). Mic select (0x063B), tones on / off (0x060B), Do Not Disturb (0x0631), mic SNR (0x0602), voice prompt sets (0x060B), the mix balance
+    (0x0609; its source numbering is ours), aux input (0x063C) and USB
     ports (0x063A) too. Lighting over 0x0620 RGB host mode (the G735's lights: a Lighting page and
     the effects) and 0x0621 stored effects (what each light keeps without Lghub: fixed, colour cycle,
     colour wave, breathing, signature). Left: noise exposure (0x060D: its levels map
