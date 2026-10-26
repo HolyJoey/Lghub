@@ -334,6 +334,8 @@ onboard equalizer, and others.
   1 vertical, 2 / 3 reversed), 3 breathing `[r, g, b, intensity %, period ms u16 BE]`, 4 signature
   `[r, g, b, r2, g2, b2, intensity %]`, 5 custom.
 - 0x0602 mic SNR: fn 0 get, fn 1 set `[on]`.
+- 0x060B tones: fn 0 / 1 get / set on; fn 2 the sets it has `[n, n x set u16 BE]`, fn 4 get / fn 5 set
+  `[set u16 BE]`: 0 tones only, 1 English voice 1, 2 English voice 2.
 - Devices behind a 0x0003 bridge go through a sub-device layer that refuses packets larger than
   the adapter's size.
 

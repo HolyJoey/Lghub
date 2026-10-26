@@ -4,6 +4,8 @@ import os
 import re
 import subprocess
 
+import hidpp
+
 SIDETONE = 0x8300     # HID++: function 0 get level (0-100), function 1 set level
 SYS_SOUND = '/sys/class/sound'
 
@@ -241,6 +243,27 @@ def switches(dev):
 	if AI_NOISE_REDUCTION in out:
 		out['ai_level'] = ai_nr_level(dev)
 	return out
+
+
+# 0x060B tone sets (Feature060BHeadsetTones): fn 2 getSonificationInfo -> [n, n x set u16 BE], fn 4
+# getSonificationSet -> [set u16 BE], fn 5 setSonificationSet [set u16 BE]. Sets on the wire = G HUB's
+# HeadsetSonification.SonificationSet - 1 (toDevio 0x142225f60).
+TONE_SETS = {0: 'Tones only', 1: 'English voice 1', 2: 'English voice 2'}
+
+
+def tone_sets(dev):
+	"""([set ids the headset has], current set), or None when it doesn't answer (G HUB checks for the
+	sonification part separately)."""
+	try:
+		r, c = dev.call(TONES, 2), dev.call(TONES, 4)
+	except (hidpp.HidppError, OSError, IndexError):
+		return None
+	sets = [(r[1 + 2 * i] << 8) | r[2 + 2 * i] for i in range(r[0]) if 3 + 2 * i <= len(r)]
+	return sets, (c[0] << 8) | c[1]
+
+
+def set_tone_set(dev, value):
+	dev.call(TONES, 5, bytes([value >> 8, value & 0xFF]))
 
 
 # 0x063C AuxConfig (fn 0 get, fn 1 set; proto ALWAYS_ENABLED / ONLY_WHEN_DOCKED, wire = enum - 1) and

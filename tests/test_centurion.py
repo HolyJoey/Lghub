@@ -176,6 +176,26 @@ if __name__ == '__main__':
 	unittest.main()
 
 
+class ToneSetTest(unittest.TestCase):
+	def test_tone_sets(self):
+		calls = []
+
+		class Dev:
+			def call(self, feature, fn, params=b''):
+				calls.append((feature, fn, bytes(params)))
+				return {2: bytes([2, 0, 0, 0, 2]), 4: bytes([0, 2])}.get(fn, b'').ljust(16, b'\0')
+		dev = Dev()
+		self.assertEqual(headset.tone_sets(dev), ([0, 2], 2))
+		headset.set_tone_set(dev, 1)
+		self.assertEqual(calls[-1], (0x060B, 5, bytes([0, 1])))
+
+	def test_no_tone_sets(self):
+		class Dev:
+			def call(self, feature, fn, params=b''):
+				raise hidpp.HidppError('unsupported')
+		self.assertIsNone(headset.tone_sets(Dev()))
+
+
 class HostModeTest(unittest.TestCase):
 	def test_host_mode_frames(self):
 		import perkey

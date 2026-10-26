@@ -48,6 +48,7 @@ SIMPLE_READS = ((features.SIDETONE, 'sidetone', headset.sidetone),
                 (centurion_eq.EQ, 'onboard_eq', centurion_eq.read),
                 (headset.MIC_SELECT, 'mic_select', headset.mics),
                 (headset.AUX_CONFIG, 'aux', headset.aux_mode),
+                (headset.TONES, 'tone_sets', headset.tone_sets),
                 (headset.USB_PORTS, 'usb_ports', headset.usb_ports),
                 (cluster_effects.FEATURE, 'clusters', cluster_effects.read),
                 (features.POLAR_PATTERN, 'patterns', features.polar_patterns),
@@ -434,6 +435,7 @@ class SettingsPanel(Gtk.Box):
 		                   ('bass_tone', self._bass_card), ('mic', self._mic_card), ('anc', self._anc_card),
 		                   ('onboard_eq', self._onboard_eq_card), ('headset_switches', self._switches_card),
 		                   ('mic_select', self._mic_select_card), ('aux', self._aux_card),
+		                   ('tone_sets', self._tone_sets_card),
 		                   ('usb_ports', self._usb_ports_card), ('clusters', self._clusters_card),
 		                   ('power', lambda i: power_card(i['power'], self._do, self.dev)),
 		                   ('battery', lambda _i: battery_warnings_card()),
@@ -568,6 +570,17 @@ class SettingsPanel(Gtk.Box):
 			sw = Gtk.Switch(active=usage in chosen, valign=Gtk.Align.CENTER)
 			sw.connect(NOTIFY_ACTIVE, lambda w, _p, u=usage: self.loading or self._game_key(u, w.get_active()))
 			c.append(row(f'Turn off {name}', sw))
+		return c
+
+	def _tone_sets_card(self, info):
+		sets, current = info['tone_sets']
+		c = card('Voice prompts', 'The headset’s own prompts: tones, or a spoken voice.')
+		if sets:
+			dd = Gtk.DropDown.new_from_strings([headset.TONE_SETS.get(s, f'Set {s}') for s in sets])
+			dd.set_selected(sets.index(current) if current in sets else 0)
+			dd.connect(NOTIFY_SELECTED, lambda w, _p: self.loading or self._do(
+				lambda s=sets[w.get_selected()]: headset.set_tone_set(self.dev, s)))
+			c.append(row('Prompts', dd))
 		return c
 
 	def _aux_card(self, info):
