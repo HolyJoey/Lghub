@@ -154,8 +154,11 @@ Done too: G HUB's busy check before writes (FUN_18000e180). Not ported on purpos
   data] per macro; the CRC stays in G HUB), read and shown per profile (onboard_macros.py). The key rows (tag 0x110) are read and shown too
   (onboard_keys.py): [groups] then per key [control index, row count] and 9-byte rows [row index,
   trigger modifiers, action bits, opcode, params] (G HUB mirrors left / right modifiers into a second row);
-  the analog groups are [control index, u16, count] + 6-byte entries (meanings not read). Left: which part
-  of the tag a plain read returns (Lghub shows only an exact parse), the other tags, then a keyboard to test.
+  the analog groups are [control index, u16, count] + 6-byte entries (meanings not read). The Fn / G-Shift layers
+  (0x111 / 0x112) use the same rows; the active profile's name and report rates (0x0003 / 0x0100 / 0x0101) are
+  shown too. The game-mode keys tag (0x0102, 16 bytes) is shown as the 0x4523 bitmap (equating
+  them is ours); G HUB 2026.6 has no class for 0x0004. Left: which part of 0x110 a plain read returns (Lghub
+  shows only an exact parse), then a keyboard to test.
 - **0x8030 MR key** (record a macro on the keyboard): needs the keystrokes, which Lghub can't
   read without input-device access.
 - **Analog keyboards** (PRO X TKL RAPID, G515 RAPID TKL, G512 X, PRO X2 RAPID, ...): done:

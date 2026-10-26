@@ -67,6 +67,32 @@ def read_profile_tag(dev, profile, tag):
 		return data[:length]
 
 
+# G HUB's profile tags: 0x0003 name = 32 UTF-16BE characters (zero-padded, all 0xFF when empty),
+# 0x0100 / 0x0101 report rate wired / wireless = 1 byte, log2(Hz / 125)
+PROFILE_NAME, RATE_WIRED, RATE_WIRELESS = 0x0003, 0x0100, 0x0101
+# 0x0102 GameModeDisabledKeysTag: exactly 16 bytes (its parser 0x14235e610 refuses other sizes); read as
+# 0x4523's bitmap of control indexes (index i = byte i >> 3, bit i & 7): the same size, ours to equate
+GAME_MODE_KEYS = 0x0102
+
+
+def decode_control_bitmap(data):
+	"""[control index] set in a 16-byte bitmap, or None when it isn't 16 bytes."""
+	if not data or len(data) != 16:
+		return None
+	return [i for i in range(128) if data[i >> 3] >> (i & 7) & 1]
+
+
+def decode_profile_name(data):
+	if not data or all(b == 0xFF for b in data):
+		return ''
+	return data[:64].decode('utf-16-be', 'replace').split('\0')[0]
+
+
+def decode_report_rate(data):
+	"""Hz, or None."""
+	return 125 << data[0] if data and data[0] < 8 else None
+
+
 # G HUB's analog tags (IFeature8102AnalogProfileTag; values are its settings x 100, big-endian)
 ACTUATION, RAPID_TRIGGER_ON, KEY_PRIORITY_ON = 0x120, 0x121, 0x122
 KEY_ACTUATION, KEY_RAPID_TRIGGER, KEY_PRIORITY_PAIRS = 0x123, 0x124, 0x130

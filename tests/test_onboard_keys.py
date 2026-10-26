@@ -33,5 +33,17 @@ class BaseLayerTest(unittest.TestCase):
 		self.assertEqual(ok.describe((0, 0, 0, 0x7000, 3)), 'action 0x7000 (3)')
 
 
+class ProfileTagsTest(unittest.TestCase):
+	def test_name_and_rate(self):
+		import device_settings as ds
+		self.assertEqual(ds.decode_profile_name('Gaming'.encode('utf-16-be').ljust(64, b'\0')), 'Gaming')
+		self.assertEqual(ds.decode_profile_name(b'\xff' * 64), '')
+		self.assertEqual((ds.decode_report_rate(b'\x03'), ds.decode_report_rate(b'\x00')), (1000, 125))
+		self.assertIsNone(ds.decode_report_rate(b''))
+		self.assertIsNone(ds.decode_report_rate(None))
+		self.assertEqual(ds.decode_control_bitmap(bytes([0x81]) + bytes(14) + bytes([0x40])), [0, 7, 126])
+		self.assertIsNone(ds.decode_control_bitmap(bytes(15)))
+
+
 if __name__ == '__main__':
 	unittest.main()

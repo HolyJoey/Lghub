@@ -99,12 +99,31 @@ def read_macros(dev):
 	return None if data is None else onboard_macros.parse_library(data)
 
 
+def read_profile_summary(dev, have):
+	"""{'name', 'wired', 'wireless', 'game_mode': [CID]} of the active onboard profile; the tags it lacks
+	are left out."""
+	out = {}
+	off = device_settings.decode_control_bitmap(_active_tag(dev, device_settings.GAME_MODE_KEYS))
+	if off and features.CONTROL_LIST in have:
+		cids = features.control_list(dev)
+		out['game_mode'] = [cids[i] for i in off if i < len(cids)]
+	name = _active_tag(dev, device_settings.PROFILE_NAME)
+	if name is not None:
+		out['name'] = device_settings.decode_profile_name(name)
+	for key, tag in (('wired', device_settings.RATE_WIRED), ('wireless', device_settings.RATE_WIRELESS)):
+		hz = device_settings.decode_report_rate(_active_tag(dev, tag))
+		if hz:
+			out[key] = hz
+	return out or None
+
+
 def read_key_rows(dev, have):
-	"""(the active profile's key rows by control index, the 0x1B10 control list), or None."""
-	rows = onboard_keys.parse_base_layer(_active_tag(dev, onboard_keys.BASE_LAYER_TAG))
-	if not rows or features.CONTROL_LIST not in have:
+	"""([(layer name, key rows by control index)], the 0x1B10 control list) of the active profile, or None."""
+	if features.CONTROL_LIST not in have:
 		return None
-	return rows, features.control_list(dev)
+	layers = [(name, rows) for tag, name in onboard_keys.LAYERS
+	          if (rows := onboard_keys.parse_base_layer(_active_tag(dev, tag)))]
+	return (layers, features.control_list(dev)) if layers else None
 
 
 def game_mode_controls(cids, model):
@@ -431,6 +450,7 @@ class SettingsPanel(Gtk.Box):
 				except (OSError, hidpp.HidppError, IndexError):
 					pass
 		if device_settings.PROFILE_MANAGEMENT in have:
+			info['onboard_profile'] = read_profile_summary(dev, have)
 			info['macros'] = read_macros(dev)
 			info['key_rows'] = read_key_rows(dev, have)
 		self._read_game_mode(dev, have, info)
@@ -488,7 +508,7 @@ class SettingsPanel(Gtk.Box):
 		                   ('bass_tone', self._bass_card), ('mic', self._mic_card), ('anc', self._anc_card),
 		                   ('onboard_eq', self._onboard_eq_card), ('headset_switches', self._switches_card),
 		                   ('mic_select', self._mic_select_card), ('aux', self._aux_card),
-		                   ('tone_sets', self._tone_sets_card), ('mix', self._mix_card), ('macros', self._macros_card),
+		                   ('tone_sets', self._tone_sets_card), ('mix', self._mix_card), ('onboard_profile', self._onboard_profile_card), ('macros', self._macros_card),
 		                   ('key_rows', self._key_rows_card),
 		                   ('usb_ports', self._usb_ports_card), ('clusters', self._clusters_card),
 		                   ('power', lambda i: power_card(i['power'], self._do, self.dev)),
@@ -646,15 +666,31 @@ class SettingsPanel(Gtk.Box):
 			c.append(row(name or f'Macro {mid}', label(text or 'empty', ['muted', 'small'], wrap=True)))
 		return c
 
+	def _onboard_profile_card(self, info):
+		p = info['onboard_profile']
+		c = card('Active onboard profile', 'What the keyboard’s active profile holds (read only).')
+		if 'name' in p:
+			c.append(row('Name', label(p['name'] or 'unnamed', ['muted'])))
+		for key, title in (('wired', 'Report rate (wired)'), ('wireless', 'Report rate (wireless)')):
+			if key in p:
+				c.append(row(title, label(f'{p[key]} Hz', ['muted'])))
+		if p.get('game_mode'):
+			names = analog_keys.cid_names(self.device.model.key)
+			c.append(row('Game mode turns off', label(', '.join(names.get(cid, f'control 0x{cid:X}') for cid in p['game_mode']),
+			                                          ['muted', 'small'], wrap=True)))
+		return c
+
 	def _key_rows_card(self, info):
-		groups, cids = info['key_rows']
+		layers, cids = info['key_rows']
 		names = analog_keys.cid_names(self.device.model.key)
 		c = card('Onboard key assignments', 'What the keys do in the keyboard’s active profile (read only).')
-		for cidx, rows in groups:
-			cid = cids[cidx] if cidx < len(cids) else None
-			actions = [onboard_keys.describe(r, mouse.KEY_NAMES) + (f' (with modifiers 0x{r[1]:02X})' if r[1] else '')
-			           for r in rows]
-			c.append(row(names.get(cid, f'Control {cidx}'), label(', '.join(actions), ['muted', 'small'], wrap=True)))
+		for layer, groups in layers:
+			c.append(label(f'{layer} layer', ['muted', 'small']))
+			for cidx, rows in groups:
+				cid = cids[cidx] if cidx < len(cids) else None
+				actions = [onboard_keys.describe(r, mouse.KEY_NAMES) + (f' (with modifiers 0x{r[1]:02X})' if r[1] else '')
+				           for r in rows]
+				c.append(row(names.get(cid, f'Control {cidx}'), label(', '.join(actions), ['muted', 'small'], wrap=True)))
 		return c
 
 	def _mix_card(self, info):

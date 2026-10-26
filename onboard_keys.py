@@ -14,6 +14,9 @@ another part), so Lghub only shows a parse that uses the bytes up exactly."""
 import struct
 
 BASE_LAYER_TAG = 0x110
+# Fn / G-Shift layers: AssignmentsFnLayerTag / AssignmentsGshiftLayerTag share the base layer's row
+# serializer (0x142b62090) and have no analog part
+LAYERS = ((BASE_LAYER_TAG, 'Base'), (0x111, 'Fn'), (0x112, 'G-Shift'))
 ROW = struct.Struct('>BHHHH')
 OPCODES = {0x8000: 'modifiers', 0x8001: 'mouse buttons', 0x8003: 'media', 0x9001: 'wheel left',
            0x9002: 'wheel right', 0x9003: 'DPI up', 0x9004: 'DPI down', 0x9005: 'DPI cycle',

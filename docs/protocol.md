@@ -131,8 +131,8 @@ byte comes before the tag. Tag ids G HUB uses:
 | 0x0003 | profile name: 32 UTF-16BE characters, 64 bytes, zero-padded; all 0xFF when empty |
 | 0x0004 | key mapping |
 | 0x0100 / 0x0101 | report rate wired / wireless: 1 byte, log2(Hz / 125) |
-| 0x0102 | game-mode keys |
-| 0x0110-0x0112 | base / Fn / G-Shift layer assignments |
+| 0x0102 | game-mode keys: 16 bytes (read as the 0x4523 control-index bitmap) |
+| 0x0110-0x0112 | base / Fn / G-Shift layer assignments (key rows; 0x0110 also has analog groups) |
 | 0x0113 | macros |
 | 0x0120-0x0130 | analog keys |
 | 0xFF01 | profile checksum |
