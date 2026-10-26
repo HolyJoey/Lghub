@@ -94,3 +94,43 @@ class AudioActionsTest(unittest.TestCase):
 
 if __name__ == '__main__':
 	unittest.main()
+
+
+class AudioHelpersTest(unittest.TestCase):
+	def test_default_name_from_wpctl(self):
+		out = 'id 57, type PipeWire:Interface:Node\n  * node.name = "alsa_output.usb-Logitech_PRO_X"\n    media.class = "Audio/Sink"\n'
+		with mock.patch('subprocess.run', return_value=mock.Mock(stdout=out)):
+			self.assertEqual(audio_actions.default_name('SINK'), 'alsa_output.usb-Logitech_PRO_X')
+		with mock.patch('subprocess.run', return_value=mock.Mock(stdout='nothing\n')):
+			self.assertIsNone(audio_actions.default_name('SINK'))
+		with mock.patch('subprocess.run', side_effect=OSError):
+			self.assertIsNone(audio_actions.default_name('SOURCE'))
+
+	def test_cycle_device(self):
+		nodes = [{'id': 1, 'name': 'a', 'description': 'A'}, {'id': 2, 'name': 'b', 'description': 'B'}]
+		with mock.patch('subprocess.run') as run:
+			self.assertEqual(audio_actions.cycle_device(nodes, 'a')['id'], 2)
+			self.assertEqual(run.call_args[0][0], ['wpctl', 'set-default', '2'])
+			self.assertIsNone(audio_actions.cycle_device([], 'a'))
+
+	def test_headsets_behind_receivers(self):
+		import types
+		model = lambda t: types.SimpleNamespace(type=t)              # noqa: E731
+		receiver = types.SimpleNamespace(model=model('receiver'))
+		dead = types.SimpleNamespace(model=model('receiver'))
+		corded = types.SimpleNamespace(model=model('headset'))
+		paired = types.SimpleNamespace(model=model('headset'))
+		mouse = types.SimpleNamespace(model=model('mouse'))
+
+		def scan(r):
+			if r is dead:
+				raise OSError('gone')
+			return [paired, mouse]
+		with mock.patch('devices.discover', return_value=[receiver, dead, corded, mouse]), \
+		     mock.patch('devices.scan_receiver', side_effect=scan):
+			self.assertEqual(list(audio_actions._headsets()), [paired, corded])
+
+	def test_step_skips_headsets_that_do_not_answer(self):
+		with mock.patch.object(audio_actions, '_headsets', return_value=['a']), \
+		     mock.patch('devices.open_hidpp', side_effect=OSError('busy')):
+			self.assertIsNone(audio_actions.step_headset(0x8300, 5))

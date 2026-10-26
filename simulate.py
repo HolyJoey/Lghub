@@ -752,6 +752,26 @@ class FakeReceiver:
 		pass   # nothing to release: no file is open
 
 
+class FakeYeti2(FakeYeti):
+	"""A Yeti 2-like microphone with its screen (0x0A00 brightness, 0x0A01 orientation in G HUB's
+	layouts; made-up values). Its other features as the Yeti X fake."""
+	FEATURES = FakeYeti.FEATURES + [features.DISPLAY_BRIGHTNESS, features.DISPLAY_ORIENTATION]
+
+	def __init__(self):
+		super().__init__()
+		self.device_name = b'Yeti 2'
+		self.screen, self.orientation = 3, 0
+
+	def handle(self, feature, fn, p):
+		if feature == features.DISPLAY_BRIGHTNESS:
+			self.screen = p[0] if fn == 2 else self.screen
+			return bytes([0x80, 5]) if fn == 0 else bytes([self.screen, 1])
+		if feature == features.DISPLAY_ORIENTATION:
+			self.orientation = p[0] if fn == 2 else self.orientation
+			return bytes([0b1111_0000]) if fn == 0 else bytes([self.orientation, 1])
+		return super().handle(feature, fn, p)
+
+
 MICE = ('c08b', 'c08d', 'c332', 'c07d', 'c084', 'c092')
 MICE_X = ('c099',)               # G502 X
 MICE_X_PLUS = ('c095',)          # G502 X PLUS
@@ -760,6 +780,7 @@ KEYBOARDS = ('c33f', 'c339', 'c33c', 'c343', 'c33e')
 ANALOG_KEYBOARDS = ('c35b',)     # PRO X TKL RAPID
 YETIS = ('0aaf',)
 CENTURION_HEADSETS = ('0ad8',)    # G735
+YETI_2 = ('0b3a',)
 RECEIVERS = ('c539', 'c53a', 'c53f', 'c541', 'c545', 'c547', 'c548', 'c52b')
 _FAKES = {}
 
@@ -772,6 +793,7 @@ def transport_for(usb_id, port):
 	         **dict.fromkeys(ANALOG_KEYBOARDS, FakeAnalogKeyboard), **dict.fromkeys(MICE_X, FakeMouseX),
 	         **dict.fromkeys(MICE_X_PLUS, FakeMouseXPlus), **dict.fromkeys(LIGHTS, FakeLitra),
 	         **dict.fromkeys(YETIS, FakeYeti), **dict.fromkeys(CENTURION_HEADSETS, FakeCenturionHeadset),
+	         **dict.fromkeys(YETI_2, FakeYeti2),
 	         **dict.fromkeys(RECEIVERS, FakeReceiver)}
 	if pid not in kinds:
 		return None

@@ -337,6 +337,8 @@ Done too: G HUB's busy check before writes (FUN_18000e180). Not ported on purpos
 
 ## 3. Upkeep
 
+- Before a release: the page walk (tests/test_smoke_pages.py with LGHUB_SMOKE=1 and a display) opens
+  every page of every simulated device; a Python error anywhere fails it.
 - Keep `docs/protocol.md` current when a protocol detail is found or confirmed on a device.
 - `fetch.py` (APO hashes), `depots.py` (depot paths, the icon's offset and hash) and the DLL
   modules (`micopt.c`, `hx2e.c`, `bv2.c`: RVAs and export names) are for G HUB 2026.6. A newer
