@@ -122,7 +122,7 @@ copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
   model's light_map.json, with its signature effects (lighting_effects.json: keyframe animations,
   played by softlight). Check on the mouse. 0x8071 mice's onboard profiles: done as G HUB's onboard
   encoder ([effect id] + the live parameters), with each zone's own effects (fixed, cycle, colour wave,
-  breathing, ripple). Left: the two-colour and signature ids there.
+  breathing, ripple, and the two-colour ones: Pulsar Point, Neutron Null, signature with its style).
 - **Battery time left** (newer models' battery.xml are power models: capacity in Wh, milliwatts
   per sensor / MCU / roller / report rate / lighting effect): done as G HUB's agent does it
   (hours = percent / 100 * Wh * 1000 / mW, its max_life_span and "mileage"). Ours: the running

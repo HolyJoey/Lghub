@@ -694,6 +694,16 @@ class MouseView(Gtk.Box):
 		color.set_rgba(rgba)
 		color_row = row('Color', color)
 		c.append(color_row)
+		color2 = Gtk.ColorDialogButton(dialog=Gtk.ColorDialog(with_alpha=False))
+		rgba2 = Gdk.RGBA()
+		rgba2.red, rgba2.green, rgba2.blue, rgba2.alpha = (*(v / 255 for v in led.color2), 1.0)
+		color2.set_rgba(rgba2)
+		color2_row = row('Second color', color2)
+		c.append(color2_row)
+		style = Gtk.DropDown.new_from_strings(list(features.STYLES.values()))
+		style.set_selected(led.style if led.style < len(features.STYLES) else 0)
+		style_row = row('Style', style)
+		c.append(style_row)
 		speed = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 1, 20, 0.5)
 		speed.set_value(led.period / 1000)
 		speed.set_size_request(260, -1)
@@ -709,20 +719,24 @@ class MouseView(Gtk.Box):
 
 		def visible():
 			effect = effects[effect_dd.get_selected()]
-			color_row.set_visible(effect in (mouse.LED_FIXED, mouse.LED_BREATHING, mouse.LED_RIPPLE))
+			color_row.set_visible(effect in (mouse.LED_FIXED, mouse.LED_BREATHING, mouse.LED_RIPPLE, *mouse.LED_TWO_COLOR))
+			color2_row.set_visible(effect in mouse.LED_TWO_COLOR)
+			style_row.set_visible(effect in mouse.LED_SIGNATURE)
 			speed_row.set_visible(effect in (mouse.LED_CYCLE, mouse.LED_BREATHING, mouse.LED_RIPPLE, mouse.LED_COLOR_WAVE))
-			bright_row.set_visible(effect in (mouse.LED_CYCLE, mouse.LED_BREATHING, mouse.LED_COLOR_WAVE))
+			bright_row.set_visible(effect in (mouse.LED_CYCLE, mouse.LED_BREATHING, mouse.LED_COLOR_WAVE, *mouse.LED_TWO_COLOR))
 
 		def apply(*_):
 			visible()
-			rgb = color.get_rgba()
-			build = mouse.Led.build_v2 if v2 else mouse.Led.build
-			new = build(effects[effect_dd.get_selected()],
-			                      tuple(round(v * 255) for v in (rgb.red, rgb.green, rgb.blue)),
-			                      speed.get_value() * 1000, bright.get_value())
+			def rgb(button):
+				c = button.get_rgba()
+				return tuple(round(v * 255) for v in (c.red, c.green, c.blue))
+			args = (effects[effect_dd.get_selected()], rgb(color), speed.get_value() * 1000, bright.get_value())
+			new = mouse.Led.build_v2(*args, rgb(color2), style.get_selected()) if v2 else mouse.Led.build(*args)
 			self._edit(lambda: p.set_led(i, new))
 		effect_dd.connect(NOTIFY_SELECTED, apply)
 		color.connect('notify::rgba', apply)
+		color2.connect('notify::rgba', apply)
+		style.connect(NOTIFY_SELECTED, apply)
 		speed.connect('value-changed', apply)
 		bright.connect('value-changed', apply)
 		visible()

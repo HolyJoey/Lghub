@@ -135,9 +135,11 @@ LED_OFF, LED_FIXED, LED_CYCLE, LED_BREATHING = 0x00, 0x01, 0x03, 0x0a
 LED_EFFECTS = {LED_OFF: 'Off', LED_FIXED: 'Fixed', LED_BREATHING: 'Breathing', LED_CYCLE: 'Color cycle'}
 # 0x8071 mice: G HUB's get_raw_onboard_effect_params (0x142175070) stores [effect id] + the live
 # parameters (get_raw_effect_params, features.effect_params), so a zone keeps any effect it supports;
-# these are the ones whose parameters Lghub builds
+# these are the ones whose parameters Lghub builds (the two-colour ones with G HUB's 50 ms period)
 LED_COLOR_WAVE, LED_RIPPLE = 0x04, 0x0b
-ONBOARD_V2_EFFECTS = (LED_OFF, LED_FIXED, LED_CYCLE, LED_COLOR_WAVE, LED_BREATHING, LED_RIPPLE)
+LED_TWO_COLOR = (0x11, 0x12, 0x18, 0x19)   # features.TWO_COLOR: Pulsar Point, Neutron Null, signature
+LED_SIGNATURE = (0x18, 0x19)               # ... whose last byte is the style (features.SIGNATURE_STYLES)
+ONBOARD_V2_EFFECTS = (LED_OFF, LED_FIXED, LED_CYCLE, LED_COLOR_WAVE, LED_BREATHING, LED_RIPPLE, *LED_TWO_COLOR)
 
 
 @dataclass
@@ -151,7 +153,16 @@ class Led:
 
 	@property
 	def color(self):
-		return tuple(self.raw[1:4]) if self.effect in (LED_FIXED, LED_BREATHING, LED_RIPPLE) else (0x2f, 0x8c, 0xff)
+		return tuple(self.raw[1:4]) if self.effect in (LED_FIXED, LED_BREATHING, LED_RIPPLE, *LED_TWO_COLOR) \
+			else (0x2f, 0x8c, 0xff)
+
+	@property
+	def color2(self):
+		return tuple(self.raw[4:7]) if self.effect in LED_TWO_COLOR else (0xff, 0x00, 0xab)
+
+	@property
+	def style(self):
+		return self.raw[10] if self.effect in LED_SIGNATURE else 0
 
 	@property
 	def period(self):
@@ -165,18 +176,19 @@ class Led:
 	@property
 	def brightness(self):
 		"""1-100 %. The device stores 0 for full."""
-		at = {LED_CYCLE: 8, LED_BREATHING: 7, LED_COLOR_WAVE: 9}.get(self.effect)
+		at = {LED_CYCLE: 8, LED_BREATHING: 7, LED_COLOR_WAVE: 9, **dict.fromkeys(LED_TWO_COLOR, 9)}.get(self.effect)
 		value = self.raw[at] if at else 100
 		return value if 0 < value <= 100 else 100
 
 	@staticmethod
-	def build_v2(effect, color=(255, 255, 255), period=3000, brightness=100):
+	def build_v2(effect, color=(255, 255, 255), period=3000, brightness=100, color2=(0, 0, 0), style=0):
 		"""A 0x8071 mouse's profile entry, as G HUB's get_raw_onboard_effect_params: the effect id,
 		then the effect's live parameters."""
 		import features
 		if effect == LED_OFF:
 			return Led(bytes(LED_SIZE))
-		return Led((bytes([effect]) + features.effect_params(effect, color, period, brightness))[:LED_SIZE])
+		return Led((bytes([effect]) + features.effect_params(effect, color, period, brightness, color2,
+		                                                    style=style))[:LED_SIZE])
 
 	@staticmethod
 	def build(effect, color=(255, 255, 255), period=3000, brightness=100):

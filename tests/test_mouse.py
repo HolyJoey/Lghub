@@ -159,3 +159,13 @@ class OnboardV2LightingTest(unittest.TestCase):
 		ripple = mouse.Led.build_v2(mouse.LED_RIPPLE, (9, 8, 7), 2000)
 		self.assertEqual((ripple.color, ripple.period), ((9, 8, 7), 2000))
 		self.assertEqual(mouse.Led.build_v2(mouse.LED_OFF).raw, bytes(mouse.LED_SIZE))
+
+	def test_two_colour_and_signature(self):
+		import features
+		self.assertEqual(mouse.LED_TWO_COLOR, features.TWO_COLOR)
+		self.assertEqual(mouse.LED_SIGNATURE, features.SIGNATURE_STYLES)
+		led = mouse.Led.build_v2(0x19, (1, 2, 3), 3000, 70, (4, 5, 6), 3)
+		self.assertEqual(led.raw, bytes([0x19, 1, 2, 3, 4, 5, 6, 0, 50, 70, 3]))
+		self.assertEqual((led.color, led.color2, led.brightness, led.style), ((1, 2, 3), (4, 5, 6), 70, 3))
+		pulsar = mouse.Led.build_v2(0x11, (9, 9, 9), 3000, 40, (1, 1, 1), 4)
+		self.assertEqual((pulsar.raw[10], pulsar.style), (0, 0))
