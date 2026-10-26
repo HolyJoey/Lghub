@@ -54,6 +54,16 @@ class LightStripTest(unittest.TestCase):
 		with mock.patch('depots.metadata_path', return_value=f.name):
 			self.assertEqual(perkey.load_layout('g316x')[2], [('PERKEY_COSMETIC_3', 160, 55, 25, 10, 10)])
 
+	def test_layout_skips_zone_drawings(self):
+		import tempfile
+		data = {'images': [{'origin': {'width': 100, 'height': 50}, 'zones': [{'id': 'ZONE_PRIMARY', 'components': [
+			{'renderings': [{'type': 'rect', 'rect': {'x': 0, 'y': 0, 'width': 10, 'height': 10}}]}]}]}]}
+		with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False) as f:
+			json.dump(data, f)
+		self.addCleanup(os.unlink, f.name)
+		with mock.patch('depots.metadata_path', return_value=f.name):
+			self.assertEqual(perkey.load_layout('g502_hero'), (100, 50, []))
+
 	def test_layout_reads_path_leds(self):
 		import perkey
 		self.assertEqual(perkey._path_box('M 10 10 l 5 0 l 0 5 Z'), (10.0, 10.0, 5.0, 5.0))

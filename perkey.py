@@ -86,6 +86,7 @@ def load_layout(model):
 	except (OSError, ValueError, KeyError, IndexError):
 		return None
 	keys = [(zone['id'], comp['id'], *box) for zone in image.get('zones', []) for comp in zone.get('components', [])
+	        if 'id' in comp                          # zone-wide drawings (zonal mice) have none: not an LED
 	        for box in map(_box, comp.get('renderings', [])) if box]
 	origin = image.get('origin', {})
 	return origin.get('width', 1), origin.get('height', 1), keys
