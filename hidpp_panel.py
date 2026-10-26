@@ -81,6 +81,14 @@ def analog_summary(a):
 	return lines
 
 
+def game_mode_controls(cids, model):
+	"""[(CID, name)] of a 0x4523 keyboard's controls that are the keys Lghub offers for game mode on
+	other keyboards (Windows, Menu, Caps Lock; the choice is ours, G HUB lets you click any key)."""
+	usages = analog_keys.cid_usages(model)
+	offered = dict(features.GAME_MODE_KEYS)
+	return [(cid, offered[usages[cid]]) for cid in cids if usages.get(cid) in offered]
+
+
 def report_rates(dev):
 	"""(rates the device offers in Hz, highest first; the current one) from 0x8060."""
 	mask = dev.call(features.REPORT_RATE, 0)[0]
@@ -390,7 +398,11 @@ class SettingsPanel(Gtk.Box):
 						info['analog_cids'] = features.control_list(dev)
 				except (OSError, hidpp.HidppError, IndexError):
 					pass
-		if features.DISABLE_KEYS in have or features.DISABLE_KEYS_V1 in have:
+		if features.DISABLE_CONTROLS in have and features.CONTROL_LIST in have:
+			keys = game_mode_controls(features.control_list(dev), self.device.model.key)
+			info['game_mode'] = (len(keys), features.game_mode_keys(self.device.model.key), keys)
+			features.apply_game_mode(dev, info['game_mode'][1])
+		elif features.DISABLE_KEYS in have or features.DISABLE_KEYS_V1 in have:
 			most, keys = features.game_mode_choices(dev)
 			info['game_mode'] = (most, features.game_mode_keys(self.device.model.key), keys)
 			features.apply_game_mode(dev, info['game_mode'][1])   # ours: the chosen keys stay off

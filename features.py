@@ -26,6 +26,7 @@ REPROG_CONTROLS = 0x1B04
 ILLUMINATION = 0x1990
 DISABLE_KEYS = 0x4522
 DISABLE_KEYS_V1 = 0x4521
+DISABLE_CONTROLS = 0x4523
 CHANGE_HOST = 0x1814
 HOSTS_INFO = 0x1815
 DEVICE_EQ = 0x8310
@@ -566,12 +567,35 @@ def game_mode_choices(dev):
 
 
 def apply_game_mode(dev, usages):
-	"""Turn these keys off (and the others back on), on either kind of keyboard."""
-	if dev.has(DISABLE_KEYS):
+	"""Turn these keys off (and the others back on), on any kind of keyboard (on 0x4523 keyboards the
+	list holds CIDs, as G HUB's presets do)."""
+	if dev.has(DISABLE_CONTROLS):
+		index = cid_indexes(dev)
+		set_disabled_controls(dev, [index[c] for c in usages if c in index])
+	elif dev.has(DISABLE_KEYS):
 		set_disabled_keys(dev, usages)
 	elif dev.has(DISABLE_KEYS_V1):
 		mask = sum(bit for bit, usage, _n in KEYS_V1 if usage in usages)
 		dev.call(DISABLE_KEYS_V1, 2, bytes([mask]))
+
+
+# Newer keyboards (0x4523 DisableControls): fn 0 = which controls game mode turns off, 16 bytes with
+# control index i at byte i >> 3, bit i & 7 (Feature4523DisableControls 0x141d70b80). The index is the
+# control's place in the 0x1B10 list: G HUB maps each preset CID through its CidMap (0x1418342e0, from
+# feature 4523's preset handler 0x1417b0690). The keyboard's game-mode key turns them off.
+DISABLED_CONTROLS_BYTES = 16
+
+
+def disabled_controls_bitmap(indexes):
+	bitmap = bytearray(DISABLED_CONTROLS_BYTES)
+	for i in indexes:
+		if 0 <= i < DISABLED_CONTROLS_BYTES * 8:
+			bitmap[i >> 3] |= 1 << (i & 7)
+	return bytes(bitmap)
+
+
+def set_disabled_controls(dev, indexes):
+	dev.call(DISABLE_CONTROLS, 0, disabled_controls_bitmap(indexes))
 
 
 def max_disabled_keys(dev):

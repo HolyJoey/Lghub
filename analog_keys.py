@@ -30,8 +30,8 @@ def cid_places(model):
 	return out
 
 
-def cid_names(model):
-	"""{CID: key name}: each control named after the HID key drawn where it is."""
+def cid_usages(model):
+	"""{CID: HID usage}: each control matched to the HID key drawn where it is."""
 	layout = perkey.load_layout(model)
 	if not layout:
 		return {}
@@ -42,8 +42,12 @@ def cid_names(model):
 		return min(keys, key=lambda e: (e[0][0] - cx) ** 2 + (e[0][1] - cy) ** 2)[1]
 	if not keys:
 		return {}
-	return {cid: mouse.KEY_NAMES.get(usage, f'Key {usage}')
-	        for cid, usage in ((cid, nearest(place)) for cid, place in cid_places(model).items())}
+	return {cid: nearest(place) for cid, place in cid_places(model).items()}
+
+
+def cid_names(model):
+	"""{CID: key name}: each control named after the HID key drawn where it is."""
+	return {cid: mouse.KEY_NAMES.get(usage, f'Key {usage}') for cid, usage in cid_usages(model).items()}
 
 
 def per_key_rows(profile, cids, model):

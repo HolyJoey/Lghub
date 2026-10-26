@@ -172,12 +172,12 @@ copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
 - 0x4521 game mode on older keyboards done (bits from G HUB, key names from Logitech's HID++
   spec). 0x4523 disable controls (newer keyboards' game mode): fn 0 sets a bitmap of control
   indexes, fn 1 / fn 3 read game-mode bits, fn 2 [0, on | lock << 1] sets game mode (G HUB's
-  Feature4523DisableControls); left: which index is which key. G HUB's game-mode presets hold
+  Feature4523DisableControls). Done: which index is which key (the control's place in the 0x1B10
+  list: G HUB maps each preset CID through its CidMap), with the Windows / Menu / Caps Lock choices. G HUB's game-mode presets hold
   control ids (CIDs, from the key pictures' inputRegions). The newer keyboards' depots are
   readable now: their game-mode preset (DISABLE_CONTROLS_PRESET in defaults_override.json) is
   empty by default, so no mapping there. fn 0's bitmap is built from a list of on / off flags by
-  index (Feature4523DisableControls); which control each index is gets decided above it (not
-  found). Needs a keyboard to read its control table. 0x8088 multi-lightbar: not started (no device known). Left out: 0x8051 Logi
+  index (Feature4523DisableControls 0x141d70b80: index i -> byte i >> 3, bit i & 7). Check on a keyboard. 0x8088 multi-lightbar: not started (no device known). Left out: 0x8051 Logi
   modifiers (G HUB uses it inside its key remapping, no setting of its own).
 - Left out on purpose: 0x4540 layout, 0x4530 / 0x4531 multi-platform, 0x4220 lock-key state;
   G HUB's app has no setting for them.
