@@ -73,6 +73,11 @@ PROFILE_NAME, RATE_WIRED, RATE_WIRELESS = 0x0003, 0x0100, 0x0101
 # 0x0102 GameModeDisabledKeysTag: exactly 16 bytes (its parser 0x14235e610 refuses other sizes); read as
 # 0x4523's bitmap of control indexes (index i = byte i >> 3, bit i & 7): the same size, ours to equate
 GAME_MODE_KEYS = 0x0102
+# Actuation-point immersive lighting (analog keyboards): 0x0103 on / off (1 byte), 0x0104 / 0x0105 active
+# clusters 0 / 1, 0x0106 / 0x0107 passive clusters 0 / 1: 11 bytes each, [effect id] + parameters from
+# G HUB's onboard effect encoder (0x14235bd50 -> 0x142175070), as 0x8071 mice store their zones
+IMMERSIVE_FLAG = 0x0103
+IMMERSIVE_CLUSTERS = ((0x0104, 'active', 0), (0x0105, 'active', 1), (0x0106, 'passive', 0), (0x0107, 'passive', 1))
 
 
 def decode_control_bitmap(data):

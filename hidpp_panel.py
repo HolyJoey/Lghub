@@ -110,6 +110,10 @@ def read_profile_summary(dev, have):
 	name = _active_tag(dev, device_settings.PROFILE_NAME)
 	if name is not None:
 		out['name'] = device_settings.decode_profile_name(name)
+	flag = _active_tag(dev, device_settings.IMMERSIVE_FLAG)
+	if flag:
+		out['immersive'] = (bool(flag[0]), [(kind, cluster, mouse.Led(data)) for tag, kind, cluster in device_settings.IMMERSIVE_CLUSTERS
+		                                     if (data := _active_tag(dev, tag)) and len(data) == mouse.LED_SIZE])
 	for key, tag in (('wired', device_settings.RATE_WIRED), ('wireless', device_settings.RATE_WIRELESS)):
 		hz = device_settings.decode_report_rate(_active_tag(dev, tag))
 		if hz:
@@ -674,6 +678,14 @@ class SettingsPanel(Gtk.Box):
 		for key, title in (('wired', 'Report rate (wired)'), ('wireless', 'Report rate (wireless)')):
 			if key in p:
 				c.append(row(title, label(f'{p[key]} Hz', ['muted'])))
+		if 'immersive' in p:
+			on, clusters = p['immersive']
+			c.append(row('Actuation-point lighting', label('on' if on else 'off', ['muted'])))
+			for kind, cluster, led in clusters:
+				text = features.EFFECTS.get(led.effect, f'effect 0x{led.effect:02X}')
+				if led.effect in (mouse.LED_FIXED, mouse.LED_BREATHING, mouse.LED_RIPPLE, *mouse.LED_TWO_COLOR):
+					text += ' #%02X%02X%02X' % led.color
+				c.append(row(f'{kind.title()} effect, cluster {cluster + 1}', label(text, ['muted', 'small'])))
 		if p.get('game_mode'):
 			names = analog_keys.cid_names(self.device.model.key)
 			c.append(row('Game mode turns off', label(', '.join(names.get(cid, f'control 0x{cid:X}') for cid in p['game_mode']),

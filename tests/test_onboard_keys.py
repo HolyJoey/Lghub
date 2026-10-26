@@ -47,3 +47,26 @@ class ProfileTagsTest(unittest.TestCase):
 
 if __name__ == '__main__':
 	unittest.main()
+
+
+class ProfileSummaryTest(unittest.TestCase):
+	def test_summary_from_tags(self):
+		try:
+			import hidpp_panel
+		except (ImportError, ValueError):
+			self.skipTest('GTK not available')
+		from unittest import mock
+		import device_settings as ds
+		import features
+		import mouse
+		led = bytes([mouse.LED_FIXED, 1, 2, 3, 2]) + bytes(6)
+		tags = {ds.PROFILE_NAME: 'P1'.encode('utf-16-be').ljust(64, b'\0'), ds.RATE_WIRED: b'\x03',
+		        ds.GAME_MODE_KEYS: bytes([0b10]) + bytes(15), ds.IMMERSIVE_FLAG: b'\x01', 0x0104: led}
+		with mock.patch.object(hidpp_panel, '_active_tag', side_effect=lambda _d, t: tags.get(t)), \
+		     mock.patch.object(features, 'control_list', return_value=[0x10, 0x20]):
+			p = hidpp_panel.read_profile_summary(None, {features.CONTROL_LIST})
+		self.assertEqual((p['name'], p['wired'], p['game_mode']), ('P1', 1000, [0x20]))
+		on, clusters = p['immersive']
+		self.assertTrue(on)
+		self.assertEqual([(k, c, l.color) for k, c, l in clusters], [('active', 0, (1, 2, 3))])
+		self.assertNotIn('wireless', p)

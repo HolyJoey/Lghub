@@ -132,6 +132,8 @@ byte comes before the tag. Tag ids G HUB uses:
 | 0x0004 | key mapping |
 | 0x0100 / 0x0101 | report rate wired / wireless: 1 byte, log2(Hz / 125) |
 | 0x0102 | game-mode keys: 16 bytes (read as the 0x4523 control-index bitmap) |
+| 0x0103 | actuation-point immersive lighting on (1 byte) |
+| 0x0104-0x0107 | its active / passive effects, clusters 0 / 1: 11 bytes, [effect id] + parameters (the 0x8071 onboard encoding) |
 | 0x0110-0x0112 | base / Fn / G-Shift layer assignments (key rows; 0x0110 also has analog groups) |
 | 0x0113 | macros |
 | 0x0120-0x0130 | analog keys |
