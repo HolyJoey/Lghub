@@ -166,8 +166,7 @@ Done too: G HUB's busy check before writes (FUN_18000e180). Not ported on purpos
   per-key [control index, u16] (value x 100), 0x130 key-priority pairs. 0x130's mode = G HUB's BindingFeatureFlavor (distance /
   last input / ordinal / reverse ordinal / neutral). The control-index table is 0x1B10 (G HUB's CidMap; features.control_list). Reading the analog
   tags is built (device_settings.analog_profile, G HUB's read path fn 4 / 6 / 7 with the profile
-  byte). Left: which 0x8102 function reports the active profile, then a page; writes (fn 9-11)
-  stay off until a keyboard can confirm them (a wrong write breaks the onboard profile).
+  byte; the active profile from fn 2, confirmed in G HUB). Writes (fn 9-11) stay off until a keyboard can confirm them (a wrong write breaks the onboard profile).
 - **0x1B05 full key customization** (G HUB's "FKC": remap any key, per layer, with presets):
   large; needs a keyboard that has it. Not started.
 - 0x4521 game mode on older keyboards done (bits from G HUB, key names from Logitech's HID++
@@ -289,9 +288,9 @@ Done too: G HUB's busy check before writes (FUN_18000e180). Not ported on purpos
   Smooth Star done the same way (builder 0x141218ff0: startup glow, the gradient sweep, G HUB's
   starlight twinkles; ported StartupFrameHandler and StarlightFrameHandler too). Its zonal roots
   (+0x190 / +0x1b0) not used yet.
-  Factory found (0x1411e5db0: effect type -> builder; re/notes/lighting.txt). Left: the signature
-  types 16-18 (builders 0x141204170 / 0x14120fe90 / 0x141214500; styles Pulsar Point, G 3 Series, Remind Me Of, Neon, Outer Space,
-  Astro Point) from their builders (re/notes/lighting.txt), check on a real keyboard. The keyframe editor (Freestyle) is done: frames,
+  Factory found (0x1411e5db0: effect type -> builder; re/notes/lighting.txt). The signature
+  types 16-18 are done from their builders (0x141204170 / 0x14120fe90 / 0x141214500); Astro Point is the
+  A20 X's firmware effect. Check on a real keyboard. The keyframe editor (Freestyle) is done: frames,
   length, curve, order, preview; saved in G HUB's keyframe format. Effects on zonal devices done
   (starlight, colour cycle, audio, echo press on clicks, screen sampler with G HUB's zone regions). Per-key frames use
   G HUB's single-value call for shared colours; its other calls are in docs/protocol.md (fn 2
