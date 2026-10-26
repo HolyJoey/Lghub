@@ -1,6 +1,8 @@
 """Device settings over HID++: lighting zones, brightness, report rate, sidetone, onboard
 memory and battery, built from what the device says it has. Changes apply right away. Used on
 the generic device page and on the headset page."""
+import struct
+
 from gi.repository import Gdk, GLib, Gtk
 
 import devices
@@ -14,6 +16,7 @@ import headset
 import hidpp
 import lightsync_ui
 import mouse
+import onboard_macros
 import perkey
 import perkey_ui
 import store
@@ -79,6 +82,15 @@ def analog_summary(a):
 		lines.append('Read from the keyboard’s onboard profile. Changing them stays off until it is checked on a '
 		             'keyboard (a wrong write would overwrite a profile).')
 	return lines
+
+
+def read_macros(dev):
+	"""The active profile's onboard macros, or None when the keyboard doesn't answer."""
+	try:
+		data = device_settings.read_profile_tag(dev, device_settings.active_profile(dev), onboard_macros.MACROS_TAG)
+	except (OSError, hidpp.HidppError, IndexError, struct.error):
+		return None
+	return onboard_macros.parse_library(data)
 
 
 def game_mode_controls(cids, model):
@@ -398,14 +410,21 @@ class SettingsPanel(Gtk.Box):
 						info['analog_cids'] = features.control_list(dev)
 				except (OSError, hidpp.HidppError, IndexError):
 					pass
+		if device_settings.PROFILE_MANAGEMENT in have:
+			info['macros'] = read_macros(dev)
+		self._read_game_mode(dev, have, info)
+
+	def _read_game_mode(self, dev, have, info):
+		model = self.device.model.key
 		if features.DISABLE_CONTROLS in have and features.CONTROL_LIST in have:
-			keys = game_mode_controls(features.control_list(dev), self.device.model.key)
-			info['game_mode'] = (len(keys), features.game_mode_keys(self.device.model.key), keys)
-			features.apply_game_mode(dev, info['game_mode'][1])
+			keys = game_mode_controls(features.control_list(dev), model)
+			most = len(keys)
 		elif features.DISABLE_KEYS in have or features.DISABLE_KEYS_V1 in have:
 			most, keys = features.game_mode_choices(dev)
-			info['game_mode'] = (most, features.game_mode_keys(self.device.model.key), keys)
-			features.apply_game_mode(dev, info['game_mode'][1])   # ours: the chosen keys stay off
+		else:
+			return
+		info['game_mode'] = (most, features.game_mode_keys(model), keys)
+		features.apply_game_mode(dev, info['game_mode'][1])   # ours: the chosen keys stay off
 
 	def _do(self, job, done=None):
 		self.worker.submit(job, done, lambda e: self.win.toast(f'The device refused: {e}'))
@@ -448,7 +467,7 @@ class SettingsPanel(Gtk.Box):
 		                   ('bass_tone', self._bass_card), ('mic', self._mic_card), ('anc', self._anc_card),
 		                   ('onboard_eq', self._onboard_eq_card), ('headset_switches', self._switches_card),
 		                   ('mic_select', self._mic_select_card), ('aux', self._aux_card),
-		                   ('tone_sets', self._tone_sets_card), ('mix', self._mix_card),
+		                   ('tone_sets', self._tone_sets_card), ('mix', self._mix_card), ('macros', self._macros_card),
 		                   ('usb_ports', self._usb_ports_card), ('clusters', self._clusters_card),
 		                   ('power', lambda i: power_card(i['power'], self._do, self.dev)),
 		                   ('battery', lambda _i: battery_warnings_card()),
@@ -594,6 +613,15 @@ class SettingsPanel(Gtk.Box):
 			dd.connect(NOTIFY_SELECTED, lambda w, _p: self.loading or self._do(
 				lambda s=sets[w.get_selected()]: headset.set_tone_set(self.dev, s)))
 			c.append(row('Prompts', dd))
+		return c
+
+	def _macros_card(self, info):
+		c = card('Onboard macros', 'The macros stored in the keyboard’s active profile (read only: changing them '
+		         'waits for a check on a keyboard).')
+		for mid, name, data in info['macros']:
+			steps = onboard_macros.parse_steps(data)
+			text = ', '.join(onboard_macros.describe(s, mouse.KEY_NAMES) for s in steps[:8]) + (' …' if len(steps) > 8 else '')
+			c.append(row(name or f'Macro {mid}', label(text or 'empty', ['muted', 'small'], wrap=True)))
 		return c
 
 	def _mix_card(self, info):

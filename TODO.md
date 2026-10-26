@@ -150,7 +150,8 @@ copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
   G HUB's opcodes: 0x8002 key (+ modifiers), 0x8000 modifiers only, 0x8001 mouse button bitmask,
   0x8003 media usage, 0x9001-0x9007 wheel / DPI, 0x9008-0x900A / 0x900C / 0x9017 profile, battery,
   report rate. Macro steps (MACROS_LIBRARY) found too: delay, key / mouse / consumer down-up,
-  mouse move, 0xFF end, CRC-32 (docs/protocol.md). Left: where the macro id and CRC go in the tag. Wire format of those rows found too ([groups u8], per group 2 bytes, per row a
+  mouse move, 0xFF end, CRC-32 (docs/protocol.md). Done: the library tag 0x113 ([id u16, name, data length u16,
+  data] per macro; the CRC stays in G HUB), read and shown per profile (onboard_macros.py). Wire format of those rows found too ([groups u8], per group 2 bytes, per row a
   byte + 4 big-endian u16; FUN_142b62090). Left: the row's first two fields, the MA bytes, the other tags, G HUB's
   v1 / v2 session paths, then a keyboard to test.
 - **0x8030 MR key** (record a macro on the keyboard): needs the keystrokes, which Lghub can't
