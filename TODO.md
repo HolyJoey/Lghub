@@ -16,6 +16,9 @@ What's left needs a device:
    comes from the device's own zone list at runtime.
 3. Everything under "Check first" and section 1 below.
 
+4. README screenshots: retake on real devices (the keyboard page's new cards, the mouse lighting card's
+   second colour / style, the newer headsets' pages have none yet).
+
 ## Check first: G Pro X headset (mic, Blue VO!CE, surround)
 
 - Sidetone slider is missing. G HUB sets sidetone only over HID++ (0x8300; 0x0604 on Centurion),

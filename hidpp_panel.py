@@ -266,7 +266,9 @@ def zone_card(zone, loading, do, dev):
 
 def _color_button(rgb):
 	button = Gtk.ColorDialogButton(dialog=Gtk.ColorDialog(with_alpha=False))
-	button.set_rgba(Gdk.RGBA(red=rgb[0] / 255, green=rgb[1] / 255, blue=rgb[2] / 255, alpha=1))
+	rgba = Gdk.RGBA()
+	rgba.red, rgba.green, rgba.blue, rgba.alpha = rgb[0] / 255, rgb[1] / 255, rgb[2] / 255, 1.0
+	button.set_rgba(rgba)
 	return button
 
 
