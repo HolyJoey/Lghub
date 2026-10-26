@@ -16,8 +16,8 @@ What's left needs a device:
    comes from the device's own zone list at runtime.
 3. Everything under "Check first" and section 1 below.
 
-4. README screenshots: retake on real devices (the keyboard page's new cards, the mouse lighting card's
-   second colour / style, the newer headsets' pages have none yet).
+4. README screenshots: all retaken on 2026-10-26 from the simulated devices (docs/screenshots.sh now says
+   when a page fails). Before 1.0: add a newer headset's page and retake from real devices where they differ.
 
 ## Check first: G Pro X headset (mic, Blue VO!CE, surround)
 

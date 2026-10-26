@@ -467,7 +467,14 @@ class FakeAnalogKeyboard(FakeKeyboard):
 	# profile 1's analog tags in G HUB's layout: 1.5 mm global, rapid trigger on, two keys' own
 	# actuation points, one key-priority pair (made-up values)
 	TAGS = {(1, 0x120): bytes([0, 150]), (1, 0x121): bytes([1]), (1, 0x122): bytes([0]),
-	        (1, 0x123): bytes([3, 0, 80, 7, 1, 44]), (1, 0x124): b'', (1, 0x130): bytes([4, 6, 1, 1])}
+	        (1, 0x123): bytes([3, 0, 80, 7, 1, 44]), (1, 0x124): b'', (1, 0x130): bytes([4, 6, 1, 1]),
+	        # name, report rate, game-mode keys, one macro and two key rows (made-up, G HUB's layouts)
+	        (1, 0x0003): 'Ranked'.encode('utf-16-be').ljust(64, b'\0'), (1, 0x0100): bytes([3]),
+	        (1, 0x0102): bytes([0b100]) + bytes(15),
+	        (1, 0x0113): struct.pack('>HB', 1, 5) + b'Hello' + struct.pack('>H', 16) + bytes(
+	            [0x43, 2, 0x0B, 0x44, 2, 0x0B, 0x40, 0, 30, 0x43, 0, 0x08, 0x44, 0, 0x08, 0xFF]),
+	        (1, 0x0110): bytes([2, 3, 1]) + struct.pack('>BHHHH', 0, 0, 0, 0x8002, 0x3A)
+	                     + bytes([5, 1]) + struct.pack('>BHHHH', 0, 0, 0, 0x9008, 0)}
 
 	def _profile_tags(self, fn, p):
 		if fn == 2:
