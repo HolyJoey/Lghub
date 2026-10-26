@@ -204,6 +204,7 @@ SIGNATURE_NAMES = {'SIGNATURE_FRAME_ACTIVE': 'Signature (active)', 'SIGNATURE_FR
 
 
 def _effects(per_key, model=None):
+	import lightsync
 	import softlight
 	effects = [(None, None, 'Off'), ('audio', None, 'Audio visualizer'), ('screen', None, 'Screen sampler'),
 	           ('starlight', None, 'Starlight'), ('cycle', None, 'Colour cycle'), ('echo', None, 'Echo press')]

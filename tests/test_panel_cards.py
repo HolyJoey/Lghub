@@ -260,3 +260,12 @@ class ProEqCardTest(unittest.TestCase):
 			card = proeq_ui.ProEqCard(types.SimpleNamespace(port='3-2'), SyncWorker())
 		texts = [w.get_text() for w in _walk(card) if isinstance(w, Gtk.Label)]
 		self.assertTrue(any('can’t read' in t for t in texts))
+
+
+@unittest.skipUnless(HAVE_DISPLAY, 'needs a display')
+class LightsyncCardTest(unittest.TestCase):
+	def test_per_key_and_zone_cards_build(self):
+		import lightsync_ui
+		for per_key in (True, False):
+			card = lightsync_ui.card('g815', lambda: None, per_key=per_key)
+			self.assertIsInstance(card, Gtk.Widget)
