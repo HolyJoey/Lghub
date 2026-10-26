@@ -55,6 +55,8 @@ SIMPLE_READS = ((features.SIDETONE, 'sidetone', headset.sidetone),
                 (headset.AUX_CONFIG, 'aux', headset.aux_mode),
                 (headset.TONES, 'tone_sets', headset.tone_sets),
                 (headset.MIX, 'mix', headset.mix),
+                (features.DISPLAY_BRIGHTNESS, 'display_brightness', features.display_brightness),
+                (features.DISPLAY_ORIENTATION, 'display_orientation', features.display_orientation),
                 (headset.USB_PORTS, 'usb_ports', headset.usb_ports),
                 (cluster_effects.FEATURE, 'clusters', cluster_effects.read),
                 (features.POLAR_PATTERN, 'patterns', features.polar_patterns),
@@ -516,7 +518,8 @@ class SettingsPanel(Gtk.Box):
 		                   ('bass_tone', self._bass_card), ('mic', self._mic_card), ('anc', self._anc_card),
 		                   ('onboard_eq', self._onboard_eq_card), ('headset_switches', self._switches_card),
 		                   ('mic_select', self._mic_select_card), ('aux', self._aux_card),
-		                   ('tone_sets', self._tone_sets_card), ('mix', self._mix_card), ('onboard_profile', self._onboard_profile_card), ('macros', self._macros_card),
+		                   ('tone_sets', self._tone_sets_card), ('mix', self._mix_card),
+		                   ('display_brightness', self._screen_card), ('onboard_profile', self._onboard_profile_card), ('macros', self._macros_card),
 		                   ('key_rows', self._key_rows_card), ('fkc', self._fkc_card),
 		                   ('usb_ports', self._usb_ports_card), ('clusters', self._clusters_card),
 		                   ('power', lambda i: power_card(i['power'], self._do, self.dev)),
@@ -716,6 +719,22 @@ class SettingsPanel(Gtk.Box):
 				actions = [onboard_keys.describe(r, mouse.KEY_NAMES) + (f' (with modifiers 0x{r[1]:02X})' if r[1] else '')
 				           for r in rows]
 				c.append(row(names.get(cid, f'Control {cidx}'), label(', '.join(actions), ['muted', 'small'], wrap=True)))
+		return c
+
+	def _screen_card(self, info):
+		level, levels = info['display_brightness']
+		c = card('Screen', 'The device’s own screen.')
+		s = slider(0, max(1, levels - 1), min(level, max(0, levels - 1)))
+		s.connect('value-changed', lambda w: self.loading or self._do(
+			lambda v=int(w.get_value()): features.set_display_brightness(self.dev, v)))
+		c.append(row('Brightness', s))
+		current, supported = info.get('display_orientation') or (0, [])
+		if len(supported) > 1:
+			dd = Gtk.DropDown.new_from_strings([features.ORIENTATIONS[o] for o in supported])
+			dd.set_selected(supported.index(current) if current in supported else 0)
+			dd.connect(NOTIFY_SELECTED, lambda w, _p: self.loading or self._do(
+				lambda o=supported[w.get_selected()]: features.set_display_orientation(self.dev, o)))
+			c.append(row('Orientation', dd))
 		return c
 
 	def _mix_card(self, info):

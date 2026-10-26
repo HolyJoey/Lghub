@@ -120,7 +120,7 @@ rate, Fn keys, game mode (also on the newer keyboards), full key customization o
 like) get G HUB's rapid trigger and key priority switches, and show their onboard profile's actuation
 point, each key's own actuation and rapid-trigger values by key name, and key-priority pairs (read only
 until a write is checked on one of these keyboards). Devices with a USB sound card (headsets,
-speakers, Yeti mics) also get its controls. Yetis also get their own mute, gain, headphone level and mic monitoring over HID++,
+speakers, Yeti mics) also get its controls. Yetis also get their own mute, gain, headphone level and mic monitoring over HID++ (and the Yeti 2 its screen's brightness and orientation),
 as G HUB sets them. Litra lights get on / off, brightness and colour temperature (HID++ 0x1990, as G HUB sets them).
 
 | Settings | Per-key lighting | Litra |

@@ -43,6 +43,21 @@ class DisableControlsTest(unittest.TestCase):
 		features.set_fkc_enabled(Dev(), False)
 		self.assertEqual(calls, [(0x1B05, 1, bytes([0, 0])), (0x1B05, 1, bytes([1, 0]))])
 
+	def test_screen_as_g_hub(self):
+		calls = []
+
+		class Dev:
+			def call(self, feature, fn, params=b''):
+				calls.append((feature, fn, bytes(params)))
+				return {(0x0A00, 0): bytes([0x80, 5]), (0x0A00, 1): bytes([3, 1]),
+				        (0x0A01, 0): bytes([0b0110_0000]), (0x0A01, 1): bytes([1, 1])}.get((feature, fn), b'').ljust(16, b'\0')
+		dev = Dev()
+		self.assertEqual(features.display_brightness(dev), (3, 5))
+		self.assertEqual(features.display_orientation(dev), (1, [0, 1]))
+		features.set_display_orientation(dev, 0)
+		features.set_display_brightness(dev, 4)
+		self.assertEqual(calls[-2:], [(0x0A01, 2, b'\x00'), (0x0A00, 2, b'\x04')])
+
 	def test_offered_keys(self):
 		try:
 			import hidpp_panel

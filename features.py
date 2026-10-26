@@ -28,6 +28,7 @@ DISABLE_KEYS = 0x4522
 DISABLE_KEYS_V1 = 0x4521
 DISABLE_CONTROLS = 0x4523
 FULL_KEY_CUSTOMIZATION = 0x1B05
+DISPLAY_BRIGHTNESS, DISPLAY_ORIENTATION = 0x0A00, 0x0A01
 CHANGE_HOST = 0x1814
 HOSTS_INFO = 0x1815
 DEVICE_EQ = 0x8310
@@ -619,6 +620,32 @@ def fkc_enabled(dev):
 
 def set_fkc_enabled(dev, on):
 	dev.call(FULL_KEY_CUSTOMIZATION, 1, bytes([1, 1 if on else 0]))
+
+
+# Screens (the Yeti 2), as G HUB's Feature0A00iDisplayBrightness / Feature0A01iDisplayOrientation: fn 0
+# getInfo, fn 1 get -> [value, control], fn 2 set [value]. Brightness info (0x141f183b0): byte 1 = levels,
+# byte 0 bit 7 = overridable. Orientation info (0x141f1de90): bits 6 / 5 / 4 / 3 = UP / DOWN / LEFT / RIGHT
+# supported; values = G HUB's Display.Orientation.Type - 1 (toProto 0x142250460).
+ORIENTATIONS = ('Up', 'Down', 'Left', 'Right')
+
+
+def display_brightness(dev):
+	"""(level, levels)."""
+	return dev.call(DISPLAY_BRIGHTNESS, 1)[0], dev.call(DISPLAY_BRIGHTNESS, 0)[1]
+
+
+def set_display_brightness(dev, level):
+	dev.call(DISPLAY_BRIGHTNESS, 2, bytes([level]))
+
+
+def display_orientation(dev):
+	"""(current orientation, [orientations the screen supports])."""
+	bits = dev.call(DISPLAY_ORIENTATION, 0)[0]
+	return dev.call(DISPLAY_ORIENTATION, 1)[0], [o for o in range(4) if bits >> (6 - o) & 1]
+
+
+def set_display_orientation(dev, orientation):
+	dev.call(DISPLAY_ORIENTATION, 2, bytes([orientation]))
 
 
 # --- brightness (0x8040) -------------------------------------------------------------------

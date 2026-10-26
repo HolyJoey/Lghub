@@ -331,7 +331,9 @@ Done too: G HUB's busy check before writes (FUN_18000e180). Not ported on purpos
 - **Firmware updates**: not planned (a mistake can brick a device).
 - **Discord / OBS integrations**: not planned.
 - **Racing wheels and pedals** (0x8123-0x8140): nobody here owns one.
-- **Devices with screens** (0x0A00-0x0A02, 0x8103 Screen..., 0x8130 game data): not started.
+- **Devices with screens** (the Yeti 2): screen brightness and orientation done (0x0A00 / 0x0A01, as G HUB's).
+  Its pictures and mascot (0x0A02: prepare / write / commit / apply into flash) wait for a Yeti 2 to check
+  against (re/notes/display.txt). 0x8103 Screen... and 0x8130 game data: no device uses them.
 
 ## 3. Upkeep
 
