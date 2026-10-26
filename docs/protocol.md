@@ -327,10 +327,16 @@ onboard equalizer, and others.
   a filter designer inside G HUB's agent (per rate, 44.1 then 48 kHz: `[2 for 48 kHz else 1, 0,
   count u16 LE, count x int16]`, after `[3, 0x0E, 0, rates, 0, 0, 0]`, all behind `[5, 0x5A, length
   u16 LE]`); Lghub runs that designer natively (`bin/centurion-eq`).
+- 0x0621 stored lighting effects (one per cluster, i.e. light): fn 0 info `[?, n, n x 2 bytes]` (one pair
+  per cluster), fn 1 `[cluster]` -> `[n, n x (effect id u16 BE, ?, capability bits)]`, fn 2 get / fn 3 set
+  `[cluster, effect id u16 BE, params]` (10 bytes): 0 fixed `[r, g, b]` (black = off), 1 colour cycle
+  `[intensity %, period ms u16 BE, saturation]`, 2 colour wave (the same, then direction: 0 horizontal,
+  1 vertical, 2 / 3 reversed), 3 breathing `[r, g, b, intensity %, period ms u16 BE]`, 4 signature
+  `[r, g, b, r2, g2, b2, intensity %]`, 5 custom.
 - Devices behind a 0x0003 bridge go through a sub-device layer that refuses packets larger than
   the adapter's size.
 
-Lghub (`centurion.py`) opens these headsets over this transport and sets their sidetone, mic mute, mic gain, noise cancelling and onboard equalizer (not
+Lghub (`centurion.py`) opens these headsets over this transport and sets their sidetone, mic mute, mic gain, noise cancelling, onboard equalizer and stored lighting effects (not
 checked on a headset yet). Byte 0 on the wire is the collection's report id (ours: how G HUB's
 HID layer fills it isn't read).
 

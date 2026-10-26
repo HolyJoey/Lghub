@@ -7,6 +7,7 @@ import devices
 import analog_keys
 import battery_model
 import centurion_eq
+import cluster_effects
 import device_settings
 import features
 import headset
@@ -21,6 +22,7 @@ from worker import Worker
 
 NOTIFY_SELECTED = 'notify::selected'
 NOTIFY_ACTIVE = 'notify::active'
+NOTIFY_RGBA = 'notify::rgba'
 
 
 def card(title, hint=None):
@@ -47,6 +49,7 @@ SIMPLE_READS = ((features.SIDETONE, 'sidetone', headset.sidetone),
                 (headset.MIC_SELECT, 'mic_select', headset.mics),
                 (headset.AUX_CONFIG, 'aux', headset.aux_mode),
                 (headset.USB_PORTS, 'usb_ports', headset.usb_ports),
+                (cluster_effects.FEATURE, 'clusters', cluster_effects.read),
                 (features.POLAR_PATTERN, 'patterns', features.polar_patterns),
                 (features.DEVICE_EQ, 'device_eq', features.device_eq),
                 (features.ANGLE_SNAPPING, 'angle_snapping', features.angle_snapping),
@@ -192,14 +195,70 @@ def zone_card(zone, loading, do, dev):
 		                                list(features.STYLES)[style.get_selected()])
 		do(lambda: features.set_effect(dev(), zone.index, index, params, feature=zone.feature))
 	effect_dd.connect(NOTIFY_SELECTED, apply)
-	color.connect('notify::rgba', apply)
-	color2.connect('notify::rgba', apply)
+	color.connect(NOTIFY_RGBA, apply)
+	color2.connect(NOTIFY_RGBA, apply)
 	direction.connect(NOTIFY_SELECTED, apply)
 	style.connect(NOTIFY_SELECTED, apply)
 	speed.connect('value-changed', apply)
 	bright.connect('value-changed', apply)
 	visible()
 	return c
+
+
+def _color_button(rgb):
+	button = Gtk.ColorDialogButton(dialog=Gtk.ColorDialog(with_alpha=False))
+	button.set_rgba(Gdk.RGBA(red=rgb[0] / 255, green=rgb[1] / 255, blue=rgb[2] / 255, alpha=1))
+	return button
+
+
+def _rgb(button):
+	c = button.get_rgba()
+	return tuple(round(v * 255) for v in (c.red, c.green, c.blue))
+
+
+def cluster_box(cluster, effects, current, loading, do, dev):
+	"""One light's stored effect (0x0621): the effect, its colours, speed, brightness and direction."""
+	eid, params = current
+	v = {**cluster_effects.DEFAULTS, **params}
+	b = box(spacing=8)
+	b.append(label(f'Light {cluster + 1}', ['muted', 'small']))
+	effect_dd = Gtk.DropDown.new_from_strings([cluster_effects.NAMES[e] for e in effects])
+	effect_dd.set_selected(effects.index(eid) if eid in effects else 0)
+	color, color2 = _color_button(v['color']), _color_button(v['color2'])
+	direction = Gtk.DropDown.new_from_strings(list(cluster_effects.DIRECTIONS))
+	direction.set_selected(min(v['direction'], len(cluster_effects.DIRECTIONS) - 1))
+	speed = slider(1, 20, max(1, round(v['period'] / 1000)))
+	bright = slider(1, 100, max(1, v['intensity']))
+	rows = {}
+	for key, title, widget in (('effect', 'Effect', effect_dd), ('color', 'Color', color),
+	                           ('color2', 'Second color', color2), ('direction', 'Direction', direction),
+	                           ('period', 'Speed (seconds per cycle)', speed), ('intensity', 'Brightness (%)', bright)):
+		rows[key] = row(title, widget)
+		b.append(rows[key])
+	uses = {cluster_effects.FIXED: ('color',), cluster_effects.CYCLE: ('period', 'intensity'),
+	        cluster_effects.WAVE: ('period', 'intensity', 'direction'),
+	        cluster_effects.BREATHING: ('color', 'period', 'intensity'),
+	        cluster_effects.SIGNATURE: ('color', 'color2', 'intensity')}
+
+	def visible():
+		used = uses[effects[effect_dd.get_selected()]]
+		for key, r in rows.items():
+			r.set_visible(key == 'effect' or key in used)
+
+	def apply(*_):
+		visible()
+		if loading():
+			return
+		e = effects[effect_dd.get_selected()]
+		new = {'color': _rgb(color), 'color2': _rgb(color2), 'direction': direction.get_selected(),
+		       'period': int(speed.get_value() * 1000), 'intensity': int(bright.get_value()),
+		       'saturation': v['saturation']}
+		do(lambda: cluster_effects.set_effect(dev(), cluster, e, new))
+	for widget, signal in ((effect_dd, NOTIFY_SELECTED), (color, NOTIFY_RGBA), (color2, NOTIFY_RGBA),
+	                       (direction, NOTIFY_SELECTED), (speed, 'value-changed'), (bright, 'value-changed')):
+		widget.connect(signal, apply)
+	visible()
+	return b
 
 
 class SettingsPanel(Gtk.Box):
@@ -375,7 +434,7 @@ class SettingsPanel(Gtk.Box):
 		                   ('bass_tone', self._bass_card), ('mic', self._mic_card), ('anc', self._anc_card),
 		                   ('onboard_eq', self._onboard_eq_card), ('headset_switches', self._switches_card),
 		                   ('mic_select', self._mic_select_card), ('aux', self._aux_card),
-		                   ('usb_ports', self._usb_ports_card),
+		                   ('usb_ports', self._usb_ports_card), ('clusters', self._clusters_card),
 		                   ('power', lambda i: power_card(i['power'], self._do, self.dev)),
 		                   ('battery', lambda _i: battery_warnings_card()),
 		                   ('mode', self._mode_card)):
@@ -528,6 +587,14 @@ class SettingsPanel(Gtk.Box):
 			dd.connect(NOTIFY_SELECTED, lambda w, _p, i=index: self.loading or self._do(
 				lambda s=w.get_selected(): headset.set_usb_port(self.dev, i, s)))
 			c.append(row(f'Port {index + 1}', dd))
+		return c
+
+	def _clusters_card(self, info):
+		c = card('Stored lighting', 'The effect each light keeps in the headset, also without Lghub running.')
+		for cluster, ids, current in info['clusters']:
+			effects = [e for e in ids if e in cluster_effects.SETTABLE]
+			if effects:
+				c.append(cluster_box(cluster, effects, current, lambda: self.loading, self._do, lambda: self.dev))
 		return c
 
 	def _mic_select_card(self, info):

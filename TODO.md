@@ -197,7 +197,8 @@ copy instead of the band record (same values). Notes: `re/notes/proeq.txt`.
   - Also done: AI noise reduction (on / off, level), battery saver and footstep detection (0x060E /
     0x0618 / 0x0639). Mic select (0x063B), tones on / off (0x060B), Do Not Disturb (0x0631), aux input (0x063C) and USB
     ports (0x063A) too. Lighting over 0x0620 RGB host mode (the G735's lights: a Lighting page and
-    the effects). Left: noise exposure (0x060D: its levels map
+    the effects) and 0x0621 stored effects (what each light keeps without Lghub: fixed, colour cycle,
+    colour wave, breathing, signature). Left: noise exposure (0x060D: its levels map
     through the headset's own table), tone sets, and the other 0x06xx features,
     read the same way from G HUB's decoders; Centurion0003SubdevicePlain (devices behind the 0x0003
     bridge: write 0x141fea530 and its creator found; the sub-device discovery flow 0x141f837e1 is next). Notes: re/notes/centurion.txt.
