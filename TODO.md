@@ -151,9 +151,11 @@ Done too: G HUB's busy check before writes (FUN_18000e180). Not ported on purpos
   0x8003 media usage, 0x9001-0x9007 wheel / DPI, 0x9008-0x900A / 0x900C / 0x9017 profile, battery,
   report rate. Macro steps (MACROS_LIBRARY) found too: delay, key / mouse / consumer down-up,
   mouse move, 0xFF end, CRC-32 (docs/protocol.md). Done: the library tag 0x113 ([id u16, name, data length u16,
-  data] per macro; the CRC stays in G HUB), read and shown per profile (onboard_macros.py). Wire format of those rows found too ([groups u8], per group 2 bytes, per row a
-  byte + 4 big-endian u16; FUN_142b62090). Left: the row's first two fields, the MA bytes, the other tags, G HUB's
-  v1 / v2 session paths, then a keyboard to test.
+  data] per macro; the CRC stays in G HUB), read and shown per profile (onboard_macros.py). The key rows (tag 0x110) are read and shown too
+  (onboard_keys.py): [groups] then per key [control index, row count] and 9-byte rows [row index,
+  trigger modifiers, action bits, opcode, params] (G HUB mirrors left / right modifiers into a second row);
+  the analog groups are [control index, u16, count] + 6-byte entries (meanings not read). Left: which part
+  of the tag a plain read returns (Lghub shows only an exact parse), the other tags, then a keyboard to test.
 - **0x8030 MR key** (record a macro on the keyboard): needs the keystrokes, which Lghub can't
   read without input-device access.
 - **Analog keyboards** (PRO X TKL RAPID, G515 RAPID TKL, G512 X, PRO X2 RAPID, ...): done:

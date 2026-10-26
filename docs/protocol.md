@@ -280,7 +280,9 @@ index B, flavor (3 bits: 0 distance priority, 1 last input, 2 ordinal, 3 reverse
 
 ### On-board macro steps (0x8102 MACROS_LIBRARY), from G HUB's sequence converter
 
-The tag (0x113) is the macros one after another, each `[macro id u16 BE, name length (max 24),
+The key rows (base layer, tag 0x110): `[groups]`, per key `[control index, row count]` then 9-byte rows
+`[row index, trigger modifiers u16, action bits u16, opcode u16, params u16]` (big-endian; G HUB adds a
+row with left / right modifiers swapped). The macro tag (0x113) is the macros one after another, each `[macro id u16 BE, name length (max 24),
 name, data length u16 BE, data]`; a key plays one through its base-layer row (params = macro id).
 Lghub reads it (onboard_macros.py) and shows the active profile's macros. Steps: 0x40 delay `[ms]`; 0x43 / 0x44 key down / up `[modifiers, HID
 usage]`; 0x41 / 0x42 mouse button down / up `[button mask]`; 0x45 / 0x46 consumer key down / up
