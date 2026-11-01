@@ -67,6 +67,13 @@ class CameraTest(unittest.TestCase):
 		self.assertEqual(controls['zoom_steps'].menu, {0: '100', 1: '200'})
 		self.assertEqual(driver.set_log, [(0x980900, 50)])
 
+	def test_closed_after_use(self):
+		# an open device keeps the camera awake, so the webcam page opens it per job
+		with mock.patch('os.open', return_value=3), mock.patch('os.close') as close:
+			with v4l2.Camera('/dev/video9') as cam:
+				self.assertEqual(cam.fd, 3)
+			close.assert_called_once_with(3)
+
 	def test_video_node(self):
 		with tempfile.TemporaryDirectory() as root:
 			for name, port, index in (('video1', '3-4', '1'), ('video0', '3-4', '0'), ('video2', '3-5', '0')):

@@ -36,7 +36,7 @@ class WebcamView(Gtk.Box):
 		super().__init__(orientation=Gtk.Orientation.HORIZONTAL, vexpand=True)
 		self.win = win
 		self.device = device
-		self.camera = None
+		self.node = None         # /dev/videoN; opened only while used, so the camera can sleep
 		self.loading = False
 		self.widgets = {}        # control id -> (control, widget, row)
 		self.worker = Worker()
@@ -68,9 +68,12 @@ class WebcamView(Gtk.Box):
 
 	def close(self):
 		self._stop_preview()
-		cam = self.camera
-		self.worker.submit(lambda: cam and cam.close())
 		self.worker.stop()
+
+	def _camera(self):
+		"""The camera, opened for one job (on the worker thread). An open device keeps the camera
+		awake, also without a preview."""
+		return v4l2.Camera(self.node)
 
 	# --- preview --------------------------------------------------------------------------
 
@@ -95,22 +98,26 @@ class WebcamView(Gtk.Box):
 		return c
 
 	def _start_preview(self):
-		if self.streaming or not self.camera or not self.preview_switch.get_active():
+		if self.streaming or not self.node or not self.preview_switch.get_active():
 			return
 		stop = threading.Event()
 		self.streaming = stop
 		self.preview_note.set_text('')
-		threading.Thread(target=self._stream, args=(self.camera, stop), daemon=True).start()
+		threading.Thread(target=self._stream, args=(self.node, stop), daemon=True).start()
 
 	def _stop_preview(self):
 		if self.streaming:
 			self.streaming.set()
 			self.streaming = None
 
-	def _stream(self, camera, stop):
+	def _stream(self, node, stop):
+		camera = None
 		try:
+			camera = v4l2.Camera(node)
 			stream = v4l2.Stream(camera)
 		except OSError as e:
+			if camera:
+				camera.close()
 			text = ('The camera is in use by another app, so there is no preview here. Settings still work.'
 			        if e.errno == 16 else f'No preview: {e.strerror or e}.')
 			GLib.idle_add(lambda: self.preview_note.set_text(text) and False)
@@ -125,6 +132,7 @@ class WebcamView(Gtk.Box):
 			GLib.idle_add(lambda: self.preview_note.set_text('The preview stopped.') and False)
 		finally:
 			stream.close()
+			camera.close()          # lets the camera sleep again
 
 	def _show_frame(self, data):
 		self.frame_pending = False
@@ -140,8 +148,9 @@ class WebcamView(Gtk.Box):
 		node = v4l2.video_node(self.device.id.split(':', 1)[1])
 		if not node:
 			raise OSError('no video device for this camera')
-		self.camera = v4l2.Camera(node)
-		return self.camera.controls()
+		self.node = node
+		with self._camera() as cam:
+			return cam.controls()
 
 	def _failed(self, error):
 		self._clear()
@@ -215,11 +224,14 @@ class WebcamView(Gtk.Box):
 		if self.loading or value == ctrl.value:
 			return
 		ctrl.value = value
-		cam = self.camera
 		webcam.remember(self.device, ctrl.key, value)
 		refresh = ctrl.kind != v4l2.T_INTEGER     # auto modes enable or disable other controls
-		self.worker.submit(lambda: (cam.set(ctrl.id, value), cam.controls() if refresh else None)[1],
-		                   self._after_set, lambda e: self.win.toast(f'The camera refused: {e}'))
+
+		def job():
+			with self._camera() as cam:
+				cam.set(ctrl.id, value)
+				return cam.controls() if refresh else None
+		self.worker.submit(job, self._after_set, lambda e: self.win.toast(f'The camera refused: {e}'))
 
 	def _after_set(self, controls):
 		if not controls:
@@ -236,14 +248,14 @@ class WebcamView(Gtk.Box):
 		self.loading = False
 
 	def _reset(self):
-		cam = self.camera
-		if not cam:
+		if not self.node:
 			return
 		webcam.forget(self.device)
 
 		def job():
-			defaults = {c.key: c.default for c in cam.controls()}
-			webcam.apply(cam, defaults)
-			return cam.controls()
+			with self._camera() as cam:
+				defaults = {c.key: c.default for c in cam.controls()}
+				webcam.apply(cam, defaults)
+				return cam.controls()
 		self.worker.submit(job, self._show, lambda e: self.win.toast(f'The camera refused: {e}'))
 		self.win.toast('Back to the camera’s defaults')

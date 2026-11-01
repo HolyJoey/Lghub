@@ -89,6 +89,12 @@ class Camera:
 		except OSError:
 			pass
 
+	def __enter__(self):
+		return self
+
+	def __exit__(self, *_):
+		self.close()
+
 	def controls(self):
 		"""Every usable control, in the driver's order, with current values."""
 		found = []
