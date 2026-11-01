@@ -598,9 +598,13 @@ class SettingsPanel(Gtk.Box):
 		c = card('Sidetone', 'Hear your own voice in the headset.')
 		s = slider(0, 100, info['sidetone'])
 		s.connect('value-changed', lambda w: self.loading or self._do(
-			lambda v=int(w.get_value()): headset.set_sidetone(self.dev, v)))
+			lambda v=int(w.get_value()): self._set_sidetone(v)))
 		c.append(row('Level', s))
 		return c
+
+	def _set_sidetone(self, level):
+		headset.set_sidetone(self.dev, level)
+		headset.save_sidetone(self.device.model.key, level)       # put back when it reconnects (restore.py)
 
 	def _pattern_card(self, info):
 		c = card('Polar pattern', 'Which directions the microphone picks up.')

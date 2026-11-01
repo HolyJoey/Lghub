@@ -5,6 +5,7 @@ The home screen lists connected devices; each opens its own page.
 """
 import os
 import sys
+import threading
 
 import gi
 
@@ -16,6 +17,7 @@ import bluevoice_ui  # noqa: E402
 import games_ui  # noqa: E402
 import pairing  # noqa: E402
 import pairing_ui  # noqa: E402
+import service  # noqa: E402
 import settings_ui  # noqa: E402
 import update_ui  # noqa: E402
 import devices  # noqa: E402
@@ -320,6 +322,13 @@ class MainWindow(Adw.ApplicationWindow):
 			self.show_home()
 
 
+def start_service():
+	"""The background service keeps the drivers and the tray running after the window closes;
+	start it with the window when it isn't running (not on the Blue VO!CE page only)."""
+	if not service.is_active() and service.installed():
+		service.start()
+
+
 class App(Adw.Application):
 	def __init__(self):
 		super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
@@ -336,6 +345,7 @@ class App(Adw.Application):
 		quit_action = Gio.SimpleAction.new('quit', None)       # the tray's Quit closes the window too
 		quit_action.connect('activate', lambda *_: self.quit())
 		self.add_action(quit_action)
+		threading.Thread(target=start_service, daemon=True).start()
 
 	def do_activate(self):
 		page = 'home'

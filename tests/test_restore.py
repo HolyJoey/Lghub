@@ -8,6 +8,7 @@ from unittest import mock
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import features  # noqa: E402
+import headset  # noqa: E402
 import hidpp  # noqa: E402
 import perkey  # noqa: E402
 import restore  # noqa: E402
@@ -26,6 +27,18 @@ class RestoreTest(unittest.TestCase):
 			restore.apply_saved(hidpp.Device(kb), 'g815')
 			self.assertEqual(kb.keys[1], (255, 0, 0))
 			self.assertEqual(kb.disabled, {0xE3})
+
+	def test_sidetone_goes_back_on(self):
+		with tempfile.TemporaryDirectory() as d, mock.patch.object(store, 'CONFIG_DIR', d):
+			headset.save_sidetone('pro_71_gaming_headset', 0)
+			self.assertTrue(restore.anything_saved())                 # a level of 0 counts
+			dev = mock.Mock()
+			dev.has.side_effect = lambda f: f == headset.SIDETONE
+			restore.apply_saved(dev, 'pro_71_gaming_headset')
+			dev.call.assert_called_once_with(headset.SIDETONE, 1, bytes([0]))
+			dev.reset_mock()
+			restore.apply_saved(dev, 'g815')                         # nothing saved for it
+			dev.call.assert_not_called()
 
 	def test_check_restores_new_devices_once(self):
 		kb = mock.Mock(id='usb:kb', model=mock.Mock(type='keyboard', key='g815'))

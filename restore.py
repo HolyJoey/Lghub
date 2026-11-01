@@ -1,5 +1,6 @@
 """Puts devices' saved settings back when they appear, as G HUB re-applies them when a device
-connects or wakes up (its 0x1D4B reconnection handling): per-key colours and game-mode keys.
+connects or wakes up (its 0x1D4B reconnection handling): per-key colours, game-mode keys and the
+headset's sidetone level.
 
 A device counts as appearing when it is plugged in, or when its receiver says it switched on
 (receiver_watch.py), with a look every CHECK_EVERY seconds as a fallback while something is
@@ -8,6 +9,7 @@ saved; listening to the receiver rather than to 0x1D4B on each device is ours.
 import time
 
 import features
+import headset
 import hidpp
 import hotplug
 import perkey
@@ -17,22 +19,28 @@ CHECK_EVERY = 60.0
 
 
 def saved_for(model):
-	"""(per-key colours, game-mode keys) saved for a model."""
-	return perkey.load_colors(model), features.game_mode_keys(model)
+	"""(per-key colours, game-mode keys, sidetone level or None) saved for a model."""
+	return perkey.load_colors(model), features.game_mode_keys(model), headset.saved_sidetone(model)
+
+
+def _is_set(value):
+	return value not in (None, {}, [])       # a sidetone level of 0 counts
 
 
 def anything_saved():
-	return any(store._read_json(f'{store.CONFIG_DIR}/{name}', {}).values()
-	           for name in (perkey.COLORS_FILE, features.GAME_MODE_FILE))
+	return any(_is_set(v) for name in (perkey.COLORS_FILE, features.GAME_MODE_FILE, headset.SIDETONE_FILE)
+	           for v in store._read_json(f'{store.CONFIG_DIR}/{name}', {}).values())
 
 
 def apply_saved(dev, model):
 	"""Put a model's saved settings on an open device; the features it lacks are skipped."""
-	colors, keys = saved_for(model)
+	colors, keys, sidetone = saved_for(model)
 	if colors and (dev.has(perkey.PERKEY) or dev.has(perkey.PERKEY_V1)):
 		perkey.apply(dev, colors, light_map=perkey.load_light_map(model))
 	if keys and (dev.has(features.DISABLE_KEYS) or dev.has(features.DISABLE_KEYS_V1)):
 		features.apply_game_mode(dev, keys)
+	if sidetone is not None and dev.has(headset.SIDETONE):
+		headset.set_sidetone(dev, sidetone)
 
 
 class Restorer:
@@ -68,7 +76,7 @@ class Restorer:
 					continue
 		for dev_id in set(found) - self.present:
 			d = found[dev_id]
-			if not any(saved_for(d.model.key)):
+			if not any(_is_set(v) for v in saved_for(d.model.key)):
 				continue
 			try:
 				dev = devices.open_hidpp(d)

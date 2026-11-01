@@ -185,12 +185,18 @@ class Tray:
 		                          self._menu_call, self._menu_get, None)
 		name = f'org.kde.StatusNotifierItem-{os.getpid()}-1'
 		Gio.bus_own_name_on_connection(self.conn, name, Gio.BusNameOwnerFlags.NONE, None, None)
-		self.conn.call(WATCHER, '/StatusNotifierWatcher', WATCHER, 'RegisterStatusNotifierItem',
-		               GLib.Variant('(s)', (name,)), None, Gio.DBusCallFlags.NONE, -1, None, None)
+		# at login the service usually starts before the panel: register whenever a watcher shows
+		# up (also when the panel restarts), not just once
+		Gio.bus_watch_name_on_connection(self.conn, WATCHER, Gio.BusNameWatcherFlags.NONE,
+		                                 lambda *_: self._register(name), None)
 		tick = GLib.timeout_source_new_seconds(30)            # the battery readings move on
 		tick.set_callback(lambda *_: self._rebuild() or True)
 		tick.attach(context)
 		self.loop.run()
+
+	def _register(self, name):
+		self.conn.call(WATCHER, '/StatusNotifierWatcher', WATCHER, 'RegisterStatusNotifierItem',
+		               GLib.Variant('(s)', (name,)), None, Gio.DBusCallFlags.NONE, -1, None, None)
 
 	# --- StatusNotifierItem --------------------------------------------------------------------
 

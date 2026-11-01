@@ -67,6 +67,15 @@ class DeviceTest(unittest.TestCase):
 		with mock.patch.object(hidpp, 'TIMEOUT', 0.01), self.assertRaises(hidpp.NoReply):
 			silent.request(1, 0)
 
+	def test_missing_feature_as_an_error(self):
+		# the PRO X headset answers the root's lookup of a feature it lacks with an error
+		error = bytes([hidpp.LONG, hidpp.CORDED, 0xFF, 0, 0x00 | hidpp.SW_ID, 6])
+		dev = hidpp.Device(Scripted([error]))
+		self.assertFalse(dev.has(0x1F20))
+		busy = bytes([hidpp.LONG, hidpp.CORDED, 0xFF, 0, 0x00 | hidpp.SW_ID, 8])
+		with self.assertRaises(hidpp.HidppError):
+			hidpp.Device(Scripted([busy])).has(0x1F20)
+
 	def test_report_size(self):
 		dev = hidpp.Device(Scripted([]), reports=(hidpp.SHORT, hidpp.LONG, hidpp.VERY_LONG))
 		self.assertEqual(dev._report_for(3), hidpp.SHORT)

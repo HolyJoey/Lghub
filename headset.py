@@ -5,8 +5,10 @@ import re
 import subprocess
 
 import hidpp
+import store
 
 SIDETONE = 0x8300     # HID++: function 0 get level (0-100), function 1 set level
+SIDETONE_FILE = 'sidetone.json'     # in store.CONFIG_DIR: {model key: level}
 SYS_SOUND = '/sys/class/sound'
 
 
@@ -365,3 +367,16 @@ def set_centurion_sidetone(dev, percent):
 	mic = dev.call(CENTURION_SIDETONE, 0)[1]
 	level = round(max(0, min(100, percent)) * (steps - 1) / 100)        # G HUB's scale, inverted (ours)
 	dev.call(CENTURION_SIDETONE, 1, bytes([mic, 0xFF, level] if version >= 2 else [mic, level]))
+
+
+def saved_sidetone(model):
+	"""The level last set for a model, or None. Ours: some headsets (the PRO X) forget it when
+	unplugged, so it goes back on when they connect (restore.py)."""
+	return store._read_json(f'{store.CONFIG_DIR}/{SIDETONE_FILE}', {}).get(model)
+
+
+def save_sidetone(model, level):
+	path = f'{store.CONFIG_DIR}/{SIDETONE_FILE}'
+	data = store._read_json(path, {})
+	data[model] = max(0, min(100, int(level)))
+	store._write_json(path, data)

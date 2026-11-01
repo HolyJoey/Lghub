@@ -155,7 +155,12 @@ class Device:
 	def feature_index(self, feature_id):
 		"""The device's index for a feature, or None if it doesn't have it (cached)."""
 		if feature_id not in self._features:
-			reply = self.request(0, 0, struct.pack('>H', feature_id))
+			try:
+				reply = self.request(0, 0, struct.pack('>H', feature_id))
+			except HidppError as e:
+				if e.code not in (2, 6):
+					raise
+				reply = b'\0'           # the PRO X headset answers a missing feature with an error, not index 0
 			self._features[feature_id] = reply[0] or None
 		return self._features[feature_id]
 
